@@ -116,10 +116,14 @@ function missionsPage(){
 }
 function staffPage(){
  const title=role?.kind==="teacher"?"پنل مدرس":"مرکز کنترل مدیریت";
- const courses=staffData?.academy_courses||[],students=staffData?.academy_students||[],enroll=staffData?.academy_enrollments||[],reqs=staffData?.academy_registration_requests||[];
- return '<main class="shell rf-dashboard">'+heading("ACADEMY CONTROL",title,"دسترسی به داده‌های این صفحه تنها پس از احراز نقش معتبر صادر می‌شود.")+actions()+toast()+
- '<div class="rf-stats"><div>'+badge("دوره‌ها")+'<strong>'+num(courses.length)+'</strong></div><div>'+badge("هنرجویان قابل مشاهده")+'<strong>'+num(students.length)+'</strong></div><div>'+badge("ثبت‌نام‌ها")+'<strong>'+num(enroll.length)+'</strong></div></div>'+
- '<div class="rf-panel"><h3>دوره‌های مرتبط با حساب</h3><div class="rf-admin-list">'+(courses.length?courses.slice(0,20).map(c=>'<div><b>'+esc(c.title)+'</b>'+badge(c.status||"فعال")+'</div>').join(""):'<div class="rf-empty">هنوز دوره مرتبط در این حساب قابل مشاهده نیست.</div>')+'</div><div class="rf-action-row"><a class="btn btn-outline" href="'+OLD+'/manage" rel="noopener noreferrer" target="_blank">پنل کامل مدیریت فعلی ↗</a>'+(role?.kind==="teacher"?'<a class="btn btn-outline" href="'+OLD+'/teacher" target="_blank" rel="noopener noreferrer">فضای مدرس ↗</a>':"")+'</div><p class="rf-caption">تکمیل انتقال امکانات مدیریتی و عملیاتی در حال انجام است. سوابق و مجوزهای قبلی تغییر نکرده‌اند.</p></div></main>';
+ const courses=staffData?.academy_courses||[],students=staffData?.academy_students||[],enroll=staffData?.academy_enrollments||[];
+ const canManage=role?.kind==="staff"&&["owner","manager"].includes(String(role?.role||""));
+ const options=courses.filter(c=>c.status==="active").map(c=>'<option value="'+esc(c.id)+'">'+esc(c.title)+'</option>').join("");
+ return '<main class="shell rf-dashboard">'+heading("ACADEMY CONTROL",title,"دسترسی به اطلاعات تنها با نقش معتبر و سیاست دسترسی سرور انجام می‌شود.")+actions()+toast()+
+ '<div class="rf-stats"><div>'+badge("دوره‌های قابل مشاهده")+'<strong>'+num(courses.length)+'</strong></div><div>'+badge("هنرجویان قابل مشاهده")+'<strong>'+num(students.length)+'</strong></div><div>'+badge("ثبت‌نام‌های قابل مشاهده")+'<strong>'+num(enroll.length)+'</strong></div></div>'+
+ '<section class="rf-grid-two"><div class="rf-panel"><h3>دوره‌های آموزشگاه</h3><div class="rf-admin-list">'+(courses.length?courses.slice(0,20).map(c=>'<div><b>'+esc(c.title)+'</b>'+badge(c.status||"فعال")+'</div>').join(""):'<div class="rf-empty">هنوز دوره مرتبطی برای این حساب قابل مشاهده نیست.</div>')+'</div><div class="rf-action-row"><a class="btn btn-outline" href="'+OLD+'/manage" rel="noopener noreferrer" target="_blank">پنل عملیات و قراردادها ↗</a>'+(role?.kind==="teacher"?'<a class="btn btn-outline" href="'+OLD+'/teacher" target="_blank" rel="noopener noreferrer">کلاس‌های مدرس ↗</a>':"")+'</div><p class="rf-caption">گردش‌کار قراردادها، بیعانه‌ها و اطلاع‌رسانی همچنان در سامانه عملیاتی قبلی محفوظ است.</p></div>'+
+ (canManage?'<div class="rf-panel"><div class="rf-panel-title"><span>✧</span><h3>مدیریت AI MISSION 90</h3></div><p>برای راه‌اندازی ۲۴ مأموریت پروژه‌ای در یک دوره، تاریخ شروع و وضعیت فعال بودن آن را مشخص کنید.</p><form class="rf-form" id="rf-campaign-launch"><label class="portal-field"><span>دوره</span><select name="course_id" required>'+options+'</select></label><label class="portal-field"><span>تاریخ شروع دوره (میلادی، ذخیره و نمایش اصلی شمسی)</span><input type="date" name="start_date" required/></label><label class="rf-check"><input type="checkbox" name="active" checked/> مأموریت‌های دوره فعال شوند.</label><button type="submit" class="btn btn-primary">ذخیره مسیر ۹۰روزه ←</button></form><p class="rf-caption">فعال‌سازی فقط توسط مدیر یا مالک پذیرفته می‌شود؛ هر ارسال در دیتابیس اصلی ثبت خواهد شد.</p></div>':
+ '<div class="rf-panel"><div class="rf-panel-title"><span>◈</span><h3>فضای تخصصی مدرس</h3></div><p>کلاس‌ها، حضور و غیاب، تکالیف و بازخورد همچنان در پنل آموزشی فعلی در دسترس‌اند.</p><a class="btn btn-outline" href="'+OLD+'/teacher" rel="noopener noreferrer" target="_blank">مشاهده کلاس‌ها ↗</a></div>')+'</section></main>';
 }
 async function printResume(){
  const d=await rpc("academy_student_resume_snapshot",{p_include_contact:false});
@@ -169,6 +173,12 @@ async function submit(e){
   if(title.length<3||url&&safeURL(url)==="#")throw Error("عنوان یا لینک پروژه معتبر نیست.");
   await rpc("academy_save_showcase_work",{p_work_id:null,p_category:d.get("category"),p_title:title,p_description:d.get("description")||"",p_project_url:url});
   journey=await rpc("academy_student_journey_snapshot");await loadStudentExtras();showNotice("نمونه‌کار برای بررسی آموزشگاه ثبت شد.");
+ }else if(f.id==="rf-campaign-launch"){
+  if(!["owner","manager"].includes(String(role?.role||"")))throw Error("برای این عملیات دسترسی مدیریت لازم است.");
+  const course_id=String(d.get("course_id")||""),start_date=String(d.get("start_date")||"");
+  if(!/^[0-9a-f-]{36}$/i.test(course_id)||!/^\d{4}-\d{2}-\d{2}$/.test(start_date))throw Error("دوره یا تاریخ معتبر نیست.");
+  await rpc("academy_launch_mission_campaign",{p_course_id:course_id,p_start_date:start_date,p_active:d.has("active")});
+  showNotice("کمپین دوره ذخیره شد. مأموریت‌ها مطابق تاریخ شروع باز می‌شوند.");
  }else if(f.id==="rf-quiz"){
   const answer={};for(const [key,value] of d.entries()){if(/^q[1-8]$/.test(key))answer[key]=Number(value)}
   if(Object.keys(answer).length!==8)throw Error("به همه هشت سؤال پاسخ دهید.");
