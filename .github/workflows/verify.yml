@@ -16,3 +16,30 @@ jobs:
           node-version: '22'
       - name: Validate frontend source, privacy and public assets
         run: node scripts/verify.mjs
+  browser-smoke:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser test dependencies
+        run: |
+          npm install --no-audit --no-fund --no-save @playwright/test@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Launch static app locally
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 --directory site > /tmp/roshanfekran-test-server.log 2>&1 &
+          sleep 2
+      - name: Mobile, desktop and security UX smoke
+        run: npx playwright test --reporter=line
+      - name: Save screenshots and browser traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: roshanfekran-browser-qa
+          path: test-results/
+          retention-days: 7
