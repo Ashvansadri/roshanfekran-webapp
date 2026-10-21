@@ -150,7 +150,7 @@ function route(parts){
  return workspace();
 }
 async function submit(e){
- const f=e.target;if((!f.id||!f.id.startsWith("rf-"))&&!f.classList.contains("rf-mission-submit"))return;e.preventDefault();if(busy)return;busy=true;error="";notice="";
+ const f=e.target;if(!["rf-login","rf-activate","rf-profile-save","rf-work-save","rf-avatar-upload","rf-quiz","rf-campaign-launch"].includes(f.id)&&!f.classList.contains("rf-mission-submit"))return;e.preventDefault();if(busy)return;busy=true;error="";notice="";
  try{
  const d=new FormData(f);
  if(f.id==="rf-login"){
