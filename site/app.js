@@ -37,7 +37,7 @@ function home(){
   '<section class="shell hero"><div><div class="eyebrow">آموزشگاه آزاد فنی و حرفه‌ای روشنفکران</div><h1>آینده را فقط <span class="gradient-text">تماشا نکن.</span><br>آن را بساز.</h1><p>از هوش مصنوعی تا بازارهای مالی؛ مهارت را با پروژه‌های واقعی، همراهی مدرس و مسیری روشن از آموزش تا ارائه نمونه‌کار یاد بگیر.</p>'+
   '<div class="actions"><a href="#/courses" class="btn btn-primary">مشاهده دوره‌های ثبت‌نام باز <span>↙</span></a><a href="#/about" class="btn btn-outline">آشنایی با روشنفکران ↗</a></div>'+
   '<div class="micro"><span>یادگیری پروژه‌محور</span><span>مسیر رشد شخصی</span><span>اعتبارسنجی مهارت‌ها</span></div></div>'+
-  '<div class="stage" role="img" aria-label="کره انتزاعی سه‌بعدی فیروزه‌ای نماد فناوری و رشد"><div class="orbit"></div><div class="orb"></div><div class="stage-chip chip-1"><b>AI</b> آینده هوشمند</div><div class="stage-chip chip-2"><b>FOREX</b> تحلیل مسئولانه</div><div class="stage-chip chip-3"><b>WEB3</b> سواد دارایی دیجیتال</div></div></section>'+
+  '<div class="stage" role="img" aria-label="کره تعاملی با نورپردازی متالیک، نماد یادگیری فناوری"><canvas id="rf-3d-canvas" class="rf-webgl" aria-hidden="true"></canvas><div class="orbit"></div><div class="orb"></div><div class="stage-chip chip-1"><b>AI</b> آینده هوشمند</div><div class="stage-chip chip-2"><b>FOREX</b> تحلیل مسئولانه</div><div class="stage-chip chip-3"><b>WEB3</b> سواد دارایی دیجیتال</div></div></section>'+
   '<section class="section shell">'+head("OUR FOCUS","یادگیری که به عمل می‌رسد","مسیرهای آموزشی متناسب با مهارت‌های امروز و آینده")+
   '<div class="card-grid"><article class="card"><div class="card-icon">✳</div><h3>هوش مصنوعی کاربردی</h3><p>از آشنایی و پرامپت‌نویسی تا تولید محتوای حرفه‌ای، اتوماسیون و ساخت ایجنت.</p><div class="card-foot"><span>یادگیری با تمرین</span><a class="thin-link" href="#/courses">مشاهده دوره‌ها ←</a></div></article>'+
   '<article class="card"><div class="card-icon">₿</div><h3>ارز دیجیتال و وب۳</h3><p>مفاهیم بلاکچین، امنیت کیف پول و تحلیل فرصت و ریسک بدون وعده سود.</p><div class="card-foot"><span>دانش همراه با مدیریت ریسک</span><a class="thin-link" href="#/courses">مشاهده دوره‌ها ←</a></div></article>'+
@@ -105,6 +105,7 @@ function render(){
  else if(parts[0]==="about")html=about();
  else html=notfound();
  root.innerHTML=html;
+ window.RFSCENE?.mount?.();
  document.querySelectorAll("#mainNav a").forEach(a=>a.classList.toggle("active",a.getAttribute("href")==="#/"+route));
  document.title=(parts.length?({courses:"دوره‌های روشنفکران",course:"ثبت‌نام دوره",updates:"اخبار روشنفکران",portals:"پورتال‌ها",about:"درباره ما"}[parts[0]]||"روشنفکران")+" | ":"")+"آموزشگاه روشنفکران";
 }
