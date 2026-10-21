@@ -45,7 +45,15 @@ async function loadStudentExtras(){
 }
 async function loadStaffExtras(){
  const names=role.kind==="teacher"?["academy_courses","academy_assignments"]:["academy_courses","academy_students","academy_enrollments","academy_registration_requests"];
- const requests=names.map(n=>proxy("/rest/v1/"+n+"?select=*&limit=50"));
+ // Fetch only fields used by this view; never request national ID, contact, finance or private notes.
+ const projections={
+  academy_courses:"id,title,status",
+  academy_assignments:"id,title,instructions,published,course_id",
+  academy_students:"id,full_name,user_id,archived_at,status",
+  academy_enrollments:"id,student_id,course_id,status",
+  academy_registration_requests:"id,full_name,course_id,status"
+ };
+ const requests=names.map(n=>proxy("/rest/v1/"+n+"?select="+projections[n]+"&limit=50"));
  const res=await Promise.allSettled(requests);
  staffData={};names.forEach((n,i)=>staffData[n]=res[i].status==="fulfilled"&&Array.isArray(res[i].value)?res[i].value:[]);
 }
@@ -126,7 +134,7 @@ function staffPage(){
  '<div class="rf-stats rf-inline-stats"><div>'+badge("در انتظار بررسی")+'<strong>'+num(pending.length)+'</strong></div><div>'+badge("تأییدشده در این نمای محدود")+'<strong>'+num(approved.length)+'</strong></div></div>'+
  '<div class="rf-admin-list">'+(registrations.length?registrations.slice(0,9).map(x=>'<div class="rf-req-row"><span><b>'+esc(x.full_name||"متقاضی")+'</b><small>'+esc(x.course_id||"")+'</small></span>'+badge(({pending:"منتظر",contacted:"در حال پیگیری",awaiting_payment:"منتظر پرداخت",approved:"تأییدشده",rejected:"ردشده"})[String(x.status||"")]||String(x.status||"ثبت‌شده"))+'</div>').join(""):'<div class="rf-empty">درخواستی با سطح دسترسی فعلی مشاهده نشد.</div>')+'</div></section>':
  '<section class="rf-panel rf-manage-extras"><div class="rf-panel-title"><span>◎</span><h3>تکالیف کلاس‌ها</h3></div><p>مرور تکالیف و فعالیت‌های تعریف‌شده در کلاس‌های مجاز شما.</p>'+
- '<div class="rf-admin-list">'+(assignments.length?assignments.slice(0,12).map(x=>'<div class="rf-req-row"><span><b>'+esc(x.title||"تکلیف کلاسی")+'</b><small>'+esc(x.description||"").slice(0,150)+'</small></span>'+badge(x.status||"تعریف‌شده")+'</div>').join(""):'<div class="rf-empty">تکلیفی برای این حساب نمایش داده نمی‌شود.</div>')+'</div></section>';
+ '<div class="rf-admin-list">'+(assignments.length?assignments.slice(0,12).map(x=>'<div class="rf-req-row"><span><b>'+esc(x.title||"تکلیف کلاسی")+'</b><small>'+esc(x.instructions||"").slice(0,150)+'</small></span>'+badge(x.published?"منتشرشده":"پیش‌نویس")+'</div>').join(""):'<div class="rf-empty">تکلیفی برای این حساب نمایش داده نمی‌شود.</div>')+'</div></section>';
  const options=courses.filter(c=>c.status==="active").map(c=>'<option value="'+esc(c.id)+'">'+esc(c.title)+'</option>').join("");
 
  const studentsOpt=students.filter(x=>!x.user_id&&x.archived_at==null).map(x=>'<option value="'+esc(x.id)+'">'+esc(x.full_name)+'</option>').join("");
@@ -159,7 +167,7 @@ function workspace(){
  return staffPage();
 }
 function route(parts){
- if(!["access","activate","workspace","student","family","staff","missions"].includes(parts[0]))return null;
+ if(!["access","activate","workspace","student","family","staff","missions","portal","parent","teacher","manage"].includes(parts[0]))return null;
  if(parts[0]==="access")return loginPage();
  if(parts[0]==="activate")return activate();
  if(parts[0]==="missions"){if(session&&!role&&!loading)loadWorkspace();return loading?loadingHTML():missionsPage()}

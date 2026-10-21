@@ -71,3 +71,15 @@ test('unauthenticated workspace cannot show private dashboard',async({browser})=
  await expect(page.locator('#app')).not.toContainText('پروفایل هنرجو');
  await page.close();
 });
+
+test('role-specific route aliases require authentication',async({browser})=>{
+ const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true});
+ await apiMock(page);
+ for(const route of ['portal','parent','teacher','manage']){
+  await page.goto('/#/'+route,{waitUntil:'domcontentloaded'});
+  await expect(page.locator('#rf-login')).toBeVisible();
+  await expect(page.locator('#app')).not.toContainText('درخواست‌های ثبت‌نام اخیر');
+  await expect(page.locator('#app')).not.toContainText('پیشرفت فرزند');
+ }
+ await page.close();
+});

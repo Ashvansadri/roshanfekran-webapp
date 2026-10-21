@@ -30,6 +30,13 @@ assert(!/localStorage\s*\.\s*setItem\s*\(\s*["']rf_/i.test(js),"Persistent sessi
 for(const rpc of ["academy_student_journey_snapshot","academy_parent_journey_snapshot","academy_student_resume_snapshot","academy_submit_mission","academy_set_showcase_share"])
  assert(js.includes(rpc),"Missing existing backend integration: "+rpc);
 assert(js.includes("submit_public_registration"),"Registration endpoint missing");
+const portal=readFileSync(join(site,"portal.js"),"utf8");
+assert(!portal.includes('"?select=*&limit=50"'),"Staff portal must not fetch all personal fields");
+for(const projection of ["id,full_name,user_id,archived_at,status","id,full_name,course_id,status","id,title,instructions,published,course_id"])
+ assert(portal.includes(projection),"Missing least-privilege staff projection: "+projection);
+for(const route of ['"portal"','"parent"','"teacher"','"manage"'])
+ assert(portal.includes(route),"Missing protected route alias: "+route);
+assert(/href="#\/access">ورود\s*</.test(html),"Public login button must say ورود");
 const manifest=JSON.parse(readFileSync(join(site,"manifest.webmanifest"),"utf8"));
 assert.equal(manifest.lang,"fa");assert.equal(manifest.display,"standalone");
 console.log("PASS: 6 scripts, 6 CSS assets, referenced files, Persian typography, secure role-aware calls and PWA metadata.");
