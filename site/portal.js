@@ -6,7 +6,7 @@ const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&
 const safeURL=v=>{try{let u=new URL(String(v));return u.protocol==="https:"?u.href:"#"}catch{return "#"}};
 const date=v=>{try{return new Intl.DateTimeFormat("fa-IR-u-ca-persian",{dateStyle:"medium"}).format(new Date(v))}catch{return "—"}};
 const num=v=>new Intl.NumberFormat("fa-IR").format(Number(v||0));
-let session=null,role=null,journey=null,parent=null,familyTip=null,resume=null,works=[],missions=[],campaigns=[],staffData=null,profileFormOpen=false,workFormOpen=false,stage=0,busy=false,error="",notice="",loading=false;
+let session=null,role=null,journey=null,parent=null,familyTip=null,resume=null,works=[],missions=[],campaigns=[],staffData=null,profileFormOpen=false,workFormOpen=false,stage=0,busy=false,error="",notice="",loading=false,quizQuestions=null,quizLoading=false;
 try{const saved=sessionStorage.getItem("rf_safe_session_v1");if(saved)session=JSON.parse(saved)}catch{sessionStorage.removeItem("rf_safe_session_v1")}
 const token=()=>session?.access_token||"";
 const setSession=x=>{session=x;sessionStorage.setItem("rf_safe_session_v1",JSON.stringify({access_token:x.access_token,refresh_token:x.refresh_token,expires_at:Date.now()+Number(x.expires_in||3600)*1000}))};
@@ -88,7 +88,13 @@ function studentPage(){
  }else if(stageIndex===2){
  right='<div class="rf-panel"><h3>مرحله ۳ · گالری پروژه‌ها</h3><p>سه نمونه‌کار ثبت کنید؛ برای تکمیل این مرحله حداقل یک نمونه باید توسط آموزشگاه تأیید شده باشد.</p><div class="rf-works">'+(works.length?works.map(w=>'<article class="rf-work"><b>'+esc(w.title)+'</b><span>'+badge(w.review_status==="approved"?"تأیید شده":w.review_status==="rejected"?"نیازمند اصلاح":"در انتظار تأیید")+'</span><p>'+esc(w.description||"")+'</p>'+(safeURL(w.project_url)!=="#"?'<a href="'+esc(safeURL(w.project_url))+'" target="_blank" rel="noopener noreferrer">مشاهده پروژه ↗</a>':"")+'</article>').join(""):'<div class="rf-empty">هنوز نمونه‌کاری ثبت نکرده‌اید.</div>')+'</div><form id="rf-work-save" class="rf-form"><label class="portal-field"><span>عنوان پروژه</span><input name="title" maxlength="120" minlength="3" required/></label><label class="portal-field"><span>نوع خروجی</span><select name="category"><option value="agent">ایجنت و اتوماسیون</option><option value="video">ویدیو</option><option value="motion">موشن گرافیک</option><option value="website">وب‌سایت</option><option value="research">پژوهش</option><option value="image">تصویر</option><option value="other">سایر</option></select></label><label class="portal-field"><span>توضیح کوتاه</span><textarea name="description" maxlength="1200"></textarea></label><label class="portal-field"><span>لینک HTTPS پروژه (اختیاری)</span><input name="url" type="url" placeholder="https://..." /></label><button class="btn btn-primary">ارسال برای بررسی آموزشگاه ←</button></form></div>';
  }else if(stageIndex===3){
- right='<div class="rf-panel"><h3>مرحله ۴ · آزمون مهارت</h3><p>پس از تأیید حداقل یک نمونه‌کار، آزمون مهارت فعال می‌شود. در هر ۲۴ ساعت حداکثر سه تلاش وجود دارد.</p><div class="rf-meters"><span>بهترین نمره</span><b>'+num(journey.quiz_best_score||0)+'</b></div><a href="'+OLD+'/career" class="btn btn-outline" target="_blank" rel="noopener noreferrer">رفتن به آزمون کامل سامانه ↗</a></div>';
+ if(quizQuestions===null&&!quizLoading){
+  quizLoading=true;
+  rpc("academy_showcase_quiz_questions").then(data=>{quizQuestions=Array.isArray(data)?data:[]}).catch(e=>{quizQuestions=[];error=e.message}).finally(()=>{quizLoading=false;refresh()});
+ }
+ const canTake=(journey.showcase_works_approved||0)>0;
+ right='<div class="rf-panel"><h3>مرحله ۴ · آزمون مهارت</h3><p>پس از تأیید حداقل یک نمونه‌کار، به هشت سؤال واقعی آزمون پاسخ دهید. سقف تلاش: ۳ بار در ۲۴ ساعت.</p><div class="rf-meters"><span>بهترین نمره</span><b>'+num(journey.quiz_best_score||0)+'</b></div>'+
+ (canTake?(quizQuestions===null?'<div class="rf-empty">در حال آماده‌سازی سؤال‌های آزمون...</div>':'<form id="rf-quiz" class="rf-form">'+quizQuestions.map(q=>'<fieldset class="rf-question"><legend>'+esc(q.q)+'</legend>'+((Array.isArray(q.options)?q.options:[]).map((o,i)=>'<label class="rf-choice"><input type="radio" name="'+esc(q.id)+'" value="'+i+'" required/><span>'+esc(o)+'</span></label>').join(""))+'</fieldset>').join("")+'<button class="btn btn-primary" type="submit">ثبت پاسخ و مشاهده نتیجه ←</button></form>'):'<div class="rf-empty">ابتدا حداقل یک نمونه‌کار باید تأیید شود تا آزمون برایتان باز شود.</div>')+'</div>';
  }else{
  right='<div class="rf-panel"><h3>مرحله ۵ · رزومه و اعتبار</h3><p>رزومه صرفاً شامل موارد واقعی ثبت‌شده و تأییدشده است. انتشار عمومی اختیاری است و برای افراد زیر ۱۸ سال نیازمند رضایت سرپرست است.</p><div class="rf-action-row"><button type="button" class="btn btn-primary" data-rf="resume">ساخت و چاپ رزومه PDF</button><button type="button" class="portal-secondary" data-rf="share-on">فعال‌کردن لینک با رضایت صریح</button><button type="button" class="portal-secondary" data-rf="share-off">لغو دسترسی عمومی</button></div><div class="rf-meters"><span>انتشار عمومی</span><b>'+(journey.public_sharing_enabled?"فعال":"خاموش")+'</b></div>'+(journey.requires_guardian_consent&&!journey.guardian_consent_granted?'<div class="portal-alert">برای انتشار، رضایت سرپرست دارای مجوز الزامی است.</div>':"")+'<p class="rf-caption">پیش‌نمایش و نسخه PDF خصوصی است؛ برای لینک عمومی باید کنترل امنیت و رضایت‌ها برقرار باشد.</p></div>';
  }
@@ -100,7 +106,13 @@ function studentPage(){
 }
 function missionsPage(){
  if(role?.kind!=="student")return '<main class="shell rf-panel-container"><div class="rf-empty">مشاهده مأموریت‌ها ویژه هنرجو است. <a href="#/access">ورود</a></div></main>';
- return '<main class="shell rf-dashboard">'+heading("MISSION LAB","مأموریت‌های ۹۰روزه","۲۴ مأموریت پروژه‌محور؛ برای ارسال باید کمپین فعال و ثبت‌نام تأییدشده داشته باشید.")+toast()+'<div class="rf-mission-grid">'+(missions.length?missions.map(m=>'<article class="rf-mission"><div class="rf-mission-top"><span>روز '+num(m.release_day)+'</span><span>فاز '+num(m.phase)+'</span></div><h3>'+esc(m.title)+'</h3><p>'+esc(m.objective)+'</p><small>'+esc(m.deliverable||"")+'</small></article>').join(""):'<div class="rf-empty">دسترسی مأموریت‌ها در این حساب هنوز فعال نشده است.</div>')+'</div><p class="rf-caption">برای ارسال پروژه روی سامانه اصلیِ مأموریت‌ها مراجعه کنید؛ این بخش فعلاً فهرست مراحل و وضعیت را نشان می‌دهد.</p><a class="btn btn-outline" target="_blank" rel="noopener noreferrer" href="'+OLD+'/missions">ارسال پروژه در پورتال فعلی ↗</a></main>';
+ const active=campaigns.filter(c=>c.active);
+ const options=active.map(c=>'<option value="'+esc(c.id)+'">مسیر فعال از '+esc(date(c.start_date))+'</option>').join("");
+ return '<main class="shell rf-dashboard">'+heading("MISSION LAB","مأموریت‌های ۹۰روزه","۲۴ مأموریت در سه فاز؛ پروژه‌ها در زمان مشخص باز می‌شوند و استاد یا مدیر آن‌ها را بررسی می‌کند.")+toast()+
+ '<div class="rf-stats"><div>'+badge("مأموریت‌ها")+'<strong>'+num(missions.length)+'</strong></div><div>'+badge("کمپین‌های فعال")+'<strong>'+num(active.length)+'</strong></div><div>'+badge("مأموریت‌های پذیرفته‌شده")+'<strong>'+num(journey?.missions_approved||0)+'</strong></div></div>'+
+ '<div class="rf-mission-grid">'+(missions.length?missions.map(m=>'<article class="rf-mission"><div class="rf-mission-top"><span>روز '+num(m.release_day)+'</span><span>فاز '+num(m.phase)+'</span></div><h3>'+esc(m.title)+'</h3><p>'+esc(m.objective)+'</p><small>'+esc(m.deliverable||"")+'</small>'+
+ (active.length?'<details class="rf-deliver"><summary>تحویل پروژه</summary><form class="rf-form rf-mission-submit"><input type="hidden" name="template_id" value="'+esc(m.id)+'"/><label class="portal-field"><span>کمپین مربوط</span><select name="campaign_id">'+options+'</select></label><label class="portal-field"><span>شرح اجرای پروژه</span><textarea name="submission_text" minlength="10" maxlength="12000" placeholder="توضیح مراحل انجام پروژه"></textarea></label><label class="portal-field"><span>لینک اثر (HTTPS، اختیاری)</span><input type="url" name="submission_url" placeholder="https://..."/></label><button class="btn btn-primary" type="submit">ارسال به مدرس ←</button></form></details>':'<div class="rf-caption">کمپین این دوره هنوز فعال نشده است.</div>')+'</article>').join(""):'<div class="rf-empty">دسترسی مأموریت‌ها در این حساب هنوز فعال نیست.</div>')+'</div>'+
+ '<p class="rf-caption">ارسال تنها پس از باز شدن روز مأموریت و احراز ثبت‌نام معتبر پذیرفته می‌شود.</p></main>';
 }
 function staffPage(){
  const title=role?.kind==="teacher"?"پنل مدرس":"مرکز کنترل مدیریت";
@@ -134,7 +146,7 @@ function route(parts){
  return workspace();
 }
 async function submit(e){
- const f=e.target;if(!f.id||!f.id.startsWith("rf-"))return;e.preventDefault();if(busy)return;busy=true;error="";notice="";
+ const f=e.target;if((!f.id||!f.id.startsWith("rf-"))&&!f.classList.contains("rf-mission-submit"))return;e.preventDefault();if(busy)return;busy=true;error="";notice="";
  try{
  const d=new FormData(f);
  if(f.id==="rf-login"){
@@ -157,6 +169,18 @@ async function submit(e){
   if(title.length<3||url&&safeURL(url)==="#")throw Error("عنوان یا لینک پروژه معتبر نیست.");
   await rpc("academy_save_showcase_work",{p_work_id:null,p_category:d.get("category"),p_title:title,p_description:d.get("description")||"",p_project_url:url});
   journey=await rpc("academy_student_journey_snapshot");await loadStudentExtras();showNotice("نمونه‌کار برای بررسی آموزشگاه ثبت شد.");
+ }else if(f.id==="rf-quiz"){
+  const answer={};for(const [key,value] of d.entries()){if(/^q[1-8]$/.test(key))answer[key]=Number(value)}
+  if(Object.keys(answer).length!==8)throw Error("به همه هشت سؤال پاسخ دهید.");
+  const result=await rpc("academy_grade_showcase_quiz",{p_answers:answer});
+  journey=await rpc("academy_student_journey_snapshot");
+  showNotice("نمره شما: "+num(result.score)+" از ۱۰۰ — "+(result.passed?"آزمون با موفقیت گذرانده شد.":"برای تلاش بعدی بیشتر تمرین کنید."));
+ }else if(f.classList.contains("rf-mission-submit")){
+  const evidence=String(d.get("submission_text")||"").trim(),url=String(d.get("submission_url")||"").trim();
+  if(evidence.length<10&&url.length<10)throw Error("شرح اجرا یا لینک پروژه باید دست‌کم ۱۰ حرف داشته باشد.");
+  if(url&&safeURL(url)==="#")throw Error("لینک پروژه باید با HTTPS شروع شود.");
+  await rpc("academy_submit_mission",{p_campaign_id:d.get("campaign_id"),p_template_id:d.get("template_id"),p_submission_text:evidence,p_submission_url:url});
+  journey=await rpc("academy_student_journey_snapshot");showNotice("پروژه برای بررسی مدیریت ثبت شد.");
  }else if(f.id==="rf-avatar-upload"){
   const file=d.get("avatar");if(!(file instanceof File)||!["image/png","image/jpeg","image/webp"].includes(file.type)||file.size>1572864)throw Error("تصویر معتبر و کمتر از ۱٫۵ مگابایت لازم است");
   const b64=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result||"").split(",")[1]);reader.onerror=reject;reader.readAsDataURL(file)});
@@ -184,7 +208,7 @@ async function click(e){
    const enable=action==="share-on";if(enable&&!confirm("با انتشار اختیاری رزومه تأییدشده به‌صورت عمومی موافق هستید؟ لینک ممکن است تا زمان لغو قابل مشاهده باشد."))return;
    const res=await rpc("academy_set_showcase_share",{p_enable:enable,p_rotate:enable});
    journey=await rpc("academy_student_journey_snapshot");
-   if(enable&&res?.token){let url=OLD+"/showcase/"+encodeURIComponent(res.token);try{await navigator.clipboard.writeText(url);showNotice("لینک رزومه فعال و کپی شد: "+url)}catch{showNotice("لینک رزومه: "+url)}}else if(enable)showNotice("درخواست انتشار ثبت شد اما لینک معتبر دریافت نشد؛ با مدیریت تماس بگیرید.");else showNotice("انتشار عمومی لغو شد و لینک قبلی دیگر نباید معتبر باشد.");
+   if(enable&&res?.token){let url=location.origin+"/#/showcase/"+encodeURIComponent(res.token);try{await navigator.clipboard.writeText(url);showNotice("لینک رزومه فعال و کپی شد: "+url)}catch{showNotice("لینک رزومه: "+url)}}else if(enable)showNotice("درخواست انتشار ثبت شد اما لینک معتبر دریافت نشد؛ با مدیریت تماس بگیرید.");else showNotice("انتشار عمومی لغو شد و لینک قبلی دیگر نباید معتبر باشد.");
  }
  }catch(err){showError(err)}finally{busy=false;refresh()}
 }

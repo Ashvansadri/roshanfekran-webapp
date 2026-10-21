@@ -91,8 +91,10 @@ function render(){
  const route=(location.hash||"#/").replace(/^#\/?/,"").split("?")[0];
  const parts=route.split("/").filter(Boolean);
  let html="";
- const privateRoute=window.RFPORTAL?.route?.(parts);
- if(privateRoute!==null&&privateRoute!==undefined)html=privateRoute;
+ const publicRoute=window.RFPUBLIC?.route?.(parts);
+ const privateRoute=publicRoute===null?window.RFPORTAL?.route?.(parts):null;
+ if(publicRoute!==null&&publicRoute!==undefined)html=publicRoute;
+ else if(privateRoute!==null&&privateRoute!==undefined)html=privateRoute;
  else if(!parts.length)html=home();
  else if(parts[0]==="courses")html=courses();
  else if(parts[0]==="course")html=course(decodeURIComponent(parts[1]||""));
