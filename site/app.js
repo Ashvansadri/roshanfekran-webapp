@@ -64,7 +64,7 @@ function course(slug){
  if(found.error)return '<main class="shell section"><div class="error">'+esc(found.error)+'</div><a class="btn btn-outline" href="#/courses">بازگشت به دوره‌ها</a></main>';
  const d=found.course||{}, l=found.link||{},p=found.pricing||{};
  const full=Number(p.full_amount||0),install=Number(p.installment_total||0);
- const oldUrl=OLD+"/register/"+encodeURIComponent(slug);
+ const oldUrl="#/enroll/"+encodeURIComponent(slug);
  return '<main class="shell"><section class="page-hero"><a class="thin-link" href="#/courses">← همه دوره‌ها</a><h1>'+esc(d.title||"دوره آموزشی")+'</h1><p>دوره '+esc(d.code||"")+' · مدرس: '+esc(d.teacher_name||"در حال تعیین")+'</p></section>'+
  '<section class="section" style="padding-top:0"><div class="reg-grid"><div class="card"><span class="kicker">اطلاعات ثبت‌نام</span><h3>جزئیات دوره</h3><div class="qa-list">'+
  '<details open><summary>زمان برگزاری</summary><p>شروع: '+esc(date(d.start_date))+'<br>پایان: '+esc(date(d.end_date))+'<br>'+esc(d.schedule_note||"برنامه دقیق توسط آموزشگاه اعلام می‌شود.")+'</p></details>'+
@@ -78,12 +78,12 @@ function course(slug){
 function updates(){return '<main class="shell"><section class="page-hero"><span class="kicker">NEWS & KNOWLEDGE</span><h1>اخبار و <span class="gradient-text">نکته‌های روز</span></h1><p>تازه‌های فناوری، هوش مصنوعی و بازارهای مالی بر اساس مطالب منتشرشده در سامانه.</p></section><section class="section" style="padding-top:0">'+sectionNews(18)+'</section><section class="section">'+dailyTeaser()+'</section></main>'}
 function portals(){
  const list=[
- {name:"هنرجویان",icon:"◈",url:OLD+"/portal",desc:"ورود و پیگیری پرونده، پروژه‌ها، رزومه، تکالیف و دوره‌های اختصاصی."},
- {name:"خانواده‌ها",icon:"◎",url:OLD+"/parent",desc:"مشاهده اطلاعات مجاز فرزند، برنامه کلاس، پیشرفت تحصیلی و آموزش روزانه."},
- {name:"مدرسان",icon:"✳",url:OLD+"/teacher",desc:"کلاس‌ها، تکالیف، ارزیابی، حضور و غیاب و مهارت‌های هنرجویان."}
+ {name:"هنرجویان",icon:"◈",url:"#/access",desc:"مراحل رشد، نمونه‌کار، آزمون واقعی، مأموریت‌ها و رزومه آموزشی."},
+ {name:"خانواده‌ها",icon:"◎",url:"#/access",desc:"پیشرفت فرزند دارای مجوز، رضایت آگاهانه و ۳۰ آموزش روزانه."},
+ {name:"مدرسان و مدیریت",icon:"✳",url:"#/access",desc:"ورود با نقش تخصصی و ادامه مدیریت کلاس‌ها و دوره‌ها."}
  ];
- return '<main class="shell"><section class="page-hero"><span class="kicker">PRIVATE PORTALS</span><h1>هر نقش، <span class="gradient-text">فضای خودش</span></h1><p>اطلاعات خصوصی پشت ورود معتبر قرار دارند؛ در نسخه آزمایشی، پورتال عملیاتی هنوز روی سایت Floot باز می‌شود تا داده‌های قبلی محفوظ بمانند.</p></section><section class="section" style="padding-top:0"><div class="portal-links">'+list.map(x=>'<a class="portal-tile" href="'+esc(x.url)+'" target="_blank" rel="noopener noreferrer"><span class="card-icon">'+x.icon+'</span><b>'+esc(x.name)+'</b><p>'+esc(x.desc)+'</p><strong>ورود امن به سامانه فعلی ↗</strong></a>').join("")+'</div>'+
- '<div class="notice" style="margin-top:30px">انتقال کامل ورود و پورتال‌ها به دامنه جدید هنوز در حال توسعه و آزمون است؛ حساب جدید یا دیتابیس موازی ایجاد نمی‌شود.</div></section></main>';
+ return '<main class="shell"><section class="page-hero"><span class="kicker">PRIVATE PORTALS</span><h1>هر نقش، <span class="gradient-text">فضای خودش</span></h1><p>اطلاعات خصوصی فقط پس از احراز هویت و بررسی نقش در سرور نمایش داده می‌شوند؛ سوابق قبلی در دیتابیس اصلی باقی می‌مانند.</p></section><section class="section" style="padding-top:0"><div class="portal-links">'+list.map(x=>'<a class="portal-tile" href="'+esc(x.url)+'"><span class="card-icon">'+x.icon+'</span><b>'+esc(x.name)+'</b><p>'+esc(x.desc)+'</p><strong>ورود امن و تعیین نقش ←</strong></a>').join("")+'</div>'+
+ '<div class="notice" style="margin-top:30px">با همان حساب آموزشگاه وارد شوید. برخی گردش‌کارهای تخصصی در سامانه مدیریتی فعلی تکمیل می‌شوند؛ حساب جدید یا دیتابیس موازی ساخته نمی‌شود.</div></section></main>';
 }
 function about(){return '<main class="shell"><section class="page-hero"><span class="kicker">ABOUT US</span><h1>آموزشگاه <span class="gradient-text">روشنفکران</span></h1><p>آموزش کاربردی برای رشد واقعی مهارت در اقلید، همراه با تمرین و پروژه‌های قابل ارائه.</p></section><section class="section" style="padding-top:0"><div class="panels"><article class="card"><span class="card-icon">✧</span><h3>آموزش برای ساختن</h3><p>تلفیق فناوری و آموزش حضوری، با تمرکز بر استقلال هنرجو و استفاده مسئولانه از ابزارهای جدید.</p><a class="thin-link" href="#/courses">دوره‌های فعال ←</a></article><article class="card"><span class="card-icon">⌖</span><h3>ارتباط و آدرس</h3><p>اقلید، خیابان امام، روبروی بانک ملت، طبقه فوقانی بانک توسعه تعاون</p><a href="tel:09164880996" class="thin-link">۰۹۱۶۴۸۸۰۹۹۶</a><p></p><a href="tel:07144520283" class="thin-link">۰۷۱۴۴۵۲۰۲۸۳</a></article></div></section></main>'}
 function notfound(){return '<main class="shell section narrow"><div class="empty"><h2>این صفحه پیدا نشد</h2><a class="btn btn-primary" href="#/">بازگشت به خانه</a></div></main>'}
