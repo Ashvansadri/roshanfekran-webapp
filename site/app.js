@@ -91,7 +91,9 @@ function render(){
  const route=(location.hash||"#/").replace(/^#\/?/,"").split("?")[0];
  const parts=route.split("/").filter(Boolean);
  let html="";
- if(!parts.length)html=home();
+ const privateRoute=window.RFPORTAL?.route?.(parts);
+ if(privateRoute!==null&&privateRoute!==undefined)html=privateRoute;
+ else if(!parts.length)html=home();
  else if(parts[0]==="courses")html=courses();
  else if(parts[0]==="course")html=course(decodeURIComponent(parts[1]||""));
  else if(parts[0]==="updates")html=updates();
@@ -127,5 +129,5 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"){menu.classList.remo
 helperBtn.addEventListener("click",()=>{helper.hidden=!helper.hidden;helperBtn.setAttribute("aria-expanded",String(!helper.hidden));});
 document.getElementById("helperClose").addEventListener("click",()=>{helper.hidden=true;helperBtn.setAttribute("aria-expanded","false")});
 helper.addEventListener("click",e=>{if(e.target.closest("a")){helper.hidden=true;helperBtn.setAttribute("aria-expanded","false")}});
-render();load();
+window.RFCORE={render};render();load();
 })();
