@@ -72,7 +72,7 @@ function course(slug){
  '<details><summary>شهریه و اقساط</summary><p>شهریه نقدی: '+money(full)+(l.installment_enabled?'<br>کل شهریه اقساطی: '+money(install)+'<br>حداکثر اقساط: '+number(l.installment_max_count)+' قسط':'<br>اقساط برای این دوره فعال نیست.')+'</p></details></div></div>'+
  '<aside class="card"><span class="pill">ثبت‌نام عمومی فعال</span><h3>شروع مسیر یادگیری</h3><p>شهریه پایه دوره</p><div class="reg-price">'+money(full)+'</div>'+
  '<p>ثبت‌نام نهایی فعلاً در سامانه اصلی روشنفکران انجام می‌شود تا رسیدهای پرداخت و پرونده‌ها در یک مسیر امن باقی بمانند.</p>'+
- '<a class="btn btn-primary" href="'+esc(oldUrl)+'" target="_blank" rel="noopener noreferrer">ثبت‌نام در سامانه فعلی ↗</a><div style="height:14px"></div><a class="btn btn-outline" href="tel:09164880996">پرسش از مشاور ↗</a>'+
+ '<a class="btn btn-primary" href="#/enroll/'+encodeURIComponent(slug)+'">ارسال درخواست ثبت‌نام ←</a><div style="height:14px"></div><a class="btn btn-outline" href="tel:09164880996">پرسش از مشاور ↗</a>'+
  '<p class="small" style="margin-top:20px">این صفحه نسخه آزمایشی مستقل است؛ تا تکمیل آزمایش، درگاه پرداخت و ثبت‌نام کاربران را در آن تکرار نمی‌کنیم.</p></aside></div></section></main>';
 }
 function updates(){return '<main class="shell"><section class="page-hero"><span class="kicker">NEWS & KNOWLEDGE</span><h1>اخبار و <span class="gradient-text">نکته‌های روز</span></h1><p>تازه‌های فناوری، هوش مصنوعی و بازارهای مالی بر اساس مطالب منتشرشده در سامانه.</p></section><section class="section" style="padding-top:0">'+sectionNews(18)+'</section><section class="section">'+dailyTeaser()+'</section></main>'}
@@ -91,9 +91,11 @@ function render(){
  const route=(location.hash||"#/").replace(/^#\/?/,"").split("?")[0];
  const parts=route.split("/").filter(Boolean);
  let html="";
- const publicRoute=window.RFPUBLIC?.route?.(parts);
+ const enrollmentRoute=window.RFENROLL?.route?.(parts);
+ const publicRoute=enrollmentRoute===null?window.RFPUBLIC?.route?.(parts):null;
  const privateRoute=publicRoute===null?window.RFPORTAL?.route?.(parts):null;
- if(publicRoute!==null&&publicRoute!==undefined)html=publicRoute;
+ if(enrollmentRoute!==null&&enrollmentRoute!==undefined)html=enrollmentRoute;
+ else if(publicRoute!==null&&publicRoute!==undefined)html=publicRoute;
  else if(privateRoute!==null&&privateRoute!==undefined)html=privateRoute;
  else if(!parts.length)html=home();
  else if(parts[0]==="courses")html=courses();
