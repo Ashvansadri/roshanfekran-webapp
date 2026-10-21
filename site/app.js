@@ -32,12 +32,30 @@ function newsCard(n){
 function cardsEmpty(){return '<div class="empty">در حال حاضر دوره‌ای برای ثبت‌نام عمومی فعال نیست. فقط دوره‌هایی که مدیریت منتشر کرده باشد نمایش داده می‌شوند.</div>'}
 function sectionCourse(limit=99){const items=state.courses.slice(0,limit);if(state.loading)return '<div class="card-grid">'+Array.from({length:3},()=>'<div class="skeleton"></div>').join("")+'</div>';if(state.error)return '<div class="error" role="alert">'+esc(state.error)+'</div>';return items.length?'<div class="card-grid">'+items.map(courseCard).join("")+'</div>':cardsEmpty()}
 function sectionNews(limit=3){const rows=[...(state.news.ai||[]).map(x=>({...x,category:"هوش مصنوعی"})),...(state.news.markets||[]).map(x=>({...x,category:"بازارهای مالی"})),...(state.news.world||[]).map(x=>({...x,category:"جهان و فناوری"}))];if(state.loading)return '<div class="news-list"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>';return rows.length?'<div class="news-list">'+rows.slice(0,limit).map(newsCard).join("")+'</div>':'<div class="empty">هنوز خبر تأییدشده‌ای در سامانه ثبت نشده است؛ تیتر یا منبع ساختگی نمایش نمی‌دهیم.</div>'}
+
+function experientialSection(){
+ const steps=[
+  ['01','شروع هوشمند','کشف مسیر مناسب','مشاهده دوره‌های فعال، آشنایی با ابزارها و انتخاب هدف روشن برای یادگیری.'],
+  ['02','ساخت و تجربه','یادگیری با پروژه','تمرین‌های واقعی و مأموریت‌های مرحله‌ای به‌جای یادگیری صرفاً تئوری.'],
+  ['03','ارزیابی و رشد','بازخورد قابل اتکا','بازبینی مدرس، ارزیابی مهارت‌ها و پیشرفت مستند در پورتال اختصاصی.'],
+  ['04','هویت حرفه‌ای','ارائه مهارت','گالری نمونه‌کار و رزومه تأییدشده؛ انتشار فقط با اجازه صاحب پروفایل.']
+ ];
+ return '<section class="rf-journey-section shell" aria-labelledby="rf-journey-heading">'+
+  '<div class="rf-journey-top"><div><span class="rf-journey-eyebrow"><span class="rf-journey-dot"></span> THE ART OF LEARNING</span><h2 id="rf-journey-heading">اینجا یادگیری، <em>یک مسیر واقعی</em> است.</h2></div><p>زیبایی فناوری وقتی معنا پیدا می‌کند که به مهارت تبدیل شود. از نخستین تجربه تا نمونه‌کاری که می‌توان با افتخار ارائه کرد.</p></div>'+
+  '<div class="rf-journey-surface"><div class="rf-journey-pillar" aria-hidden="true"><div class="rf-pillar-ring"></div><div class="rf-pillar-core"><span>R</span><small>ROSHANFEKRAN</small></div><div class="rf-pillar-base"></div></div>'+
+  '<div class="rf-journey-interface"><div class="rf-journey-index"><span>ROADMAP / 2026</span><span>01 — 04</span></div>'+
+  '<div class="rf-journey-steps" role="group" aria-label="مراحل رشد آموزشی">'+steps.map((x,i)=>'<button type="button" class="rf-journey-step'+(i===0?' current':'')+'" aria-pressed="'+(i===0)+'" data-rf-journey="'+i+'"><span>'+x[0]+'</span><b>'+x[1]+'</b><span class="rf-journey-arrow">↗</span></button>').join('')+'</div>'+
+  '<div class="rf-journey-detail" id="rf-journey-detail" aria-live="polite"><span class="rf-journey-detail-label">مرحله ۰۱ / مسیر هنرجو</span><h3>کشف مسیر مناسب</h3><p>مشاهده دوره‌های فعال، آشنایی با ابزارها و انتخاب هدف روشن برای یادگیری.</p><a class="rf-journey-start" href="#/courses">شروع مسیر یادگیری <span>↗</span></a></div>'+
+  '</div></div><div class="rf-journey-foot"><span>◈ مهارت واقعی</span><span>◈ آموزش پروژه‌محور</span><span>◈ حریم خصوصی در اولویت</span></div></section>';
+}
+
 function home(){
  return '<main>'+
   '<section class="shell hero"><div><div class="eyebrow">آموزشگاه آزاد فنی و حرفه‌ای روشنفکران</div><h1>آینده را فقط <span class="gradient-text">تماشا نکن.</span><br>آن را بساز.</h1><p>از هوش مصنوعی تا بازارهای مالی؛ مهارت را با پروژه‌های واقعی، همراهی مدرس و مسیری روشن از آموزش تا ارائه نمونه‌کار یاد بگیر.</p>'+
   '<div class="actions"><a href="#/courses" class="btn btn-primary">مشاهده دوره‌های ثبت‌نام باز <span>↙</span></a><a href="#/about" class="btn btn-outline">آشنایی با روشنفکران ↗</a></div>'+
   '<div class="micro"><span>یادگیری پروژه‌محور</span><span>مسیر رشد شخصی</span><span>اعتبارسنجی مهارت‌ها</span></div></div>'+
   '<div class="stage" role="img" aria-label="کره تعاملی با نورپردازی متالیک، نماد یادگیری فناوری"><canvas id="rf-3d-canvas" class="rf-webgl" aria-hidden="true"></canvas><div class="orbit"></div><div class="orb"></div><div class="stage-chip chip-1"><b>AI</b> آینده هوشمند</div><div class="stage-chip chip-2"><b>FOREX</b> تحلیل مسئولانه</div><div class="stage-chip chip-3"><b>WEB3</b> سواد دارایی دیجیتال</div></div></section>'+
+  experientialSection()+
   '<section class="section shell">'+head("OUR FOCUS","یادگیری که به عمل می‌رسد","مسیرهای آموزشی متناسب با مهارت‌های امروز و آینده")+
   '<div class="card-grid"><article class="card"><div class="card-icon">✳</div><h3>هوش مصنوعی کاربردی</h3><p>از آشنایی و پرامپت‌نویسی تا تولید محتوای حرفه‌ای، اتوماسیون و ساخت ایجنت.</p><div class="card-foot"><span>یادگیری با تمرین</span><a class="thin-link" href="#/courses">مشاهده دوره‌ها ←</a></div></article>'+
   '<article class="card"><div class="card-icon">₿</div><h3>ارز دیجیتال و وب۳</h3><p>مفاهیم بلاکچین، امنیت کیف پول و تحلیل فرصت و ریسک بدون وعده سود.</p><div class="card-foot"><span>دانش همراه با مدیریت ریسک</span><a class="thin-link" href="#/courses">مشاهده دوره‌ها ←</a></div></article>'+
