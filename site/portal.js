@@ -119,11 +119,18 @@ function staffPage(){
  const courses=staffData?.academy_courses||[],students=staffData?.academy_students||[],enroll=staffData?.academy_enrollments||[];
  const canManage=role?.kind==="staff"&&["owner","manager"].includes(String(role?.role||""));
  const options=courses.filter(c=>c.status==="active").map(c=>'<option value="'+esc(c.id)+'">'+esc(c.title)+'</option>').join("");
+
+ const studentsOpt=students.filter(x=>!x.user_id&&x.archived_at==null).map(x=>'<option value="'+esc(x.id)+'">'+esc(x.full_name)+'</option>').join("");
+ const inviteBlock=canManage?'<section class="rf-panel rf-invites"><span class="rf-overline">SECURE INVITATIONS</span><h2>دعوت و فعال‌سازی حساب‌ها</h2><p>دعوت هر حساب با لینک اختصاصی امضاشده و مهلت‌دار صادر می‌شود. مدیریت نباید این لینک‌ها را عمومی منتشر کند.</p>'+
+ '<div class="rf-invite-grid"><form id="rf-invite-staff" class="rf-form"><h3>همکار و مدرس</h3><label class="portal-field"><span>نام همکار</span><input name="full_name" minlength="3" required/></label><label class="portal-field"><span>ایمیل</span><input name="email" type="email" required dir="ltr"/></label><label class="portal-field"><span>نقش</span><select name="staff_role"><option value="teacher">مدرس</option><option value="viewer">مشاهده‌گر</option><option value="registrar">مسئول ثبت‌نام</option><option value="finance">امور مالی</option><option value="manager">مدیر</option></select></label><button class="btn btn-primary">صدور دعوت امن</button></form>'+
+ '<form id="rf-invite-student" class="rf-form"><h3>فعال‌سازی هنرجو</h3><label class="portal-field"><span>پرونده بدون حساب</span><select name="student_id" required>'+studentsOpt+'</select></label><label class="portal-field"><span>ایمیل هنرجو</span><input type="email" name="email" dir="ltr" required/></label><button class="btn btn-outline" '+(studentsOpt?"":"disabled")+' type="submit">ایجاد لینک ورود</button></form>'+
+ '<form id="rf-invite-guardian" class="rf-form"><h3>دعوت خانواده</h3><label class="portal-field"><span>هنرجو</span><select name="student_id" required>'+students.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.full_name)+'</option>').join("")+'</select></label><label class="portal-field"><span>نام سرپرست</span><input name="full_name" required minlength="3"/></label><label class="portal-field"><span>ایمیل سرپرست</span><input name="email" type="email" dir="ltr" required/></label><label class="portal-field"><span>شماره همراه (اختیاری)</span><input name="mobile" inputmode="numeric" dir="ltr"/></label><button class="btn btn-outline">ساخت لینک با مجوز والد</button></form></div><p class="rf-caption">با ارسال دعوت، لینک به حافظه کلیپ‌بورد منتقل می‌شود؛ آن را فقط برای شخص مشخص‌شده ارسال کنید. هیچ رمز عبوری به‌جای او تنظیم نمی‌شود.</p></section>':"";
+
  return '<main class="shell rf-dashboard">'+heading("ACADEMY CONTROL",title,"دسترسی به اطلاعات تنها با نقش معتبر و سیاست دسترسی سرور انجام می‌شود.")+actions()+toast()+
  '<div class="rf-stats"><div>'+badge("دوره‌های قابل مشاهده")+'<strong>'+num(courses.length)+'</strong></div><div>'+badge("هنرجویان قابل مشاهده")+'<strong>'+num(students.length)+'</strong></div><div>'+badge("ثبت‌نام‌های قابل مشاهده")+'<strong>'+num(enroll.length)+'</strong></div></div>'+
  '<section class="rf-grid-two"><div class="rf-panel"><h3>دوره‌های آموزشگاه</h3><div class="rf-admin-list">'+(courses.length?courses.slice(0,20).map(c=>'<div><b>'+esc(c.title)+'</b>'+badge(c.status||"فعال")+'</div>').join(""):'<div class="rf-empty">هنوز دوره مرتبطی برای این حساب قابل مشاهده نیست.</div>')+'</div><div class="rf-action-row"><a class="btn btn-outline" href="'+OLD+'/manage" rel="noopener noreferrer" target="_blank">پنل عملیات و قراردادها ↗</a>'+(role?.kind==="teacher"?'<a class="btn btn-outline" href="'+OLD+'/teacher" target="_blank" rel="noopener noreferrer">کلاس‌های مدرس ↗</a>':"")+'</div><p class="rf-caption">گردش‌کار قراردادها، بیعانه‌ها و اطلاع‌رسانی همچنان در سامانه عملیاتی قبلی محفوظ است.</p></div>'+
  (canManage?'<div class="rf-panel"><div class="rf-panel-title"><span>✧</span><h3>مدیریت AI MISSION 90</h3></div><p>برای راه‌اندازی ۲۴ مأموریت پروژه‌ای در یک دوره، تاریخ شروع و وضعیت فعال بودن آن را مشخص کنید.</p><form class="rf-form" id="rf-campaign-launch"><label class="portal-field"><span>دوره</span><select name="course_id" required>'+options+'</select></label><label class="portal-field"><span>تاریخ شروع دوره (میلادی، ذخیره و نمایش اصلی شمسی)</span><input type="date" name="start_date" required/></label><label class="rf-check"><input type="checkbox" name="active" checked/> مأموریت‌های دوره فعال شوند.</label><button type="submit" class="btn btn-primary">ذخیره مسیر ۹۰روزه ←</button></form><p class="rf-caption">فعال‌سازی فقط توسط مدیر یا مالک پذیرفته می‌شود؛ هر ارسال در دیتابیس اصلی ثبت خواهد شد.</p></div>':
- '<div class="rf-panel"><div class="rf-panel-title"><span>◈</span><h3>فضای تخصصی مدرس</h3></div><p>کلاس‌ها، حضور و غیاب، تکالیف و بازخورد همچنان در پنل آموزشی فعلی در دسترس‌اند.</p><a class="btn btn-outline" href="'+OLD+'/teacher" rel="noopener noreferrer" target="_blank">مشاهده کلاس‌ها ↗</a></div>')+'</section></main>';
+ '<div class="rf-panel"><div class="rf-panel-title"><span>◈</span><h3>فضای تخصصی مدرس</h3></div><p>کلاس‌ها، حضور و غیاب، تکالیف و بازخورد همچنان در پنل آموزشی فعلی در دسترس‌اند.</p><a class="btn btn-outline" href="'+OLD+'/teacher" rel="noopener noreferrer" target="_blank">مشاهده کلاس‌ها ↗</a></div>')+'</section>'+inviteBlock+'</main>';
 }
 async function printResume(){
  const d=await rpc("academy_student_resume_snapshot",{p_include_contact:false});
@@ -149,8 +156,16 @@ function route(parts){
  if(parts[0]==="missions"){if(session&&!role&&!loading)loadWorkspace();return loading?loadingHTML():missionsPage()}
  return workspace();
 }
+async function inviteLink(path,kind,email){
+ const query=new URLSearchParams(String(path||"").split("?")[1]||"");
+ const code=query.get("code")||"";
+ if(!/^[a-f0-9]{64}$/.test(code))throw Error("کد دعوت امن صادر نشد.");
+ const link=location.origin+"/#/activate?kind="+encodeURIComponent(kind)+"&email="+encodeURIComponent(email)+"&code="+code;
+ try{await navigator.clipboard.writeText(link);return "لینک اختصاصی ساخته و کپی شد: "+link}
+ catch{return "لینک اختصاصی ساخته شد؛ آن را کپی کنید: "+link}
+}
 async function submit(e){
- const f=e.target;if(!["rf-login","rf-activate","rf-profile-save","rf-work-save","rf-avatar-upload","rf-quiz","rf-campaign-launch"].includes(f.id)&&!f.classList.contains("rf-mission-submit"))return;e.preventDefault();if(busy)return;busy=true;error="";notice="";
+ const f=e.target;if(!["rf-login","rf-activate","rf-profile-save","rf-work-save","rf-avatar-upload","rf-quiz","rf-campaign-launch","rf-invite-staff","rf-invite-student","rf-invite-guardian"].includes(f.id)&&!f.classList.contains("rf-mission-submit"))return;e.preventDefault();if(busy)return;busy=true;error="";notice="";
  try{
  const d=new FormData(f);
  if(f.id==="rf-login"){
@@ -173,6 +188,24 @@ async function submit(e){
   if(title.length<3||url&&safeURL(url)==="#")throw Error("عنوان یا لینک پروژه معتبر نیست.");
   await rpc("academy_save_showcase_work",{p_work_id:null,p_category:d.get("category"),p_title:title,p_description:d.get("description")||"",p_project_url:url});
   journey=await rpc("academy_student_journey_snapshot");await loadStudentExtras();showNotice("نمونه‌کار برای بررسی آموزشگاه ثبت شد.");
+ }else if(f.id==="rf-invite-staff"){
+  if(!["owner","manager"].includes(String(role?.role||"")))throw Error("صدور دعوت نیازمند مجوز مدیریت است.");
+  const email=String(d.get("email")||"").toLowerCase().trim();
+  const created=await rpc("academy_invite_staff",{p_email:email,p_full_name:d.get("full_name"),p_role:d.get("staff_role"),p_days:14});
+  if(created?.mode==="activated")showNotice("حساب موجود با مجوز مدیریت فعال شد؛ شخص با رمز قبلی وارد شود.");
+  else{const link=await api("invite_activation_link",{kind:"staff",email},true);showNotice(await inviteLink(link.activation_path,"staff",email))}
+ }else if(f.id==="rf-invite-student"){
+  if(!["owner","manager"].includes(String(role?.role||"")))throw Error("صدور دعوت نیازمند مجوز مدیریت است.");
+  const email=String(d.get("email")||"").toLowerCase().trim(),student=String(d.get("student_id")||"");
+  const target=staffData?.academy_students?.find(x=>x.id===student);
+  if(!target||target.user_id)throw Error("این پرونده از قبل حساب متصل دارد و نباید دوباره فعال‌سازی شود.");
+  const created=await api("invite_student",{student_id:student,email},true);
+  showNotice(await inviteLink(created.activation_path,"student",email));
+ }else if(f.id==="rf-invite-guardian"){
+  if(!["owner","manager"].includes(String(role?.role||"")))throw Error("صدور دعوت نیازمند مجوز مدیریت است.");
+  const email=String(d.get("email")||"").toLowerCase().trim();
+  const created=await api("invite_guardian",{student_id:d.get("student_id"),email,full_name:d.get("full_name"),mobile:d.get("mobile"),relationship:"guardian",can_view_finance:false},true);
+  showNotice(await inviteLink(created.activation_path,"guardian",email));
  }else if(f.id==="rf-campaign-launch"){
   if(!["owner","manager"].includes(String(role?.role||"")))throw Error("برای این عملیات دسترسی مدیریت لازم است.");
   const course_id=String(d.get("course_id")||""),start_date=String(d.get("start_date")||"");
