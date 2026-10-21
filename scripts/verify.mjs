@@ -1,0 +1,35 @@
+import {readFileSync,existsSync} from "node:fs";
+import {spawnSync} from "node:child_process";
+import {join} from "node:path";
+import assert from "node:assert/strict";
+const root=new URL("../",import.meta.url).pathname;
+const site=join(root,"site");
+const html=readFileSync(join(site,"index.html"),"utf8");
+const scripts=["app.js","portal.js","enroll.js","public-resume.js","scene.js","sw.js"];
+const styles=["styles.css","experience.css","portal.css","enroll.css","scene.css","invites.css"];
+for(const file of scripts){
+ const filepath=join(site,file);assert(existsSync(filepath),file+" missing");
+ const check=spawnSync(process.execPath,["--check",filepath],{encoding:"utf8"});
+ assert.equal(check.status,0,file+" syntax error: "+check.stderr);
+}
+for(const f of styles){
+ assert(existsSync(join(site,f)),f+" missing");
+ assert(html.includes('href="./'+f+'"'),f+" stylesheet not linked");
+}
+for(const f of scripts.filter(f=>f!=="sw.js"))assert(html.includes('src="./'+f+'"'),f+" script not linked");
+for(const match of html.matchAll(/(?:src|href)="\.\/([^"]+)"/g))
+ assert(existsSync(join(site,match[1])),"Broken asset link: "+match[1]);
+assert(html.includes('lang="fa" dir="rtl"'),"Persian RTL expected");
+assert(html.includes('name="viewport"'),"Mobile viewport expected");
+const css=styles.map(f=>readFileSync(join(site,f),"utf8")).join("\n");
+assert(css.includes("prefers-reduced-motion"),"Reduced-motion fallback expected");
+assert(css.includes("Vazirmatn"),"Persian font stack missing");
+const js=scripts.map(f=>readFileSync(join(site,f),"utf8")).join("\n");
+assert(!/SUPABASE_SERVICE_ROLE_KEY|sb_secret_|sk_live_|service_role_key/i.test(js),"Secret key detected in public bundle");
+assert(!/localStorage\s*\.\s*setItem\s*\(\s*["']rf_/i.test(js),"Persistent session token storage forbidden");
+for(const rpc of ["academy_student_journey_snapshot","academy_parent_journey_snapshot","academy_student_resume_snapshot","academy_submit_mission","academy_set_showcase_share"])
+ assert(js.includes(rpc),"Missing existing backend integration: "+rpc);
+assert(js.includes("submit_public_registration"),"Registration endpoint missing");
+const manifest=JSON.parse(readFileSync(join(site,"manifest.webmanifest"),"utf8"));
+assert.equal(manifest.lang,"fa");assert.equal(manifest.display,"standalone");
+console.log("PASS: 6 scripts, 6 CSS assets, referenced files, Persian typography, secure role-aware calls and PWA metadata.");

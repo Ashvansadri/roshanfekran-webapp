@@ -1,0 +1,18 @@
+name: Validate Roshanfekran staging
+on:
+  push:
+    branches: [roshanfekran-next-20261021]
+  pull_request:
+    branches: [main]
+jobs:
+  source-checks:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate frontend source, privacy and public assets
+        run: node scripts/verify.mjs
