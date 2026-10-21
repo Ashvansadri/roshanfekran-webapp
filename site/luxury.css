@@ -19,3 +19,8 @@ body:after{content:"";position:fixed;z-index:80;inset:0;pointer-events:none;opac
 @media(max-width:990px){.rf-journey-top{grid-template-columns:1fr;gap:13px}.rf-journey-surface{grid-template-columns:55% 45%}.rf-journey-interface{padding:30px}.rf-journey-pillar{min-height:440px}.rf-pillar-core{width:165px;height:220px}.rf-journey-steps{gap:8px}.rf-journey-step{min-height:70px;grid-template-columns:25px 1fr 12px}.rf-journey-step b{font-size:11px}}
 @media(max-width:760px){.nav{height:72px}.hero{min-height:auto}.hero h1{font-size:clamp(39px,9.3vw,53px);letter-spacing:-1.6px}.rf-journey-section{padding-top:0}.rf-journey-surface{grid-template-columns:1fr}.rf-journey-pillar{grid-column:1;grid-row:1;min-height:260px;overflow:hidden}.rf-pillar-core{width:138px;height:175px}.rf-pillar-core span{font-size:78px}.rf-pillar-core small{font-size:7px}.rf-pillar-ring{inset:0 19%}.rf-journey-interface{grid-column:1;grid-row:2;padding:22px 23px 26px}.rf-journey-steps{grid-template-columns:1fr 1fr;margin-top:19px}.rf-journey-step{padding:10px;min-height:64px}.rf-journey-detail{padding-top:21px}.rf-journey-top h2{font-size:clamp(29px,7vw,36px)}.rf-journey-foot{flex-wrap:wrap;font-size:10px;gap:8px 17px}.card:hover,.stage:hover .orb{transform:none!important}}
 @media(prefers-reduced-motion:reduce){.rf-pillar-ring{animation:none!important}.rf-journey-step,.rf-pillar-core{transition:none!important}.rf-journey-step:hover,.rf-journey-surface:hover .rf-pillar-core{transform:none!important}}
+
+/* Decorative backgrounds must not contribute to horizontal scroll width. */
+.hero:before{left:0;right:0}
+.rf-journey-section:before{left:0;right:0}
+.hero,.rf-journey-section{min-width:0}

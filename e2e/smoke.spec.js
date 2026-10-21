@@ -32,8 +32,8 @@ test('desktop premium home is legible, safe and navigable',async({browser},testI
  await expect(page.getByText('هوش مصنوعی کاربردی',{exact:true}).first()).toBeVisible();
  await page.screenshot({path:testInfo.outputPath('desktop-home.png'),fullPage:true});
  expect(errors).toEqual([]);
- const noOverflow=await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2);
- expect(noOverflow).toBe(true);
+ const overflow=await page.evaluate(()=>({width:window.innerWidth,scrollWidth:document.documentElement.scrollWidth,offenders:[...document.querySelectorAll('body *')].filter(el=>{const r=el.getBoundingClientRect();return r.width>0&&(r.right>window.innerWidth+2||r.left< -2)}).slice(0,15).map(el=>el.tagName+'.'+String(el.className||'').replace(/\\s+/g,'.'))}));
+ expect(overflow.scrollWidth,JSON.stringify(overflow)).toBeLessThanOrEqual(overflow.width+2);
  await page.close();
 });
 test('mobile navigation is usable without horizontal overflow',async({browser},testInfo)=>{
@@ -47,8 +47,8 @@ test('mobile navigation is usable without horizontal overflow',async({browser},t
  await expect(page.locator('#mainNav')).toBeVisible();
  await page.keyboard.press('Escape');await expect(menu).toHaveAttribute('aria-expanded','false');
  await page.screenshot({path:testInfo.outputPath('mobile-home.png'),fullPage:true});
- const noOverflow=await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2);
- expect(noOverflow).toBe(true);
+ const overflow=await page.evaluate(()=>({width:window.innerWidth,scrollWidth:document.documentElement.scrollWidth,offenders:[...document.querySelectorAll('body *')].filter(el=>{const r=el.getBoundingClientRect();return r.width>0&&(r.right>window.innerWidth+2||r.left< -2)}).slice(0,15).map(el=>el.tagName+'.'+String(el.className||'').replace(/\\s+/g,'.'))}));
+ expect(overflow.scrollWidth,JSON.stringify(overflow)).toBeLessThanOrEqual(overflow.width+2);
  await page.goto('/#/courses',{waitUntil:'domcontentloaded'});
  await expect(page.getByText('هوش مصنوعی کاربردی',{exact:true}).first()).toBeVisible();
  expect(errors).toEqual([]);
