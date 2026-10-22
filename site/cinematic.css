@@ -158,3 +158,13 @@
 @media(prefers-reduced-motion:reduce){
  .rf26-stage:before,.rf26-track-visual{transition:none!important;transform:none!important}
 }
+.rf26-scene-caption{
+ position:absolute;top:24px;left:22px;z-index:4;
+ display:flex;align-items:center;gap:16px;
+ border:1px solid #d7ffe73f;border-radius:40px;
+ background:rgba(6,23,27,.63);backdrop-filter:blur(14px);
+ padding:11px 17px;font:600 10px "Segoe UI",Arial,sans-serif;
+ letter-spacing:2.4px;color:#d5e9db
+}
+.rf26-scene-caption span{color:#78ffdb;font-size:15px}
+@media(max-width:650px){.rf26-scene-caption{font-size:8px;top:16px;left:12px;padding:8px 11px;letter-spacing:1.4px}}

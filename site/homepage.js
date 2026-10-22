@@ -102,7 +102,7 @@ function render(state){
  '<div class="rf26-hero-actions"><button type="button" class="rf26-btn rf26-btn-glow" data-rf26-scroll="rf26-discover">مسیر خودم را پیدا کنم <span aria-hidden="true">↗</span></button>'+
  '<a href="#/courses" class="rf26-btn rf26-btn-ghost">دوره‌های ثبت‌نام باز <span aria-hidden="true">←</span></a></div>'+
  '<div class="rf26-hero-proof"><span><b>01</b> تمرین و پروژه</span><span><b>02</b> ارزیابی مهارت</span><span><b>03</b> رزومه قابل ارائه</span></div></div>'+
- '<div class="rf26-stage" aria-label="نمای هنری سه‌بعدی فناوری و یادگیری"><div class="rf26-stage-circles" aria-hidden="true"></div><div class="stage rf26-hero-stage"><canvas id="rf-3d-canvas" class="rf-webgl" aria-hidden="true"></canvas><div class="orbit" aria-hidden="true"></div><div class="orb" aria-hidden="true"></div></div>'+
+ '<div class="rf26-stage" aria-label="نمای هنری سه‌بعدی فناوری و یادگیری"><div class="rf26-stage-circles" aria-hidden="true"></div><div class="rf26-scene-caption" aria-hidden="true">THE FUTURE IS NOW <span>✦</span></div>'+
  '<div class="rf26-orbit-label rf26-label-a"><span>01 /</span><b>CREATE</b><small>هوش مصنوعی</small></div><div class="rf26-orbit-label rf26-label-b"><span>02 /</span><b>EXPLORE</b><small>فناوری مالی</small></div>'+
  '<div class="rf26-stage-footer"><span>RF — LEARNING UNIVERSE</span><span dir="ltr">EST. IN EQLID / IRAN</span></div></div></div>'+
  '<div class="rf26-hero-foot shell"><span class="rf26-now"><i></i> '+enc(pill)+'</span><button type="button" data-rf26-scroll="rf26-tracks">بیشتر کشف کن <span>↓</span></button><span class="rf26-hero-index" dir="ltr">SCROLL / 001</span></div></section>'+

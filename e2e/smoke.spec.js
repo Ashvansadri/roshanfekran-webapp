@@ -272,3 +272,23 @@ test('photorealistic assets are used in live home and all course worlds',async({
  expect(errors).toEqual([]);
  await page.close();
 });
+
+test('cinematic images load successfully over the public CDN',async({browser})=>{
+ const page=await browser.newPage({viewport:{width:1280,height:800}});
+ await apiMock(page);
+ await page.goto('/',{waitUntil:'domcontentloaded'});
+ const result=await page.evaluate(async()=>{
+  const urls=['rf_hero_real3d.webp','rf_ai_real3d.webp','rf_crypto_real3d.webp','rf_forex_real3d.webp'];
+  return await Promise.all(urls.map(async name=>{
+   const src='https://roshanfekran-academy-control.floot.app/_cdn/static/'+name;
+   return await new Promise(resolve=>{
+    const img=new Image(); const timeout=setTimeout(()=>resolve({name,ok:false,reason:'timeout'}),12000);
+    img.onload=()=>{clearTimeout(timeout);resolve({name,ok:img.naturalWidth>50,w:img.naturalWidth})};
+    img.onerror=()=>{clearTimeout(timeout);resolve({name,ok:false,reason:'image-error'})};
+    img.src=src;
+   });
+  }));
+ });
+ expect(result.every(x=>x.ok),JSON.stringify(result)).toBe(true);
+ await page.close();
+});
