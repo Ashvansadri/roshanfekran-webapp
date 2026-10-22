@@ -6,11 +6,11 @@ const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&
 const safeURL=v=>{try{let u=new URL(String(v));return u.protocol==="https:"?u.href:"#"}catch{return "#"}};
 const date=v=>{try{return new Intl.DateTimeFormat("fa-IR-u-ca-persian",{dateStyle:"medium"}).format(new Date(v))}catch{return "—"}};
 const num=v=>new Intl.NumberFormat("fa-IR").format(Number(v||0));
-let session=null,role=null,journey=null,parent=null,familyTip=null,resume=null,works=[],missions=[],campaigns=[],staffData=null,profileFormOpen=false,workFormOpen=false,stage=0,busy=false,error="",notice="",loading=false,quizQuestions=null,quizLoading=false;
+let session=null,role=null,journey=null,parent=null,familyTip=null,resume=null,works=[],missions=[],campaigns=[],staffData=null,finance=null,profileFormOpen=false,workFormOpen=false,stage=0,busy=false,error="",notice="",loading=false,quizQuestions=null,quizLoading=false;
 try{const saved=sessionStorage.getItem("rf_safe_session_v1");if(saved)session=JSON.parse(saved)}catch{sessionStorage.removeItem("rf_safe_session_v1")}
 const token=()=>session?.access_token||"";
 const setSession=x=>{session=x;sessionStorage.setItem("rf_safe_session_v1",JSON.stringify({access_token:x.access_token,refresh_token:x.refresh_token,expires_at:Date.now()+Number(x.expires_in||3600)*1000}))};
-const clear=()=>{session=null;role=null;journey=null;parent=null;familyTip=null;works=[];missions=[];campaigns=[];sessionStorage.removeItem("rf_safe_session_v1")};
+const clear=()=>{session=null;role=null;journey=null;parent=null;familyTip=null;finance=null;works=[];missions=[];campaigns=[];sessionStorage.removeItem("rf_safe_session_v1")};
 async function api(action,body={},auth=false){const ctl=new AbortController(),timeout=setTimeout(()=>ctl.abort(),16000);try{const r=await fetch(END,{method:"POST",headers:{"Content-Type":"application/json",...(auth&&token()?{Authorization:"Bearer "+token()}:{})},body:JSON.stringify({action,...body}),signal:ctl.signal});let d=await r.json().catch(()=>({error:"پاسخ سرور معتبر نیست"}));if(!r.ok||d?.error)throw Error(d?.error||"درخواست ناموفق بود");return d}finally{clearTimeout(timeout)}}
 async function proxy(path,method="GET",body=null){return api("proxy",{path,method,body},true)}
 async function rpc(name,body={}){if(!/^academy_[a-z0-9_]+$/.test(name))throw Error("عملیات معتبر نیست");return proxy("/rest/v1/rpc/"+name,"POST",body)}
@@ -24,7 +24,7 @@ const badge=s=>'<span class="rf-chip">'+esc(s)+'</span>';
 const loadingHTML=()=>'<section class="shell rf-panel-container"><div class="rf-panel"><div class="rf-rotator"></div><h2>در حال دریافت اطلاعات امن...</h2><p>اطلاعات فقط پس از بررسی دسترسی شما نمایش داده می‌شوند.</p></div></section>';
 async function loadWorkspace(){
  if(!session||loading)return;
- loading=true;try{
+ loading=true;finance=null;try{
   role=await api("resolve_portal",{},true);
   if(role.kind==="student"){journey=await rpc("academy_student_journey_snapshot");await loadStudentExtras()}
   else if(role.kind==="guardian"){const a=await Promise.allSettled([rpc("academy_parent_journey_snapshot"),rpc("academy_family_tip_today")]);parent=a[0].status==="fulfilled"?a[0].value:null;familyTip=a[1].status==="fulfilled"?a[1].value:null}
@@ -38,10 +38,18 @@ async function loadStudentExtras(){
   proxy("/rest/v1/academy_showcase_works?select=id,title,description,category,project_url,review_status,review_note,created_at&order=created_at.desc"),
   proxy("/rest/v1/academy_mission_templates?select=id,mission_no,phase,title,objective,release_day,deliverable&order=mission_no.asc"),
   proxy("/rest/v1/academy_mission_campaigns?select=id,course_id,start_date,active&active=eq.true"),
+  // Read-only projections, enforced by Supabase student-scoped RLS.
+  proxy("/rest/v1/academy_enrollments?select=id,course_id,final_fee,status&limit=100"),
+  proxy("/rest/v1/academy_installments?select=id,enrollment_id,installment_no,amount,paid_amount,due_date,status&limit=100"),
+  proxy("/rest/v1/academy_payments?select=id,enrollment_id,installment_id,amount,paid_at,status&limit=100"),
  ]);
  works=items[0].status==="fulfilled"&&Array.isArray(items[0].value)?items[0].value:[];
  missions=items[1].status==="fulfilled"&&Array.isArray(items[1].value)?items[1].value:[];
  campaigns=items[2].status==="fulfilled"&&Array.isArray(items[2].value)?items[2].value:[];
+ const f=items.slice(3);
+ finance=f.every(x=>x.status==="fulfilled"&&Array.isArray(x.value))
+  ?{ready:true,enrollments:f[0].value,installments:f[1].value,payments:f[2].value}
+  :{ready:false};
 }
 async function loadStaffExtras(){
  const names=role.kind==="teacher"?["academy_courses","academy_assignments"]:["academy_courses","academy_students","academy_enrollments","academy_registration_requests"];
@@ -82,6 +90,28 @@ function parentPage(){
  (familyTip?'<div class="rf-lesson"><div class="rf-overline">DAY '+num(familyTip.day_no)+' / ۳۰</div><h3>'+esc(familyTip.title)+'</h3><p>'+esc(familyTip.explanation)+'</p><div class="rf-lesson-practice"><strong>تمرین سه‌دقیقه‌ای</strong><p>'+esc(familyTip.exercise)+'</p></div><small>'+esc(familyTip.safety_note)+'</small></div>':'<div class="rf-empty">درس روز فقط برای والدین دارای مجوز مشاهده وضعیت هنرجو فعال می‌شود.</div>')+
  '<a class="btn btn-outline" href="#/courses">آشنایی با دوره‌های آموزشی</a></div></section></main>';
 }
+
+function financePanel(){
+ const head='<div class="rf-panel-title"><span>◇</span><h3>وضعیت مالی و اقساط</h3></div>';
+ const disclaimer='<p class="rf-caption">این بخش فقط برای هنرجوی واردشده و صرفاً جهت مشاهده است. پرداخت آنلاین و دریافت قرارداد در نسخه مستقل هنوز فعال نشده‌اند؛ برای امور مالی از آموزشگاه پیگیری کنید.</p>';
+ if(!finance?.ready)return '<section class="rf-panel rf-finance-readonly" aria-label="وضعیت مالی و اقساط">'+head+'<div class="rf-empty">دریافت سوابق مالی ممکن نشد؛ هیچ مبلغی به‌عنوان تسویه یا بدهی فرض نشده است.</div>'+disclaimer+'</section>';
+ const enrolled=finance.enrollments;
+ if(!enrolled.length)return '<section class="rf-panel rf-finance-readonly" aria-label="وضعیت مالی و اقساط">'+head+'<div class="rf-empty">برای این حساب هنوز ثبت‌نام مالی قابل مشاهده نیست.</div>'+disclaimer+'</section>';
+ const ids=new Set(enrolled.map(x=>x.id));
+ const installments=finance.installments.filter(x=>ids.has(x.enrollment_id));
+ const payments=finance.payments.filter(x=>ids.has(x.enrollment_id));
+ const money=v=>num(Number.isFinite(Number(v))?Number(v):0)+' تومان';
+ const fees=enrolled.reduce((sum,x)=>sum+(Number(x.final_fee)||0),0);
+ const remainder=installments.reduce((sum,x)=>sum+Math.max(0,(Number(x.amount)||0)-(Number(x.paid_amount)||0)),0);
+ const rows=installments.slice().sort((a,b)=>String(a.due_date||"").localeCompare(String(b.due_date||""))).slice(0,12).map(x=>
+  '<div class="rf-req-row"><span><b>قسط '+num(x.installment_no)+'</b><small>سررسید: '+esc(date(x.due_date))+'</small></span><span><b>'+money(x.amount)+'</b><small>پرداخت ثبت‌شده: '+money(x.paid_amount)+'</small>'+badge(x.status||"ثبت‌شده")+'</span></div>').join("");
+ const receipts=payments.slice().sort((a,b)=>String(b.paid_at||"").localeCompare(String(a.paid_at||""))).slice(0,6).map(x=>
+  '<div class="rf-req-row"><span><b>'+money(x.amount)+'</b><small>'+esc(date(x.paid_at))+'</small></span>'+badge(x.status||"در حال بررسی")+'</div>').join("");
+ return '<section class="rf-panel rf-finance-readonly" aria-label="وضعیت مالی و اقساط">'+head+
+  '<div class="rf-stats rf-inline-stats"><div>'+badge("شهریه نهایی ثبت‌نام‌ها")+'<strong>'+money(fees)+'</strong></div><div>'+badge("مانده اقساط ثبت‌شده")+'<strong>'+money(remainder)+'</strong></div></div>'+
+  '<h4>برنامه اقساط</h4><div class="rf-admin-list">'+(rows||'<div class="rf-empty">قسطی برای این حساب ثبت نشده است.</div>')+'</div>'+
+  '<h4>سوابق پرداخت قابل مشاهده</h4><div class="rf-admin-list">'+(receipts||'<div class="rf-empty">رسید پرداخت قابل مشاهده‌ای ثبت نشده است.</div>')+'</div>'+disclaimer+'</section>';
+}
 function studentPage(){
  const steps=Array.isArray(journey?.stages)?journey.stages:[],progress=Number(journey?.percentage||0);
  const headingText=journey?.student_name||"هنرجوی روشنفکران";
@@ -110,7 +140,7 @@ function studentPage(){
  actions()+toast()+'<div class="rf-progress-wrap"><div><span class="rf-overline">YOUR PROGRESS</span><h2>'+num(progress)+'٪ <small>تکمیل پرونده</small></h2></div><div class="rf-track"><span style="width:'+Math.max(0,Math.min(100,progress))+'%"></span></div><p>'+esc(journey.message||"مسیر رشد شما آغاز شده است.")+'</p></div>'+
  '<div class="rf-stages">'+steps.map((s,i)=>'<button class="rf-stage '+(i===stageIndex?"is-selected":"")+'" data-rf="stage" data-step="'+i+'"><span>'+(s.done?"✓":num(i+1))+'</span><b>'+esc(s.title)+'</b><small>'+(s.done?"تکمیل‌شده":i===stageIndex?"مرحله جاری":"آماده تکمیل")+'</small></button>').join("")+'</div>'+
  '<section class="rf-grid-two">'+right+
- '<div class="rf-panel"><div class="rf-panel-title"><span>✧</span><h3>مأموریت‌های ۹۰روزه</h3></div><p>۲۴ پروژه در سه مرحله، با تحویل و تأیید واقعی مدرس یا مدیر.</p><div class="rf-meters"><span>مأموریت‌های پذیرفته‌شده</span><strong>'+num(journey.missions_approved||0)+' / ۲۴</strong></div><div class="rf-mini-missions">'+missions.slice(0,6).map(m=>'<div><span>'+num(m.mission_no)+'</span><b>'+esc(m.title)+'</b></div>').join("")+'</div><a class="btn btn-outline" href="#/missions">مشاهده مسیر پروژه‌ها ↗</a></div></section></main>';
+ '<div class="rf-panel"><div class="rf-panel-title"><span>✧</span><h3>مأموریت‌های ۹۰روزه</h3></div><p>۲۴ پروژه در سه مرحله، با تحویل و تأیید واقعی مدرس یا مدیر.</p><div class="rf-meters"><span>مأموریت‌های پذیرفته‌شده</span><strong>'+num(journey.missions_approved||0)+' / ۲۴</strong></div><div class="rf-mini-missions">'+missions.slice(0,6).map(m=>'<div><span>'+num(m.mission_no)+'</span><b>'+esc(m.title)+'</b></div>').join("")+'</div><a class="btn btn-outline" href="#/missions">مشاهده مسیر پروژه‌ها ↗</a></div></section>'+financePanel()+'</main>';
 }
 function missionsPage(){
  if(role?.kind!=="student")return '<main class="shell rf-panel-container"><div class="rf-empty">مشاهده مأموریت‌ها ویژه هنرجو است. <a href="#/access">ورود</a></div></main>';

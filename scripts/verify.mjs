@@ -36,6 +36,10 @@ for(const projection of ["id,full_name,user_id,archived_at,status","id,full_name
  assert(portal.includes(projection),"Missing least-privilege staff projection: "+projection);
 for(const route of ['"portal"','"parent"','"teacher"','"manage"'])
  assert(portal.includes(route),"Missing protected route alias: "+route);
+for(const table of ["academy_enrollments","academy_installments","academy_payments"])
+ assert(portal.includes("/rest/v1/"+table+"?select="),"Missing read-only student finance projection: "+table);
+assert(portal.includes("financePanel()"),"Student finance view missing");
+assert(portal.includes("finance=f.every"),"Finance query failures must fail closed");
 assert(/href="#\/access">ورود\s*</.test(html),"Public login button must say ورود");
 const manifest=JSON.parse(readFileSync(join(site,"manifest.webmanifest"),"utf8"));
 assert.equal(manifest.lang,"fa");assert.equal(manifest.display,"standalone");

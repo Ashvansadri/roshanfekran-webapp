@@ -4,7 +4,7 @@ const mockCatalog={
  courses:[{id:'course-1009',title:'هوش مصنوعی کاربردی',code:'course-1009',slug:'course-1009',teacher_name:'مدرس دوره',base_fee:1500000,start_date:'2026-11-20',session_count:12,installment_enabled:true,installment_markup_percent:5,installment_max_count:3,installment_total:1575000}],
  settings:{academy_name:'آموزشگاه روشنفکران',phone:'09164880996'}
 };
-async function apiMock(page){
+async function apiMock(page,authRole=null){
  await page.route('https://sdsdzktsqpahpdrgmzuo.supabase.co/functions/v1/academy-gateway',route=>{
   const request=route.request();
   let payload={};try{payload=JSON.parse(request.postData()||'{}')}catch{}
@@ -15,6 +15,18 @@ async function apiMock(page){
   else if(payload.action==='daily_public'){result={ok:true,today:null,latest:null};code=200}
   else if(payload.action==='public_registration_info'){result={ok:true,course:{id:'course-1009',code:'course-1009',title:'هوش مصنوعی کاربردی',base_fee:1500000,capacity:20,seats_left:9,session_count:12},pricing:{full_amount:1500000,installment_total:1575000},link:{slug:'course-1009',installment_enabled:true,installment_max_count:3},settings:{}};code=200}
   else if(payload.action==='public_showcase'){result={error:'لینک نامعتبر یا لغو شده'};code=404}
+  else if(authRole&&payload.action==='resolve_portal'){result={kind:authRole};code=200}
+  else if(authRole&&payload.action==='proxy'){
+   const path=String(payload.path||'');
+   if(path.includes('/rpc/academy_student_journey_snapshot'))result={student_name:'هنرجوی آزمایشی',stages:[],percentage:25,missions_approved:0};
+   else if(path.includes('/rpc/academy_parent_journey_snapshot'))result={children:[]};
+   else if(path.includes('/rpc/academy_family_tip_today'))result={day_no:1,title:'تمرین امروز',explanation:'گفت‌وگو',exercise:'پرسش کوتاه'};
+   else if(path.includes('/academy_enrollments?select=id,course_id,final_fee,status'))result=[{id:'enroll-test',course_id:'course-test',final_fee:1500000,status:'active'}];
+   else if(path.includes('/academy_installments?select=id,enrollment_id,installment_no,amount,paid_amount,due_date,status'))result=[{id:'inst-test',enrollment_id:'enroll-test',installment_no:1,amount:525000,paid_amount:100000,due_date:'2026-11-20',status:'partial'}];
+   else if(path.includes('/academy_payments?select=id,enrollment_id,installment_id,amount,paid_at,status'))result=[{id:'payment-test',enrollment_id:'enroll-test',amount:100000,paid_at:'2026-10-20',status:'verified'}];
+   else result=[];
+   code=200;
+  }
   return route.fulfill({status:code,contentType:'application/json; charset=utf-8',body:JSON.stringify(result)});
  });
 }
@@ -81,5 +93,26 @@ test('role-specific route aliases require authentication',async({browser})=>{
   await expect(page.locator('#app')).not.toContainText('درخواست‌های ثبت‌نام اخیر');
   await expect(page.locator('#app')).not.toContainText('پیشرفت فرزند');
  }
+ await page.close();
+});
+
+test('student sees synthetic RLS-scoped read-only finance summary',async({browser})=>{
+ const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true});
+ await apiMock(page,'student');
+ await page.addInitScript(()=>sessionStorage.setItem('rf_safe_session_v1',JSON.stringify({access_token:'test-student',refresh_token:'test-refresh',expires_at:Date.now()+3600000})));
+ await page.goto('/#/portal',{waitUntil:'domcontentloaded'});
+ await expect(page.getByRole('heading',{name:'وضعیت مالی و اقساط'})).toBeVisible();
+ await expect(page.locator('.rf-finance-readonly')).toContainText('قسط ۱');
+ await expect(page.locator('.rf-finance-readonly')).toContainText('فقط برای هنرجوی واردشده');
+ await expect(page.locator('.rf-finance-readonly')).not.toContainText('کد ملی');
+ await page.close();
+});
+test('guardian has no student finance summary',async({browser})=>{
+ const page=await browser.newPage({viewport:{width:1280,height:800}});
+ await apiMock(page,'guardian');
+ await page.addInitScript(()=>sessionStorage.setItem('rf_safe_session_v1',JSON.stringify({access_token:'test-guardian',refresh_token:'test-refresh',expires_at:Date.now()+3600000})));
+ await page.goto('/#/parent',{waitUntil:'domcontentloaded'});
+ await expect(page.getByRole('heading',{name:'فضای خانواده'})).toBeVisible();
+ await expect(page.locator('.rf-finance-readonly')).toHaveCount(0);
  await page.close();
 });
