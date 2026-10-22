@@ -1,0 +1,109 @@
+/* ROSHANFEKRAN / ACADEMY OS — Premium internal-product skin
+ * This file changes visual presentation only, not security/roles or API flows.
+ */
+.rf-auth,.rf-dashboard,.rf-enroll,.rf-public-resume,.rf-panel-container{
+ --rfc:#a5f2ce;--rfc-border:#d6f5df2a;--rfc-deep:#0a171e;
+ font-family:Estedad,Vazirmatn,Tahoma,sans-serif!important
+}
+.rf-auth{min-height:calc(100vh - 190px);padding-top:65px;padding-bottom:93px;gap:6%;grid-template-columns:1fr 1fr}
+.rf-auth:before{inset:0;z-index:-2;background:radial-gradient(ellipse at 40% 45%,#24604b45,transparent 55%),radial-gradient(ellipse at 90% 20%,#1b4f4a42,transparent 62%)}
+.rf-auth-story{position:relative;padding:30px 0;isolation:isolate}
+.rf-auth-story:before{content:"R.";font:400 clamp(140px,21vw,330px) Georgia,serif;color:#beffcf0b;position:absolute;right:-11%;top:-65px;z-index:-1;pointer-events:none}
+.rf-auth-story .eyebrow{border-radius:1px;background:#9cdec916;padding:10px 17px;border-color:#c4f2d64d;color:#d5ebd6;font:700 11px "Segoe UI",sans-serif;letter-spacing:1.1px;direction:ltr;display:inline-flex}
+.rf-auth-story h1{font-family:Estedad,Vazirmatn,sans-serif;font-size:clamp(39px,4.5vw,66px);font-weight:900;line-height:1.47;letter-spacing:-2px;margin:28px 0 23px}
+.rf-auth-story .gradient-text{background-image:linear-gradient(100deg,#f0f7d7,#77e7cb 70%);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.rf-auth-story p{font-size:14px;line-height:2.6;color:#aebfb6}
+.rf-tick{font-size:12px;margin-top:38px;padding-top:23px;border-top:1px solid #a9d9cb30;color:#aac8b6}
+.rf-auth-card{background:linear-gradient(142deg,#1a3434,#0b171e 75%);max-width:510px;padding:clamp(28px,3.5vw,48px);border:1px solid #bbedd056;border-radius:5px;box-shadow:34px 35px 0 #96c3a807,0 45px 90px #020b1099}
+.rf-auth-card:before{left:0;right:0;height:3px;background:linear-gradient(90deg,#0b191a,#94e7c5,#c6b98e);top:0}
+.rf-auth-symbol{width:67px;height:67px;border:1px solid #c2f7d088;background:radial-gradient(circle at 30% 30%,#55a58d,#174338 73%);border-radius:50%;font-size:33px;box-shadow:0 15px 35px #050f1080}
+.rf-overline{color:#d4bf8c;font:700 11px "Segoe UI",Arial,sans-serif;letter-spacing:2.5px}
+.rf-auth-card h2{font-size:30px;font-weight:860;letter-spacing:-.7px;margin:11px 0}
+.rf-auth-card>p{font-size:13px}
+.rf-form .portal-field{gap:10px}
+.portal-field>span{color:#d3e6da!important;font-size:12px}
+.portal-field input,.portal-field textarea,.portal-field select,.rf-form select{background:#06151c!important;border:1px solid #b5dbc445!important;border-radius:3px!important;color:#f6fcf1!important;min-height:53px!important;padding:13px 16px!important}
+.portal-field input:focus,.portal-field textarea:focus,.portal-field select:focus{border-color:#9beec7!important;box-shadow:0 0 0 3px #6cdb9f1c!important}
+.rf-form .btn-primary,.rf-action-row .btn-primary,.rf-dashboard .btn-primary,.rf-panel .btn-primary,.rf-enroll .btn-primary{background:linear-gradient(110deg,#c5f4d6,#85d8bf)!important;border:1px solid #d3ffdf!important;color:#0a2927!important;border-radius:3px!important;box-shadow:0 12px 28px #4fdeac19;min-height:48px;font-weight:850}
+.rf-form .btn-primary:hover,.rf-dashboard .btn-primary:hover{background:#ddffe9!important;transform:translateY(-2px)}
+.rf-caption{color:#a2bfb2!important;font-size:11px!important}
+.rf-dashboard{position:relative;padding-top:58px;padding-bottom:100px}
+.rf-page-head{position:relative;border-bottom:1px solid #c2e9d62c;padding-bottom:27px;margin-bottom:26px}
+.rf-page-head .rf-overline{color:#d1bb8d}
+.rf-page-head h1{font-family:Estedad,Vazirmatn,sans-serif;font-size:clamp(32px,3.7vw,50px);font-weight:880;margin:12px 0;letter-spacing:-1.5px}
+.rf-page-head p{font-size:13px;line-height:2.3;max-width:800px;color:#a2bdb3}
+.rf-stats{gap:12px;margin-bottom:27px}
+.rf-stats>div{background:linear-gradient(138deg,#16322f,#0e1d23 83%);border:1px solid #b1e4ca37;border-radius:4px;padding:26px 27px;box-shadow:inset 0 1px #cfffde0b}
+.rf-stats strong{font:850 31px Estedad,Vazirmatn,sans-serif!important;color:#e1fae9}
+.rf-chip{font-size:11px;padding:7px 12px;border-radius:3px;border-color:#b6e9c84a;background:#7deab811;color:#c7f3d9}
+.rf-panel,.rf-progress-wrap{background:linear-gradient(140deg,#142a2d,#0c1921 83%);border:1px solid #addac744;border-radius:5px;box-shadow:0 25px 50px #00000016,inset 0 1px #ffffff0b}
+.rf-panel{padding:clamp(22px,2.8vw,40px)}
+.rf-panel:before{height:2px;left:0;right:0;background:linear-gradient(90deg,#92f0cd,#bbaf84,#0b1c20)}
+.rf-panel h2,.rf-panel h3{font-family:Estedad,Vazirmatn,sans-serif;letter-spacing:-.4px}
+.rf-panel-title h3{font-size:20px;font-weight:825}
+.rf-panel-title>span{width:48px;height:48px;border-radius:3px;background:linear-gradient(135deg,#2c7564,#163536);border:1px solid #b2f5cf58;color:#e6ffea}
+.rf-grid-two{gap:18px}
+.rf-progress-wrap{padding:35px;background:radial-gradient(circle at 79% 30%,#238b724d,transparent 50%),linear-gradient(120deg,#1b4c41,#0e2429)}
+.rf-progress-wrap h2{color:#e9ffdc;font-size:36px}
+.rf-track{height:10px;border-radius:2px;background:#061b1d}
+.rf-track>span{border-radius:2px;background:linear-gradient(90deg,#91e5bf,#dcebc2)}
+.rf-stages{gap:9px}
+.rf-stage{border:1px solid #a8d9c039;border-radius:4px;background:#10222b;padding:18px;min-height:145px}
+.rf-stage.is-selected{background:#20463f;border-color:#8debc8;box-shadow:inset 0 0 30px #8dfed10b}
+.rf-stage span{border-radius:3px;border-color:#a9eaca88;color:#c9efd5}
+.rf-stage.is-selected span{color:#173b31;background:#a5e7c6}
+.rf-stage b{font-size:12px}
+.rf-stage small{font-size:11px}
+.rf-child,.rf-work,.rf-empty,.rf-lesson-practice{border-radius:4px;border-color:#a8d4c53e}
+.rf-child{background:#10283080;padding:23px}
+.rf-meters{border-color:#d0eccc20}
+.rf-lesson h3{font-weight:820}
+.rf-lesson-practice{background:#1b574b3b}
+.rf-action-row{gap:10px}
+.portal-secondary{border-radius:3px!important;background:#152c31;border-color:#8cd4b956;min-height:48px}
+.rf-invite-grid>.rf-form{border-radius:4px;border-color:#b3dac63d;background:#10263080}
+.rf-enroll-grid{gap:27px}
+.rf-enroll-aside{top:107px}
+.rf-bank{border-radius:4px;border:1px solid #93dfb46b;background:linear-gradient(135deg,#214c3f44,#081c1c);padding:24px}
+.rf-bank b{color:#b6efd0}
+.rf-enroll-success>.rf-panel{max-width:760px}
+.rf-success-code{border-radius:4px;background:#1d453a70;border-color:#c3f8d474}
+.rf-resume-header{border-radius:4px;background:radial-gradient(circle at 89% 19%,#2c877345,transparent 40%),linear-gradient(115deg,#1b4539,#0b1c25);border-color:#b5e8ca6d}
+.rf-resume-header>img,.rf-resume-initial{border-radius:5px;border-color:#cee8c5}
+.rf-question{border-radius:4px}
+.rf-choice{min-height:45px}
+.rf-rotator{border-top-color:#b6ffe0}
+.rf-panel-container{min-height:540px}
+.rf-manage-extras .rf-req-row{padding:18px 4px;border-bottom:1px solid #b0dfbd29}
+.rf-manage-extras .rf-req-row:last-child{border:0}
+.rf-panel a:not(.btn){color:#b1efd0;text-decoration:none}
+.rf-panel a:not(.btn):hover{text-decoration:underline}
+@media(max-width:850px){
+ .rf-auth{grid-template-columns:1fr;gap:30px;min-height:0;padding:36px 0 60px}
+ .rf-auth-story{padding:8px 0}.rf-auth-story h1{font-size:43px}
+ .rf-auth-card{max-width:580px;margin:auto}
+ .rf-dashboard{padding-top:36px;padding-bottom:75px}
+ .rf-stages{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .rf-enroll-aside{position:static}
+}
+@media(max-width:600px){
+ .rf-auth-story h1{font-size:37px}
+ .rf-auth-story p{font-size:12px}
+ .rf-auth-card{padding:25px 21px}
+ .rf-auth-card h2{font-size:26px}
+ .rf-dashboard{padding-top:26px}
+ .rf-page-head h1{font-size:32px}
+ .rf-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ .rf-stats>div{padding:17px 14px;min-height:110px}
+ .rf-stats strong{font-size:25px!important}
+ .rf-panel{padding:22px 17px}
+ .rf-stages{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ .rf-stage{min-height:125px;padding:13px}
+ .rf-stage b{font-size:11px}
+ .rf-enroll-grid{grid-template-columns:1fr}
+ .rf-resume-header{padding:24px}
+}
+@media(prefers-reduced-motion:reduce){
+ .rf-stage,.rf-form .btn-primary,.portal-secondary{transition:none!important}
+ .rf-stage:hover,.rf-form .btn-primary:hover{transform:none!important}
+}

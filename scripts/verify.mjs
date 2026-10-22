@@ -6,7 +6,7 @@ const root=new URL("../",import.meta.url).pathname;
 const site=join(root,"site");
 const html=readFileSync(join(site,"index.html"),"utf8");
 const scripts=["app.js","portal.js","enroll.js","public-resume.js","scene.js","luxury.js","motion.js","homepage.js","sw.js"];
-const styles=["styles.css","experience.css","portal.css","enroll.css","scene.css","invites.css","luxury.css","motion.css","homepage.css"];
+const styles=["styles.css","experience.css","portal.css","enroll.css","scene.css","invites.css","luxury.css","motion.css","homepage.css","portal-premium.css"];
 for(const file of scripts){
  const filepath=join(site,file);assert(existsSync(filepath),file+" missing");
  const check=spawnSync(process.execPath,["--check",filepath],{encoding:"utf8"});
@@ -50,5 +50,6 @@ for(const pkg of ["gsap@3.13.0","lenis@1.3.27"])
  assert(html.includes(pkg),"Pinned animation library missing: "+pkg);
 assert(html.includes("motion.css") && html.includes("motion.js"),"Motion assets unlinked");
 assert(html.includes("homepage.css") && html.includes("homepage.js"),"New editorial homepage assets unlinked");
+assert(html.includes("portal-premium.css"),"Premium internal portal CSS not linked");
 assert(js.includes("RFHOMEPAGE"),"Conversion-focused homepage missing");
 console.log("PASS: 6 scripts, 6 CSS assets, referenced files, Persian typography, secure role-aware calls and PWA metadata.");
