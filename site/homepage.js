@@ -49,12 +49,16 @@ function courseBlock(state){
  if(state.error)return '<div class="rf26-empty" role="status">دریافت دوره‌ها موقتاً در دسترس نیست. از بخش دوره‌ها دوباره امتحان کنید. <a href="#/courses">بررسی دوره‌ها ↗</a></div>';
  const list=Array.isArray(state.courses)?state.courses:[];
  if(!list.length)return '<div class="rf26-empty">در حال حاضر دوره‌ای برای ثبت‌نام عمومی فعال نشده است. برای اطلاع از نوبت بعدی با آموزشگاه تماس بگیر. <a href="tel:09164880996">تماس با مشاور ↗</a></div>';
- return '<div class="rf26-course-list">'+list.slice(0,3).map(publicCourse).join("")+'</div>';
+ const side=list.length===1?'<aside class="rf26-course-guide"><span class="rf26-guide-number">YOUR NEXT MOVE / 01</span><div class="rf26-guide-orb" aria-hidden="true"><i></i><b>R</b></div><h3>فقط ثبت‌نام نیست؛ <em>شروع یک مسیر است.</em></h3><p>با انتخاب دوره، برنامه یادگیری و پروژه‌های قابل پیگیری در پورتال اختصاصی در دسترس هنرجویان واجد شرایط قرار می‌گیرد.</p><div class="rf26-guide-features"><span>◈ پروژه‌های مهارتی</span><span>◈ مسیر رشد</span><span>◈ رزومه آموزشی</span></div><button type="button" data-rf26-scroll="rf26-discover">هنوز مطمئن نیستی؟ مسیرت را پیدا کن <span>↗</span></button></aside>':'';
+ return '<div class="rf26-course-list">'+list.slice(0,3).map(publicCourse).join("")+side+'</div>';
 }
 function newsBlock(state){
  const news=state.news||{};
  const arr=[...(news.ai||[]).map(x=>({...x,kind:"هوش مصنوعی"})),...(news.markets||[]).map(x=>({...x,kind:"بازارهای مالی"})),...(news.world||[]).map(x=>({...x,kind:"فناوری"}))].slice(0,3);
- if(!arr.length)return '<div class="rf26-notes-empty">خبرها پس از تأیید محتوا در این قسمت منتشر می‌شوند. <a href="#/updates">رفتن به مرکز خبر ↗</a></div>';
+ if(!arr.length){
+  const notes=[["هوش مصنوعی","یک پرامپت خوب، نقش و هدف و نوع خروجی را مشخص می‌کند."],["امنیت دیجیتال","عبارت بازیابی کیف پول را در هیچ سایت یا پیامی وارد نکن."],["تفکر تحلیلی","قبل از هر تصمیم مالی، سناریوی اشتباه بودن را هم تعریف کن."]];
+  return '<div class="rf26-notes">'+notes.map((x,i)=>'<div class="rf26-note rf26-teaching-note"><span class="rf26-note-num" dir="ltr">0'+(i+1)+'</span><span class="rf26-note-body"><small>نکته آموزشی · '+enc(x[0])+'</small><b>'+enc(x[1])+'</b></span><span aria-hidden="true">✳</span></div>').join("")+'</div>';
+ }
  return '<div class="rf26-notes">'+arr.map((n,i)=>{
  let href="#/updates";try{let x=new URL(String(n.url));if(["https:","http:"].includes(x.protocol))href=x.href}catch{}
  return '<a class="rf26-note" href="'+enc(href)+'"'+(href.startsWith("http")?' target="_blank" rel="noopener noreferrer"':'')+'>'+
