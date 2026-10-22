@@ -15,9 +15,12 @@
 <link rel="stylesheet" href="./enroll.css"/>
 <link rel="stylesheet" href="./scene.css"/>
 <link rel="stylesheet" href="./luxury.css"/>
+<link rel="stylesheet" href="./motion.css"/>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin/>
 <link rel="icon" href="./favicon.svg" type="image/svg+xml"/>
 </head>
 <body>
+<div class="rf-scroll-progress" id="rf-scroll-progress" aria-hidden="true"></div>
 <div class="top-note"><span class="spark">✦</span><span>آموزشگاه روشنفکران اقلید • مسیر حرفه‌ای یادگیری فناوری، هوش مصنوعی و بازارهای مالی</span></div>
 <header id="top" class="nav shell">
  <a class="brand" href="#/"><span class="brand-mark" aria-hidden="true">RF</span><span><b>روشنفکران</b><small>ROSHANFEKRAN ACADEMY</small></span></a>
@@ -48,5 +51,10 @@
 <script src="./portal.js" defer></script>
 <script src="./app.js" defer></script>
 <script src="./luxury.js" defer></script>
+<!-- Pinned public releases; page works without a CDN connection. -->
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.3.27/dist/lenis.min.js" defer></script>
+<script src="./motion.js" defer></script>
 <script>if(location.protocol==="https:"&&"serviceWorker" in navigator){navigator.serviceWorker.register("./sw.js").catch(()=>{})}</script>
 </body></html>

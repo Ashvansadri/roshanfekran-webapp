@@ -124,6 +124,7 @@ function render(){
  else html=notfound();
  root.innerHTML=html;
  window.RFSCENE?.mount?.();
+ window.RFMOTION?.refresh?.();
  document.querySelectorAll("#mainNav a").forEach(a=>a.classList.toggle("active",a.getAttribute("href")==="#/"+route));
  document.title=(parts.length?({courses:"دوره‌های روشنفکران",course:"ثبت‌نام دوره",updates:"اخبار روشنفکران",portals:"پورتال‌ها",about:"درباره ما"}[parts[0]]||"روشنفکران")+" | ":"")+"آموزشگاه روشنفکران";
 }
@@ -147,7 +148,7 @@ async function load(){
  state.loading=false;render();
 }
 toggle.addEventListener("click",()=>{let open=menu.classList.toggle("is-open");toggle.setAttribute("aria-expanded",String(open));});
-window.addEventListener("hashchange",()=>{menu.classList.remove("is-open");toggle.setAttribute("aria-expanded","false");render();window.scrollTo({top:0,behavior:"auto"});});
+window.addEventListener("hashchange",()=>{menu.classList.remove("is-open");toggle.setAttribute("aria-expanded","false");render();window.scrollTo({top:0,behavior:"auto"});window.RFMOTION?.scrollTop?.();});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"){menu.classList.remove("is-open");toggle.setAttribute("aria-expanded","false");helper.hidden=true;helperBtn.setAttribute("aria-expanded","false")}});
 helperBtn.addEventListener("click",()=>{helper.hidden=!helper.hidden;helperBtn.setAttribute("aria-expanded",String(!helper.hidden));});
 document.getElementById("helperClose").addEventListener("click",()=>{helper.hidden=true;helperBtn.setAttribute("aria-expanded","false")});
