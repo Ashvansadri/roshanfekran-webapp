@@ -50,6 +50,7 @@ function experientialSection(){
 }
 
 function home(){
+ if(window.RFHOMEPAGE?.render)return window.RFHOMEPAGE.render(state);
  return '<main>'+
   '<section class="shell hero"><div><div class="eyebrow">آموزشگاه آزاد فنی و حرفه‌ای روشنفکران</div><h1>آینده را فقط <span class="gradient-text">تماشا نکن.</span><br>آن را بساز.</h1><p>از هوش مصنوعی تا بازارهای مالی؛ مهارت را با پروژه‌های واقعی، همراهی مدرس و مسیری روشن از آموزش تا ارائه نمونه‌کار یاد بگیر.</p>'+
   '<div class="actions"><a href="#/courses" class="btn btn-primary">مشاهده دوره‌های ثبت‌نام باز <span>↙</span></a><a href="#/about" class="btn btn-outline">آشنایی با روشنفکران ↗</a></div>'+

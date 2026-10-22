@@ -76,21 +76,21 @@
   status.reduced=reduce.matches;
   const isPublic=!root.querySelector(".rf-dashboard,.rf-auth,.rf-login,.rf-form,.rf-panel-container");
   if(reduce.matches||!isPublic)return;
-  const hero=root.querySelector(".hero");
-  const publicCards=[...root.querySelectorAll(".card-grid .card,.news-card,.feature-panel,.rf-journey-top,.rf-journey-surface")].slice(0,24);
+  const hero=root.querySelector(".hero,.rf26-hero");
+  const publicCards=[...root.querySelectorAll(".card-grid .card,.news-card,.feature-panel,.rf-journey-top,.rf-journey-surface,.rf26-track,.rf26-course,.rf26-quiz-layout,.rf26-growth-layout,.rf26-daily,.rf26-note,.rf26-faq-layout")].slice(0,24);
   const isActive=usable&&Scroll&&typeof Scroll.create==="function";
   if(!isActive){
    revealFallback(publicCards);
    return;
   }
   if(hero){
-   const heroItems=[...hero.querySelectorAll(".eyebrow,h1,p,.actions,.micro")];
+   const heroItems=[...hero.querySelectorAll(".eyebrow,.rf26-eyebrow,h1,.rf26-hero-copy>p,.actions,.rf26-hero-actions,.micro,.rf26-hero-proof")];
    currentElements.push(...heroItems);
    animations.push(gs.from(heroItems,{
     opacity:0,y:22,duration:0.9,ease:"power2.out",stagger:0.105,
     clearProps:"transform,opacity,visibility",overwrite:"auto"
    }));
-   const stage=hero.querySelector(".stage");
+   const stage=hero.querySelector(".stage,.rf26-stage");
    if(stage){
     currentElements.push(stage);
     animations.push(gs.from(stage,{

@@ -35,12 +35,14 @@ test('desktop premium home is legible, safe and navigable',async({browser},testI
  await apiMock(page);
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('/',{waitUntil:'domcontentloaded'});
- await expect(page.getByRole('heading',{name:/آینده را فقط/})).toBeVisible();
- await expect(page.locator('#rf-journey-heading')).toBeVisible();
- await expect(page.locator('.rf-journey-step')).toHaveCount(4);
- await page.locator('[data-rf-journey="2"]').click();
- await expect(page.locator('[data-rf-journey="2"]')).toHaveAttribute('aria-pressed','true');
- await expect(page.locator('#rf-journey-detail h3')).toContainText('بازخورد');
+ await expect(page.locator('#rf26-main-title')).toContainText('خودت بسازش');
+ await expect(page.locator('.rf26-track')).toHaveCount(3);
+ await expect(page.locator('.rf26-quiz-section')).toBeVisible();
+ await page.locator('#rf26-quiz-live button[data-rf26-quiz="ai"]').click();
+ await expect(page.locator('#rf26-quiz-live h3')).toContainText('روش');
+ await page.locator('#rf26-quiz-live button[data-rf26-quiz="ai"]').click();
+ await page.locator('#rf26-quiz-live button[data-rf26-quiz="ai"]').click();
+ await expect(page.locator('.rf26-quiz-answer h3')).toContainText('هوش مصنوعی');
  await expect(page.getByText('هوش مصنوعی کاربردی',{exact:true}).first()).toBeVisible();
  await page.screenshot({path:testInfo.outputPath('desktop-home.png'),fullPage:true});
  expect(errors).toEqual([]);
@@ -53,7 +55,7 @@ test('mobile navigation is usable without horizontal overflow',async({browser},t
  await apiMock(page);
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('/',{waitUntil:'domcontentloaded'});
- await expect(page.locator('.hero h1')).toBeVisible();
+ await expect(page.locator('.rf26-hero h1')).toBeVisible();
  const menu=page.locator('#mobileMenu');
  await menu.click();await expect(menu).toHaveAttribute('aria-expanded','true');
  await expect(page.locator('#mainNav')).toBeVisible();
@@ -123,7 +125,7 @@ test('motion stack honors reduced motion and preserves native scroll',async({bro
  await apiMock(page);
  const errors=[];page.on('pageerror',err=>errors.push(err.message));
  await page.goto('/',{waitUntil:'domcontentloaded'});
- await expect(page.locator('.hero h1')).toBeVisible();
+ await expect(page.locator('.rf26-hero h1')).toBeVisible();
  const status=await page.evaluate(()=>window.RFMOTION?.status||null);
  expect(status).not.toBeNull();
  expect(status.reduced).toBe(true);
@@ -138,7 +140,7 @@ test('pinned animation vendors initialize or safely fall back',async({browser})=
  await apiMock(page);
  const errors=[];page.on('pageerror',err=>errors.push(err.message));
  await page.goto('/',{waitUntil:'domcontentloaded'});
- await expect(page.locator('.rf-journey-step')).toHaveCount(4);
+ await expect(page.locator('.rf26-track')).toHaveCount(3);
  const result=await page.evaluate(()=>({
   status:window.RFMOTION?.status||null,
   globals:{gsap:!!window.gsap,ScrollTrigger:!!window.ScrollTrigger,Lenis:!!window.Lenis},
@@ -152,6 +154,71 @@ test('pinned animation vendors initialize or safely fall back',async({browser})=
  else expect(result.status.gsap).toBe(false);
  if(!result.globals.Lenis)expect(result.status.smooth).toBe(false);
  console.log('RF_LIBRARIES',JSON.stringify(result));
+ expect(errors).toEqual([]);
+ await page.close();
+});
+
+test('new 360px landing design and discovery quiz stay readable and interactive',async({browser},testInfo)=>{
+ const page=await browser.newPage({viewport:{width:360,height:780},isMobile:true,deviceScaleFactor:1});
+ await apiMock(page);
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('#rf26-main-title')).toBeVisible();
+ await expect(page.locator('.rf26-track')).toHaveCount(3);
+ await expect(page.locator('.rf26-faq-list details')).toHaveCount(5);
+ for(let i=0;i<3;i++)await page.locator('#rf26-quiz-live button[data-rf26-quiz="crypto"]').click();
+ await expect(page.locator('.rf26-quiz-answer h3')).toContainText('فناوری مالی');
+ await expect(page.locator('#rf26-quiz-live')).toContainText('پاسخ‌ها ذخیره یا به سرور ارسال نمی‌شوند');
+ const dims=await page.evaluate(()=>({viewport:innerWidth,scroll:document.documentElement.scrollWidth}));
+ expect(dims.scroll,JSON.stringify(dims)).toBeLessThanOrEqual(dims.viewport+2);
+ await page.screenshot({path:testInfo.outputPath('mobile-360-new-homepage.png'),fullPage:true});
+ expect(errors).toEqual([]);
+ await page.close();
+});
+test('real catalog creates exactly one public course card without invented reviews',async({browser})=>{
+ const page=await browser.newPage({viewport:{width:1280,height:900}});
+ await apiMock(page);
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('.rf26-course')).toHaveCount(1);
+ await expect(page.locator('.rf26-course h3')).toContainText('هوش مصنوعی کاربردی');
+ await expect(page.locator('.rf26-course a[href="#/course/course-1009"]')).toBeVisible();
+ await expect(page.locator('.rf26-dashboard')).toContainText('نمای مفهومی');
+ await expect(page.locator('blockquote')).toHaveCount(0);
+ await page.locator('.rf26-faq-list details').last().locator('summary').click();
+ await expect(page.locator('.rf26-faq-list details').last()).toHaveAttribute('open','');
+ expect(errors).toEqual([]);
+ await page.close();
+});
+test('anonymous path finder collects no personal information or extra API calls',async({browser})=>{
+ const page=await browser.newPage({viewport:{width:1120,height:900}});
+ const requests=[];
+ await page.route('https://sdsdzktsqpahpdrgmzuo.supabase.co/functions/v1/academy-gateway',route=>{
+  const body=JSON.parse(route.request().postData()||'{}');requests.push(body.action);
+  if(body.action==='public_catalog')return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(mockCatalog)});
+  return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,ai:[],markets:[],world:[]})});
+ });
+ await page.goto('/',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('.rf26-track')).toHaveCount(3);
+ await page.waitForTimeout(250);
+ const before=requests.length;
+ for(let i=0;i<3;i++)await page.locator('#rf26-quiz-live button[data-rf26-quiz="ai"]').click();
+ await expect(page.locator('.rf26-quiz-answer')).toBeVisible();
+ expect(requests.length).toBe(before);
+ await page.locator('[data-rf26-quiz="restart"]').click();
+ await expect(page.locator('#rf26-quiz-live h3')).toContainText('چه چیزی بسازی');
+ await page.close();
+});
+test('conversion homepage works even when GSAP and Lenis CDN scripts are blocked',async({browser})=>{
+ const page=await browser.newPage({viewport:{width:1024,height:800}});
+ await apiMock(page);
+ await page.route('https://cdn.jsdelivr.net/**',route=>route.abort());
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('.rf26-track')).toHaveCount(3);
+ await expect(page.locator('#rf26-main-title')).toBeVisible();
+ await page.locator('#rf26-quiz-live button[data-rf26-quiz="forex"]').click();
+ await expect(page.locator('#rf26-quiz-live h3')).toContainText('روش');
  expect(errors).toEqual([]);
  await page.close();
 });
