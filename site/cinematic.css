@@ -1,0 +1,160 @@
+/*
+  RF CINEMATIC STUDIO | photorealistic-rendered visuals, not icon-only CSS illusions.
+  Source artwork authored for Roshanfekran and exported to WebP.
+  The live content remains editable text over the artwork.
+*/
+.rf26-home{
+ --rf-image-hero:url("https://roshanfekran-academy-control.floot.app/_cdn/static/rf_hero_real3d.webp");
+ --rf-image-ai:url("https://roshanfekran-academy-control.floot.app/_cdn/static/rf_ai_real3d.webp");
+ --rf-image-crypto:url("https://roshanfekran-academy-control.floot.app/_cdn/static/rf_crypto_real3d.webp");
+ --rf-image-forex:url("https://roshanfekran-academy-control.floot.app/_cdn/static/rf_forex_real3d.webp");
+ --rf-image-architecture:url("https://roshanfekran-academy-control.floot.app/_cdn/static/rf_architecture_real3d.webp");
+}
+/* Main scene is a true three-dimensionally rendered sci-fi environment */
+.rf26-hero{background:#061017}
+.rf26-hero-atmosphere{background:
+ radial-gradient(ellipse at 44% 55%,#193e4533,transparent 60%),
+ radial-gradient(ellipse at 10% 10%,#0c37364f,transparent 55%),
+ linear-gradient(120deg,#07171d,#041018)!important}
+.rf26-hero-grid{grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);gap:32px}
+.rf26-hero h1{font-size:clamp(50px,5vw,80px);line-height:1.33}
+.rf26-hero-copy{padding-right:1%}
+.rf26-stage{
+ border:1px solid rgba(172,241,228,.24);
+ border-radius:20px;
+ overflow:hidden;
+ height:min(620px,54vw);
+ background:#0c2830;
+ isolation:isolate;
+ box-shadow:0 28px 80px #0009,0 0 0 1px #92f4d214;
+}
+.rf26-stage:before{
+ content:"";
+ position:absolute;
+ inset:-1px;
+ width:auto;height:auto;aspect-ratio:auto;
+ border:0;border-radius:0;
+ background-image:linear-gradient(180deg,#06111615 15%,transparent 45%,#04161b8a 100%),var(--rf-image-hero);
+ background-size:cover;
+ background-position:center;
+ transform:scale(1.035);
+ transition:transform 1.2s cubic-bezier(.2,.8,.2,1);
+ box-shadow:none;opacity:1;
+ z-index:-1;
+}
+.rf26-stage:hover:before{transform:scale(1.065)}
+.rf26-stage:after{
+ content:"";
+ position:absolute;
+ inset:0;
+ width:auto;height:auto;
+ bottom:auto;
+ background:linear-gradient(90deg,#0c202b1d,transparent 55%);
+ filter:none;
+ border-radius:0;
+ opacity:1;
+ z-index:-1;
+ pointer-events:none
+}
+.rf26-stage-circles,.rf26-hero-stage{display:none!important}
+.rf26-orbit-label{
+ border:1px solid #cefff46b;
+ border-radius:12px;
+ background:linear-gradient(125deg,#071d29db,#0a3534b5);
+ backdrop-filter:blur(16px);
+ min-width:155px;
+ box-shadow:0 13px 38px #0008
+}
+.rf26-label-a{right:2.3%;top:5%}
+.rf26-label-b{left:3%;bottom:11%}
+.rf26-stage-footer{bottom:11px;left:4%;right:4%;font-size:9px;color:#e5fff0; text-shadow:0 2px 6px #071720}
+.rf26-stage-footer span{padding:8px 11px;background:#061b24a9;backdrop-filter:blur(8px);border-radius:6px}
+/* Cards use actual rendered environments behind live headings and CTA */
+.rf26-track{
+ padding:0;
+ border-radius:16px;
+ background:#061620;
+ overflow:hidden;
+ box-shadow:0 20px 55px #0005,inset 0 1px #ffffff17;
+}
+.rf26-track-meta{padding:22px 22px 4px}
+.rf26-track-visual{
+ margin:8px 11px 0;
+ height:275px;
+ border-radius:12px;
+ overflow:hidden;
+ background-position:center 40%;
+ background-size:cover;
+ box-shadow:0 0 0 1px #b8fbe022;
+ isolation:isolate;
+ transition:transform .8s ease,filter .6s ease;
+}
+.rf26-track:hover .rf26-track-visual{transform:scale(1.015)}
+.rf26-track-ai .rf26-track-visual{background-image:linear-gradient(180deg,#081e2342,transparent 50%,#071b25b8),var(--rf-image-ai)}
+.rf26-track-crypto .rf26-track-visual{background-image:linear-gradient(180deg,#15242b42,transparent 45%,#0a1c24be),var(--rf-image-crypto)}
+.rf26-track-fx .rf26-track-visual{background-image:linear-gradient(180deg,#071f3142,transparent 48%,#071a27c8),var(--rf-image-forex)}
+.rf26-track-visual:before,.rf26-ai-art,.rf26-crypto-art,.rf26-track-fx svg,.rf26-art-label{display:none!important}
+.rf26-track-copy{padding:16px 25px 24px}
+.rf26-track-copy h3{font-size:clamp(27px,2.7vw,35px)}
+.rf26-track-tag{color:#9df9da}
+.rf26-track-copy p{font-size:12px;color:#cadbd5}
+.rf26-track-link{margin-top:18px}
+.rf26-track-ai{background:linear-gradient(145deg,#143533,#081821 72%)}
+.rf26-track-crypto{background:linear-gradient(145deg,#3b3326,#0e161a 75%)}
+.rf26-track-fx{background:linear-gradient(145deg,#193748,#091723 75%)}
+/* A single published course should still carry cinematic visual punch */
+.rf26-course{
+ background-image:
+ linear-gradient(90deg,#091a20ef 7%,#09232dbf 60%,#071821dc 100%),
+ var(--rf-image-hero);
+ background-position:center;
+ background-size:cover;
+ border-radius:15px;
+}
+.rf26-course:before{display:none}
+.rf26-course-symbol{color:#abf8df;text-shadow:0 0 25px #3cddbb}
+.rf26-course-guide{
+ border-radius:15px;
+ background-image:linear-gradient(100deg,#082122df,#0d2e39b5 55%,#06151bd9),var(--rf-image-architecture);
+ background-size:cover;
+ background-position:center;
+}
+.rf26-guide-orb{display:none}
+.rf26-daily{
+ border-radius:16px;
+ background-image:linear-gradient(115deg,#071e24ec,#0a2b30e3),var(--rf-image-architecture);
+ background-size:cover;
+ background-position:center;
+}
+.rf26-quiz-box{border-radius:16px;box-shadow:14px 18px 0 #c2d5c244}
+.rf26-dashboard{border-radius:17px;overflow:hidden}
+.rf26-family-symbol{border-radius:17px}
+.rf26-family-symbol:before{border-radius:14px}
+.rf26-note{border-radius:11px}
+.rf26-btn{border-radius:9px}
+.rf26-hero-actions .rf26-btn-glow{background:#63f5d7;color:#072125;box-shadow:0 0 33px #1ddac947}
+.rf26-home .rf26-hero-proof{gap:20px}
+@media(max-width:920px){
+ .rf26-hero-grid{grid-template-columns:1fr;gap:20px}
+ .rf26-hero-copy{padding-right:0}
+ .rf26-stage{height:460px;max-width:750px;margin:0 auto}
+ .rf26-tracks{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .rf26-track{min-height:500px}
+}
+@media(max-width:650px){
+ .rf26-hero-grid{display:block}
+ .rf26-hero h1{font-size:clamp(43px,9.8vw,63px)}
+ .rf26-stage{height:355px;border-radius:13px;margin-top:18px}
+ .rf26-orbit-label{min-width:105px;padding:9px 10px}
+ .rf26-label-a{right:3%;top:5%}
+ .rf26-label-b{bottom:8%;left:3%}
+ .rf26-stage-footer{font-size:7px;letter-spacing:0}
+ .rf26-track{min-height:450px;border-radius:11px}
+ .rf26-track-visual{height:234px;margin:8px 9px 0;border-radius:8px}
+ .rf26-track-copy{padding:14px 18px 17px}
+ .rf26-course-guide,.rf26-course{border-radius:11px}
+ .rf26-hero-copy{padding-top:40px}
+}
+@media(prefers-reduced-motion:reduce){
+ .rf26-stage:before,.rf26-track-visual{transition:none!important;transform:none!important}
+}

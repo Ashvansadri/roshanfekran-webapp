@@ -254,3 +254,21 @@ test('student dashboard keeps premium panel styling without private data leaks',
  expect(overflow.scroll).toBeLessThanOrEqual(overflow.viewport+2);
  await page.close();
 });
+
+test('photorealistic assets are used in live home and all course worlds',async({browser})=>{
+ const page=await browser.newPage({viewport:{width:1440,height:900}});
+ await apiMock(page);
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('.rf26-track')).toHaveCount(3);
+ const photos=await page.evaluate(()=>{
+ const root=document.querySelector('.rf26-home');
+ const hero=getComputedStyle(document.querySelector('.rf26-stage'),'::before').backgroundImage;
+ const worlds=[...document.querySelectorAll('.rf26-track-visual')].map(el=>getComputedStyle(el).backgroundImage);
+ return {hero,worlds,allHaveRealAssets:worlds.every(x=>x.includes('real3d.webp'))};
+ });
+ expect(photos.hero).toContain('rf_hero_real3d.webp');
+ expect(photos.allHaveRealAssets).toBe(true);
+ expect(errors).toEqual([]);
+ await page.close();
+});

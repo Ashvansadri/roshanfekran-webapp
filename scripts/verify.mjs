@@ -5,8 +5,8 @@ import assert from "node:assert/strict";
 const root=new URL("../",import.meta.url).pathname;
 const site=join(root,"site");
 const html=readFileSync(join(site,"index.html"),"utf8");
-const scripts=["app.js","portal.js","enroll.js","public-resume.js","scene.js","luxury.js","motion.js","homepage.js","sw.js"];
-const styles=["styles.css","experience.css","portal.css","enroll.css","scene.css","invites.css","luxury.css","motion.css","homepage.css","portal-premium.css"];
+const scripts=["app.js","portal.js","enroll.js","public-resume.js","scene.js","luxury.js","motion.js","homepage.js","cinematic.js","sw.js"];
+const styles=["styles.css","experience.css","portal.css","enroll.css","scene.css","invites.css","luxury.css","motion.css","homepage.css","portal-premium.css","cinematic.css"];
 for(const file of scripts){
  const filepath=join(site,file);assert(existsSync(filepath),file+" missing");
  const check=spawnSync(process.execPath,["--check",filepath],{encoding:"utf8"});
