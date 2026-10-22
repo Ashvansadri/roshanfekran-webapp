@@ -116,3 +116,42 @@ test('guardian has no student finance summary',async({browser})=>{
  await expect(page.locator('.rf-finance-readonly')).toHaveCount(0);
  await page.close();
 });
+
+
+test('motion stack honors reduced motion and preserves native scroll',async({browser})=>{
+ const page=await browser.newPage({viewport:{width:1440,height:900},reducedMotion:'reduce'});
+ await apiMock(page);
+ const errors=[];page.on('pageerror',err=>errors.push(err.message));
+ await page.goto('/',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('.hero h1')).toBeVisible();
+ const status=await page.evaluate(()=>window.RFMOTION?.status||null);
+ expect(status).not.toBeNull();
+ expect(status.reduced).toBe(true);
+ expect(status.smooth).toBe(false);
+ await page.goto('/#/courses',{waitUntil:'domcontentloaded'});
+ await expect(page.getByText('هوش مصنوعی کاربردی',{exact:true}).first()).toBeVisible();
+ expect(errors).toEqual([]);
+ await page.close();
+});
+test('pinned animation vendors initialize or safely fall back',async({browser})=>{
+ const page=await browser.newPage({viewport:{width:1280,height:800}});
+ await apiMock(page);
+ const errors=[];page.on('pageerror',err=>errors.push(err.message));
+ await page.goto('/',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('.rf-journey-step')).toHaveCount(4);
+ const result=await page.evaluate(()=>({
+  status:window.RFMOTION?.status||null,
+  globals:{gsap:!!window.gsap,ScrollTrigger:!!window.ScrollTrigger,Lenis:!!window.Lenis},
+  libraryScripts:Array.from(document.scripts).filter(s=>/gsap|lenis/.test(s.src)).map(s=>s.src),
+  scrollHeight:document.documentElement.scrollHeight,
+  windowHeight:window.innerHeight,
+ }));
+ expect(result.status).not.toBeNull();
+ expect(result.libraryScripts.length).toBe(3);
+ if(result.globals.gsap&&result.globals.ScrollTrigger)expect(result.status.gsap).toBe(true);
+ else expect(result.status.gsap).toBe(false);
+ if(!result.globals.Lenis)expect(result.status.smooth).toBe(false);
+ console.log('RF_LIBRARIES',JSON.stringify(result));
+ expect(errors).toEqual([]);
+ await page.close();
+});
