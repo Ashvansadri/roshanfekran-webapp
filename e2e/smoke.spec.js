@@ -222,3 +222,34 @@ test('conversion homepage works even when GSAP and Lenis CDN scripts are blocked
  expect(errors).toEqual([]);
  await page.close();
 });
+
+test('premium unified sign-in remains accessible on narrow mobile',async({browser},testInfo)=>{
+ const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,deviceScaleFactor:1});
+ await apiMock(page);
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/#/access',{waitUntil:'domcontentloaded'});
+ const login=page.locator('#rf-login');
+ await expect(login).toBeVisible();
+ await expect(page.getByPlaceholder('name@example.com')).toBeVisible();
+ const design=await page.locator('.rf-auth-card').evaluate(el=>({radius:getComputedStyle(el).borderRadius,border:getComputedStyle(el).borderColor}));
+ expect(design.radius).toBe('5px');
+ expect(design.border).not.toBe('rgba(0, 0, 0, 0)');
+ const overflow=await page.evaluate(()=>({viewport:innerWidth,scroll:document.documentElement.scrollWidth}));
+ expect(overflow.scroll,JSON.stringify(overflow)).toBeLessThanOrEqual(overflow.viewport+2);
+ await page.screenshot({path:testInfo.outputPath('mobile-portal-signin-premium.png'),fullPage:true});
+ expect(errors).toEqual([]);
+ await page.close();
+});
+test('student dashboard keeps premium panel styling without private data leaks',async({browser})=>{
+ const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true});
+ await apiMock(page,'student');
+ await page.addInitScript(()=>sessionStorage.setItem('rf_safe_session_v1',JSON.stringify({access_token:'synthetic-student',refresh_token:'test-refresh',expires_at:Date.now()+3600000})));
+ await page.goto('/#/portal',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('.rf-dashboard')).toBeVisible();
+ const panel=page.locator('.rf-panel').first();
+ await expect(panel).toBeVisible();
+ expect(await panel.evaluate(el=>getComputedStyle(el).borderRadius)).toBe('5px');
+ const overflow=await page.evaluate(()=>({viewport:innerWidth,scroll:document.documentElement.scrollWidth}));
+ expect(overflow.scroll).toBeLessThanOrEqual(overflow.viewport+2);
+ await page.close();
+});
