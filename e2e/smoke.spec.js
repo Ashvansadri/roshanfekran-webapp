@@ -316,3 +316,16 @@ test('expired session refresh fails closed without exposing workspace',async({br
  expect(await page.evaluate(()=>sessionStorage.getItem('rf_safe_session_v1'))).toBeNull();
  await page.close();
 });
+
+test('spatial-inspired navigation changes academy rooms without exposing data',async({browser})=>{
+ const page=await browser.newPage({viewport:{width:1280,height:900}});
+ await apiMock(page);
+ await page.goto('/',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('[data-rf-room]')).toHaveCount(3);
+ await page.locator('[data-rf-room="1"]').click();
+ await expect(page.locator('.rf-spatial-title')).toHaveText('آزمایشگاه بلاکچین');
+ await expect(page.locator('[data-rf-room="1"]')).toHaveAttribute('aria-pressed','true');
+ await page.locator('[data-rf-room="2"]').click();
+ await expect(page.locator('.rf-spatial-scene')).toHaveAttribute('data-rf-room-active','2');
+ await page.close();
+});

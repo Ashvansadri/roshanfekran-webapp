@@ -107,6 +107,7 @@ function render(state){
  '<div class="rf26-stage-footer"><span>RF — LEARNING UNIVERSE</span><span dir="ltr">EST. IN EQLID / IRAN</span></div></div></div>'+
  '<div class="rf26-hero-foot shell"><span class="rf26-now"><i></i> '+enc(pill)+'</span><button type="button" data-rf26-scroll="rf26-tracks">بیشتر کشف کن <span>↓</span></button><span class="rf26-hero-index" dir="ltr">SCROLL / 001</span></div></section>'+
  '<div class="rf26-ticker" aria-label="حوزه‌های آموزشی"><div class="rf26-ticker-track" aria-hidden="true"><span>AI & CREATIVE TECHNOLOGY</span><i>✳</i><span>BLOCKCHAIN LITERACY</span><i>✳</i><span>MARKET INTELLIGENCE</span><i>✳</i><span>PROJECT-BASED LEARNING</span><i>✳</i><span>AI & CREATIVE TECHNOLOGY</span><i>✳</i><span>BLOCKCHAIN LITERACY</span></div></div>'+
+ '<section class="rf-spatial shell" id="rf-spatial"><div class="rf-spatial-intro"><span>EXPERIENCE / 01—03</span><h2>سه جهان برای کشف آینده</h2><p>بین فضاهای آموزشی حرکت کن و حوزه موردعلاقه‌ات را بشناس.</p></div><div class="rf-spatial-scene" data-rf-room-active="0"><div class="rf-spatial-copy"><strong class="rf-spatial-kicker">AI / STUDIO</strong><h3 class="rf-spatial-title">کارگاه هوش مصنوعی</h3><p class="rf-spatial-desc">از ایده‌پردازی تا ساخت پروژه‌های هوشمند</p><a href="#/courses">دوره‌های ثبت‌نام باز ↗</a></div><div class="rf-spatial-menu" role="group" aria-label="انتخاب فضای آموزشی"><button type="button" data-rf-room="0" aria-pressed="true">۰۱ / هوش مصنوعی</button><button type="button" data-rf-room="1" aria-pressed="false">۰۲ / ارز دیجیتال</button><button type="button" data-rf-room="2" aria-pressed="false">۰۳ / فارکس</button></div></div><small class="rf-spatial-caption">تصاویر، فضاسازی مفهومی هستند و نمای ساختمان واقعی آموزشگاه نیستند.</small></section>'+
  '<section class="rf26-tracks-wrap" id="rf26-tracks"><div class="shell"><div class="rf26-section-top"><span class="rf26-section-code">01 / CHOOSE YOUR WORLD</span><div class="rf26-section-line"></div><span>سه مسیر برای آینده‌ای که می‌سازی</span></div>'+
  '<div class="rf26-tracks-intro"><h2>دنیای تو، <br><em>از اینجا شروع می‌شود.</em></h2><p>فقط یک دوره انتخاب نمی‌کنی؛ مسیری را انتخاب می‌کنی که قرار است با دست‌های خودت بسازی.</p></div>'+
  '<div class="rf26-tracks"><a href="#/courses" class="rf26-track rf26-track-ai"><div class="rf26-track-meta"><span>01 / CREATIVE AI</span><span class="rf26-track-arrow">↗</span></div><div class="rf26-track-visual" aria-hidden="true"><span class="rf26-art-label">NEURAL / STUDIO</span><div class="rf26-ai-art"><i></i><i></i><i></i><i></i><strong>✳</strong></div></div><div class="rf26-track-copy"><span class="rf26-track-tag">آفرینش و فناوری</span><h3>هوش مصنوعی</h3><p>از ایده تا خلق تصویر، محتوا، ابزار و ایجنت‌های هوشمند.</p><span class="rf26-track-link">کشف این دنیا <b>↗</b></span></div></a>'+
@@ -142,6 +143,20 @@ function scrollToSection(id){
   window.scrollTo({top:y,behavior:"smooth"});
  }else window.scrollTo({top:y,behavior:window.matchMedia("(prefers-reduced-motion:reduce)").matches?"auto":"smooth"});
 }
+root.addEventListener("click",e=>{
+ const button=e.target.closest("[data-rf-room]");
+ if(!button||!root.contains(button))return;
+ const n=Number(button.dataset.rfRoom),rooms=[
+ ["AI / STUDIO","کارگاه هوش مصنوعی","از ایده‌پردازی تا ساخت پروژه‌های هوشمند"],
+ ["CRYPTO / LAB","آزمایشگاه بلاکچین","سواد ارز دیجیتال، امنیت و مدیریت ریسک"],
+ ["FOREX / MARKET","اتاق تحلیل بازار","نمودار، تحلیل سناریو و مدیریت مسئولانه ریسک"]
+ ];
+ if(!Number.isInteger(n)||n<0||n>=rooms.length)return;
+ const box=root.querySelector(".rf-spatial-scene");if(!box)return;box.dataset.rfRoomActive=String(n);
+ const targets=[".rf-spatial-kicker",".rf-spatial-title",".rf-spatial-desc"];
+ targets.forEach((selector,i)=>{const el=box.querySelector(selector);if(el)el.textContent=rooms[n][i]});
+ box.querySelectorAll("[data-rf-room]").forEach(el=>el.setAttribute("aria-pressed",String(el===button)));
+});
 root.addEventListener("click",e=>{
  const action=e.target.closest("[data-rf26-scroll],[data-rf26-quiz]");if(!action||!root.contains(action))return;
  if(action.hasAttribute("data-rf26-scroll")){scrollToSection(action.getAttribute("data-rf26-scroll"));return}

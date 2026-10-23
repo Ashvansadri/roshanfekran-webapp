@@ -168,3 +168,21 @@
 }
 .rf26-scene-caption span{color:#78ffdb;font-size:15px}
 @media(max-width:650px){.rf26-scene-caption{font-size:8px;top:16px;left:12px;padding:8px 11px;letter-spacing:1.4px}}
+
+.rf-spatial{padding:65px 0 90px}.rf-spatial-intro{margin-bottom:30px}
+.rf-spatial-intro>span{font:700 11px Arial,sans-serif;letter-spacing:2px;color:#a9dec5}
+.rf-spatial-intro h2{font-size:clamp(30px,4vw,58px);margin:13px 0;font-weight:850}
+.rf-spatial-intro p{color:#afc9c0;font-size:13px;line-height:2.2}
+.rf-spatial-scene{min-height:490px;position:relative;overflow:hidden;border-radius:18px;background-image:linear-gradient(90deg,#07191ee8,#07191e40),url(https://roshanfekran-academy-control.floot.app/_cdn/static/rf_ai_real3d.webp);background-size:cover;background-position:center;border:1px solid #aadfce75;box-shadow:0 40px 90px #0007}
+.rf-spatial-scene[data-rf-room-active="1"]{background-image:linear-gradient(90deg,#091b1fe6,#08151e52),url(https://roshanfekran-academy-control.floot.app/_cdn/static/rf_crypto_real3d.webp)}
+.rf-spatial-scene[data-rf-room-active="2"]{background-image:linear-gradient(90deg,#091b24e6,#06151e52),url(https://roshanfekran-academy-control.floot.app/_cdn/static/rf_forex_real3d.webp)}
+.rf-spatial-copy{padding:65px 50px 145px;max-width:610px;position:relative;z-index:1}
+.rf-spatial-kicker{color:#d2c3a5;letter-spacing:2px;font:700 11px Arial,sans-serif}
+.rf-spatial-title{font-size:clamp(30px,4vw,55px);margin:22px 0;color:#f8fff5}
+.rf-spatial-desc{color:#c5e4d5;font-size:14px;line-height:2.3}
+.rf-spatial-copy>a{margin-top:20px;display:inline-block;background:#aef8d6;color:#0b2726;border-radius:8px;padding:14px 22px;font-size:13px;font-weight:800}
+.rf-spatial-menu{position:absolute;bottom:20px;right:20px;left:20px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.rf-spatial-menu button{padding:17px 10px;min-height:62px;border:1px solid #b9eee36b;background:#092229c7;color:#ecfff7;border-radius:10px;cursor:pointer;font-size:12px;font-weight:750}
+.rf-spatial-menu button[aria-pressed="true"]{background:#226354ed;border-color:#d4ffe8}
+.rf-spatial-caption{color:#a5bfb7;display:block;font-size:11px;margin-top:15px}
+@media(max-width:650px){.rf-spatial-scene{min-height:590px}.rf-spatial-copy{padding:39px 22px 240px}.rf-spatial-menu{display:flex;flex-direction:column;right:12px;left:12px;gap:7px}.rf-spatial-menu button{min-height:57px}}
