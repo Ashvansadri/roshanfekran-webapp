@@ -5,6 +5,8 @@ const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&
 const num=v=>new Intl.NumberFormat("fa-IR").format(Number(v||0));
 const money=v=>num(v)+" تومان";
 const valid=/^[a-z0-9]+(?:-[a-z0-9]+)*$/i;
+// Normalize Persian/Arabic numerals before native pattern validation and API submission.
+const asciiDigits=v=>String(v??"").replace(/[۰-۹]/g,c=>String(c.charCodeAt(0)-0x06f0)).replace(/[٠-٩]/g,c=>String(c.charCodeAt(0)-0x0660));
 const cache=new Map(),pending=new Set(),result=new Map();
 async function gateway(action,body={},timeout=18000){
  const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),timeout);
@@ -47,14 +49,22 @@ function route(parts){
  (s.payment_instructions?'<p class="rf-caption">'+esc(s.payment_instructions)+'</p>':"")+
  '<a href="tel:09164880996" class="btn btn-outline">پشتیبانی ثبت‌نام ↗</a></aside></section></main>';
 }
+document.getElementById("app").addEventListener("input",e=>{
+ const field=e.target;
+ if(!(field instanceof HTMLInputElement)||!["mobile","national_id"].includes(field.name)||!field.closest("#rf-enroll-submit"))return;
+ const normalized=asciiDigits(field.value);
+ if(normalized!==field.value)field.value=normalized;
+});
 document.getElementById("app").addEventListener("submit",async e=>{
  const form=e.target;if(form.id!=="rf-enroll-submit")return;
  e.preventDefault();const btn=form.querySelector("button[type=submit]"),err=document.getElementById("rf-enroll-error");if(btn.disabled)return;
  btn.disabled=true;btn.textContent="در حال ارسال امن...";
  try{
   const d=new FormData(form),slug=String(d.get("slug")||"");const name=String(d.get("full_name")||"").trim();
-  const mobile=String(d.get("mobile")||"").replace(/\D/g,"");if(name.length<3||!/09\d{9}/.test(mobile)||!d.has("privacy"))throw Error("مشخصات و رضایت داده‌ها را کامل کنید.");
-  const data={slug,full_name:name,mobile,national_id:d.get("national_id")||"",email:d.get("email")||"",city:d.get("city")||"",note:d.get("note")||"",payment_method:d.get("payment_method")||"card_transfer",reference_no:d.get("reference_no")||""};
+  const mobile=asciiDigits(d.get("mobile")).replace(/\D/g,""),nationalId=asciiDigits(d.get("national_id")).replace(/\D/g,"");
+  if(name.length<3||!/^09\d{9}$/.test(mobile)||!d.has("privacy"))throw Error("نام، شماره همراه معتبر و رضایت داده‌ها را کامل کنید.");
+  if(nationalId&&!/^\d{10}$/.test(nationalId))throw Error("کد ملی باید دقیقاً ۱۰ رقم باشد.");
+  const data={slug,full_name:name,mobile,national_id:nationalId,email:d.get("email")||"",city:d.get("city")||"",note:d.get("note")||"",payment_method:d.get("payment_method")||"card_transfer",reference_no:d.get("reference_no")||""};
   const file=d.get("receipt");
   if(file instanceof File&&file.size>0){if(file.size>4194304||!["image/jpeg","image/png","image/webp","application/pdf"].includes(file.type))throw Error("فرمت یا اندازه رسید معتبر نیست.");data.receipt_mime=file.type;data.receipt_base64=await toBase64(file)}
   const output=await gateway("submit_public_registration",data,35000);
