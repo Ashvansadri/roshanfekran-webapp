@@ -48,6 +48,8 @@ const clear=()=>{
  sessionStorage.removeItem("rf_safe_session_v1");
  const print=document.getElementById("rf-print-content");if(print)print.replaceChildren();
  document.body.classList.remove("rf-print-mode");
+ // An invalidated session must immediately render the public login state.
+ queueMicrotask(refresh);
 };
 async function api(action,body={},auth=false,retry=true){
  const generation=authEpoch;
