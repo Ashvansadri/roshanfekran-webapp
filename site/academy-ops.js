@@ -12,7 +12,7 @@ const configs={
  students:["academy_students","id,full_name,user_id,status"],
  enrollments:["academy_enrollments","id,student_id,course_id,status,final_fee,created_at"],
  applications:["academy_registration_requests","id,full_name,course_id,status,deposit_amount,installment_count,submitted_at,payment_plan"],
- payments:["academy_payment_submissions","id,student_id,enrollment_id,status,amount,submitted_at,method,reference_no"],
+ payments:["academy_payment_submissions","id,student_id,enrollment_id,status,amount,submitted_at,method"],
  installments:["academy_installments","id,enrollment_id,installment_no,amount,paid_amount,due_date,status"],
  classes:["academy_classes","id,course_id,title,session_no,starts_at,status,published"],
  assignments:["academy_assignments","id,course_id,title,instructions,due_at,published,notify_guardians,created_at"],
