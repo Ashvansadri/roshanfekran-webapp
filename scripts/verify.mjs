@@ -52,6 +52,11 @@ assert(html.includes("motion.css") && html.includes("motion.js"),"Motion assets 
 assert(html.includes("homepage.css") && html.includes("homepage.js"),"New editorial homepage assets unlinked");
 assert(html.includes("portal-premium.css"),"Premium internal portal CSS not linked");
 assert(js.includes("RFHOMEPAGE"),"Conversion-focused homepage missing");
+const ops=readFileSync(join(site,"academy-ops.js"),"utf8");
+assert(ops.includes('students:["academy_students","id,full_name,user_id,status"]'),"Staff student query must use minimal display fields");
+assert(!/emergency_name|emergency_mobile/.test(ops),"Staff frontend must not fetch unused emergency contact details");
+assert(ops.includes('viewer:["courses"]'),"Read-only viewer must not preload student or financial records");
+assert(ops.includes('manage()||meRole()==="viewer"'),"Viewer must retain the read-only courses tab");
 const isolation=spawnSync(process.execPath,[join(root,"scripts/ops-isolation.test.mjs")],{encoding:"utf8"});
 assert.equal(isolation.status,0,"Staff session isolation regression failed: "+isolation.stderr+" "+isolation.stdout);
 console.log(isolation.stdout.trim());
