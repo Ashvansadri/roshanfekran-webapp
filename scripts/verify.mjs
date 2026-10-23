@@ -63,4 +63,7 @@ console.log(isolation.stdout.trim());
 const financeQA=spawnSync(process.execPath,[join(root,"scripts/ops-finance.test.mjs")],{encoding:"utf8"});
 assert.equal(financeQA.status,0,"Finance/viewer privacy regression failed: "+financeQA.stderr+" "+financeQA.stdout);
 console.log(financeQA.stdout.trim());
+const contractsQA=spawnSync(process.execPath,[join(root,"scripts/ops-contracts.test.mjs")],{encoding:"utf8"});
+assert.equal(contractsQA.status,0,"Contract role/privacy regression failed: "+contractsQA.stderr+" "+contractsQA.stdout);
+console.log(contractsQA.stdout.trim());
 console.log("PASS: 6 scripts, 6 CSS assets, referenced files, Persian typography, secure role-aware calls and PWA metadata.");
