@@ -39,6 +39,7 @@ function authError(s,d){
 }
 const clear=()=>{
  authEpoch++;
+ window.RFOPS?.reset?.();
  for(const ctl of activeRequests)ctl.abort();
  activeRequests.clear();renewing=null;
  session=null;role=null;journey=null;parent=null;parentDetails=null;familyTip=null;resume=null;
@@ -274,13 +275,13 @@ async function submit(e){
  if(f.id==="rf-login"){
   const response=await api("proxy",{path:"/auth/v1/token?grant_type=password",method:"POST",body:{email:String(d.get("email")||"").trim().toLowerCase(),password:String(d.get("password")||"")}});
   if(!response.access_token)throw Error("رمز یا ایمیل تأیید نشد");
-  setSession(response);try{role=await api("resolve_portal",{},true)}catch(e){clear();error=e.message||"نقش حساب قابل تأیید نیست";throw e}journey=null;parent=null;familyTip=null;staffData=null;
+  window.RFOPS?.reset?.();setSession(response);try{role=await api("resolve_portal",{},true)}catch(e){clear();error=e.message||"نقش حساب قابل تأیید نیست";throw e}journey=null;parent=null;familyTip=null;staffData=null;
   location.hash="#/workspace";loadWorkspace();
  }else if(f.id==="rf-activate"){
   const kind=d.get("kind"),act=kind==="staff"?"signup_invited":kind==="student"?"signup_student":"signup_guardian";
   const response=await api(act,{email:d.get("email"),password:d.get("password"),invite_token:d.get("code")});
   if(!response.access_token)throw Error("حساب هنوز فعال نشده است");
-  setSession(response);role=null;location.hash="#/workspace";loadWorkspace();
+  window.RFOPS?.reset?.();setSession(response);role=null;location.hash="#/workspace";loadWorkspace();
  }else if(f.id==="rf-student-task"){
   const taskId=String(d.get("assignment_id")||""),explanation=String(d.get("submission_text")||"").trim(),url=String(d.get("submission_url")||"").trim();
   if(!/^[0-9a-f-]{36}$/i.test(taskId)||!studentAssignments.some(a=>a.id===taskId))throw Error("این تکلیف معتبر یا متعلق به حساب شما نیست.");
