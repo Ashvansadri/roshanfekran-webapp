@@ -153,9 +153,11 @@ function tasks(){
 function render(nextRole){
  if(!nextRole||!["staff","teacher"].includes(nextRole.kind))return "";
  role=nextRole;
+ // Resolve permitted tab before choosing the content; never render a stale tab from a previous role.
+ const nav=tabs();
  let content="";
  switch(selected){case"family":content=family();break;case"applications":content=applications();break;case"courses":content=courses();break;case"finance":content=finance();break;case"tasks":content=tasks();break;default:content=students();}
- return '<div class="rfops" id="rfops-main"><header class="rfops-top"><div><span>ACADEMY OPERATIONS / LIVE DATA</span><h2>مدیریت یکپارچه آموزشگاه</h2><p>دوره‌ها، ثبت‌نام‌ها، هنرجویان، خانواده، تکالیف و مالی در همین سامانه؛ بدون انتقال به Floot.</p></div><button data-rfops="reload" type="button">تازه‌سازی ↻</button></header>'+alert()+tabs()+(inflight?'<div class="rfops-loading">در حال دریافت اطلاعات مجاز…</div>':"")+content+'</div>';
+ return '<div class="rfops" id="rfops-main"><header class="rfops-top"><div><span>ACADEMY OPERATIONS / LIVE DATA</span><h2>مدیریت یکپارچه آموزشگاه</h2><p>دوره‌ها، ثبت‌نام‌ها، هنرجویان، خانواده، تکالیف و مالی در همین سامانه؛ بدون انتقال به Floot.</p></div><button data-rfops="reload" type="button">تازه‌سازی ↻</button></header>'+alert()+nav+(inflight?'<div class="rfops-loading">در حال دریافت اطلاعات مجاز…</div>':"")+content+'</div>';
 }
 async function act(action,element){
  if(working)return;const generation=sessionEpoch;warning="";info="";
