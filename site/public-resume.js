@@ -35,8 +35,8 @@ async function load(token){
   if(!r.ok||!x.ok)throw Error(x.error||"لینک نامعتبر است");
   cache.set(token,{data:x.profile,checkedAt:Date.now()});
  }catch(e){
-  if(revision===routeRevision&&activeToken()===token&&!c.signal.aborted)
-   cache.set(token,{error:e.message||"رزومه یافت نشد",checkedAt:Date.now()});
+  if(revision===routeRevision&&activeToken()===token)
+   cache.set(token,{error:c.signal.aborted?"پاسخ سرور طولانی شد؛ دوباره تلاش کنید.":(e.message||"رزومه یافت نشد"),checkedAt:Date.now()});
  }finally{
   if(controllers.get(token)===c){controllers.delete(token);pending.delete(token)}
   if(revision===routeRevision&&activeToken()===token)window.RFCORE?.render?.();
