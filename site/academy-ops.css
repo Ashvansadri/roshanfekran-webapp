@@ -1,0 +1,66 @@
+
+/* Unified Academy OS — operational tables and forms in the existing premium theme */
+.rfops{margin-top:28px;color:#e8f7f0;direction:rtl}
+.rfops-top{display:flex;align-items:end;justify-content:space-between;gap:20px;padding:25px 0 28px;border-bottom:1px solid #a8eecb39}
+.rfops-top>div>span{display:block;color:#b3d5b0;font:700 10px "Segoe UI",Arial,sans-serif;letter-spacing:2.2px}
+.rfops-top h2{font-size:clamp(26px,3.1vw,43px);font-weight:850;margin:12px 0}
+.rfops-top p,.rfops-section>p{line-height:2.2;font-size:12px;color:#9ebfb1;max-width:880px}
+.rfops-top>button,.rfops-tools button{font-family:inherit;background:#19483f;border:1px solid #b2efd3;color:#d6ffe3;border-radius:7px;padding:11px 17px;cursor:pointer}
+.rfops-tabs{display:flex;flex-wrap:wrap;gap:9px;margin:22px 0}
+.rfops-tabs>button{cursor:pointer;border:1px solid #c2f3d148;background:#12272d;color:#bbd8c8;padding:15px 18px;min-height:49px;border-radius:9px;font:750 12px Estedad,Vazirmatn,Tahoma,sans-serif}
+.rfops-tabs>button[aria-pressed=true]{background:#acedd0;color:#10352c;border-color:#e6ffdf}
+.rfops-ok,.rfops-warn,.rfops-loading{padding:16px 20px;line-height:2;font-size:13px;border:1px solid #a3edc763;margin:19px 0;border-radius:9px;background:#163e348c;color:#dcffdf}
+.rfops-warn{color:#ffdbbc;border-color:#e4a58355;background:#53382440}
+.rfops-section{margin-top:18px}
+.rfops-tools{display:flex;justify-content:space-between;align-items:center;margin-bottom:17px;color:#b6ddc8;font-size:12px;gap:10px}
+.rfops-table-wrap{overflow-x:auto;max-width:100%;border:1px solid #b1e8cd3d;border-radius:11px}
+.rfops table{width:100%;min-width:670px;border-collapse:collapse;font-size:12px;text-align:right;line-height:2}
+.rfops th{font-size:11px;font-weight:700;color:#9ce5c9;background:#142f32;padding:15px 18px;white-space:nowrap}
+.rfops td{padding:13px 18px;border-bottom:1px solid #a8e2cf25;vertical-align:middle}
+.rfops td strong{display:block;font-weight:750}
+.rfops td small{display:block;font-size:10px;color:#92b4ad;direction:ltr;text-align:right}
+.rfops tr:last-child td{border-bottom:0}
+.rfops-card{border:1px solid #acddc949;background:linear-gradient(135deg,#193b38,#0d2029);border-radius:13px;padding:23px;min-width:0;display:flex;flex-direction:column;gap:10px}
+.rfops-card>div:first-child{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.rfops-card strong{font-size:15px;font-weight:800;color:#effff1}
+.rfops-card p{font-size:12px;color:#b4ccc1;line-height:2;margin:3px 0}
+.rfops-card small{font-size:11px;color:#96bfab}
+.rfops-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:20px}
+.rfops-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-top:1px solid #c4e9d526;margin-top:auto;padding-top:14px}
+.rfops-actions button,.rfops-actions a,.rfops-mark button,.rfops-link-row button{cursor:pointer;font-family:inherit;border:1px solid #a2dbb966;background:#173e36;color:#d7f7e6;padding:11px 14px;border-radius:8px;font-size:11px;font-weight:750;min-height:43px}
+.rfops-actions button:hover,.rfops-actions a:hover{background:#a7eccf;color:#07332c}
+.rfops-actions span{color:#aacbbb;font-size:11px}
+.rfops-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:25px 0;padding:23px;background:#0b2127;border:1px solid #aadabf49;border-radius:11px}
+.rfops-form label{display:flex;flex-direction:column;gap:7px;font-size:12px;color:#c1e0ce;font-weight:750;min-width:0}
+.rfops-form input:not([type=checkbox]),.rfops-form select,.rfops-form textarea{font-family:inherit;width:100%;min-width:0;min-height:47px;background:#071820;color:#f0ffed;border:1px solid #b9e9ce5e;border-radius:7px;padding:12px}
+.rfops-form input:focus-visible,.rfops-form select:focus-visible,.rfops-form textarea:focus-visible{outline:2px solid #9df3cf;outline-offset:3px}
+.rfops-form button{align-self:end;min-height:48px}
+.rfops-form .rfops-wide{grid-column:1/-1}
+.rfops-form .rfops-consent{display:flex;flex-direction:row;align-items:flex-start;grid-column:1/-1;color:#dcf4e0;font-size:12px;font-weight:500;line-height:2.2}
+.rfops-form .rfops-consent input{width:18px;height:18px;flex-shrink:0;margin:3px 0 0}
+.rfops-invite{grid-template-columns:repeat(2,minmax(0,1fr))}
+.rfops-link{background:#214f406e;border:1px solid #a7f2c57c;border-radius:10px;padding:20px}
+.rfops-link strong{color:#e9ffef}.rfops-link p{font-size:11px;color:#bbd9c4}
+.rfops-link-row{display:flex;gap:10px;min-width:0;flex-wrap:wrap}
+.rfops-link-row>input{flex:1;min-width:160px;font:12px Arial,sans-serif;background:#051820;border:1px solid #9de8d069;color:#d9fff4;padding:12px;direction:ltr;border-radius:6px}
+.rfops-switch{font-family:inherit;min-width:91px;padding:9px;border:1px solid #a4d6c36d;border-radius:30px;background:#23333c;color:#e1f8e4;cursor:pointer}
+.rfops-switch[aria-pressed=true]{background:#a7ebce;color:#082e27;font-weight:820}
+.rfops h4{font-size:19px;margin:30px 0 16px}
+.rfops-summary{display:flex;flex-wrap:wrap;gap:12px;margin:20px 0}
+.rfops-summary div{min-width:130px;background:#14352e;border:1px solid #a8e1c946;border-radius:10px;padding:19px 24px;display:flex;flex-direction:column;gap:5px}
+.rfops-summary strong{font-size:31px;color:#daffec;font-weight:830}
+.rfops-summary span{font-size:12px;color:#aac8b9}
+.rfops-mark{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:7px;border-top:1px solid #a6d8c834;padding-top:13px}
+.rfops-mark>span{font-size:12px}
+.rfops button:focus-visible,.rfops a:focus-visible{outline:2px solid #b5fedd;outline-offset:3px}
+@media(max-width:900px){.rfops-form{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:660px){
+ .rfops-top{align-items:start;flex-direction:column}
+ .rfops-top h2{font-size:29px}
+ .rfops-cards{grid-template-columns:1fr}
+ .rfops-form,.rfops-invite{grid-template-columns:1fr;padding:17px}
+ .rfops-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+ .rfops-tabs button{font-size:11px;padding:10px}
+ .rfops-card{padding:17px}
+ .rfops-summary div{flex:1;min-width:100px}
+}
