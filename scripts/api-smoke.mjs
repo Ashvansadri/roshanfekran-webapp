@@ -1,17 +1,37 @@
 import assert from "node:assert/strict";
 const URL="https://sdsdzktsqpahpdrgmzuo.supabase.co/functions/v1/academy-gateway";
+async function request(action,additional={},headers={}){
+ const r=await fetch(URL,{method:"POST",headers:{"content-type":"application/json",...headers},body:JSON.stringify({action,...additional}),signal:AbortSignal.timeout(17000)});
+ const d=await r.json();
+ return {r,d};
+}
 async function read(action,additional={}){
  let last;
  for(let n=0;n<2;n++){
   try{
-   const r=await fetch(URL,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action,...additional}),signal:AbortSignal.timeout(17000)});
-   const d=await r.json();
+   const {r,d}=await request(action,additional);
    assert.equal(r.status,200,action+" HTTP status");
    assert.equal(d.ok,true,action+" response");
    return d;
   }catch(e){last=e;if(n===0)await new Promise(ok=>setTimeout(ok,950))}
  }
  throw Error(action+" read-only public API test failed: "+last?.message);
+}
+async function deny(label,action,additional,expectedStatus,headers={}){
+ let last;
+ for(let n=0;n<2;n++){
+  try{
+   const {r,d}=await request(action,additional,headers);
+   assert.equal(r.status,expectedStatus,label+" must reject with HTTP "+expectedStatus);
+   assert.equal(typeof d?.error,"string",label+" must return an error");
+   assert.equal(d.ok,undefined,label+" must not report success");
+   for(const field of ["access_token","refresh_token","students","guardians","payments","enrollments","profile"]){
+    assert.equal(d[field],undefined,label+" must not disclose "+field);
+   }
+   return;
+  }catch(e){last=e;if(n===0)await new Promise(ok=>setTimeout(ok,950))}
+ }
+ throw Error(label+" negative authorization check failed: "+last?.message);
 }
 const catalog=await read("public_catalog");
 assert(Array.isArray(catalog.courses),"courses must be an array");
@@ -26,4 +46,10 @@ if(link){
  assert.equal(data.course?.id,link.id,"course registration links must refer to the correct course");
  assert(data.link && typeof data.link.slug==="string","valid public course registration info");
 }
-console.log("PASS: live public catalog ("+catalog.courses.length+" course(s)), news, daily content and public registration info, with no writes.");
+// Real negative tests against the deployed gateway; these never authenticate or mutate data.
+// A failed authorization must not be mistaken for a passing public endpoint test.
+await deny("anonymous portal resolution","resolve_portal",{},401);
+await deny("anonymous private student snapshot","proxy",{path:"/rest/v1/rpc/academy_student_journey_snapshot",method:"POST",body:{}},400);
+await deny("anonymous private financial table","proxy",{path:"/rest/v1/academy_payments?select=id,amount&limit=1",method:"GET"},400);
+await deny("invalid public resume token","public_showcase",{token:"00000000-0000-4000-8000-000000000000"},404);
+console.log("PASS: live public catalog ("+catalog.courses.length+" course(s)), news, daily content and registration info; four real anonymous/invalid-access denial checks; no writes.");
