@@ -157,7 +157,7 @@ function parentPage(){
  (children.length?children.map(c=>'<article class="rf-child"><h3>'+esc(c.name)+'</h3><div class="rf-meters"><span>آثار تأییدشده</span><b>'+num(c.works_approved)+' / '+num(c.works_uploaded)+'</b></div><div class="rf-meters"><span>مأموریت‌های موفق</span><b>'+num(c.mission_approved_count)+'</b></div><div class="rf-meters"><span>آزمون مهارتی</span><b>'+(c.quiz_passed?"قبول‌شده":"در انتظار")+'</b></div><div class="rf-meters"><span>اجازه نمایش عمومی</span><b>'+(c.guardian_consent?"فعال":"غیرفعال")+'</b></div><div class="rf-action-row"><button class="portal-secondary" data-rf="consent" data-student="'+esc(c.student_id)+'" data-allow="true">تأیید با رضایت آگاهانه</button><button class="portal-secondary" data-rf="consent" data-student="'+esc(c.student_id)+'" data-allow="false">لغو رضایت</button></div><p class="rf-caption">تأیید والد به‌تنهایی رزومه را منتشر نمی‌کند؛ خود هنرجو نیز باید آن را فعال کند.</p></article>').join(""):'<div class="rf-empty">در این حساب هنوز ارتباط هنرجو و سرپرست با مجوز دیدن سوابق ثبت نشده است.</div>')+
  '</div><div class="rf-panel"><div class="rf-panel-title"><span>◎</span><h3>آموزش خانواده؛ درس امروز</h3></div>'+
  (familyTip?'<div class="rf-lesson"><div class="rf-overline">DAY '+num(familyTip.day_no)+' / ۳۰</div><h3>'+esc(familyTip.title)+'</h3><p>'+esc(familyTip.explanation)+'</p><div class="rf-lesson-practice"><strong>تمرین سه‌دقیقه‌ای</strong><p>'+esc(familyTip.exercise)+'</p></div><small>'+esc(familyTip.safety_note)+'</small></div>':'<div class="rf-empty">درس روز فقط برای والدین دارای مجوز مشاهده وضعیت هنرجو فعال می‌شود.</div>')+
- '<a class="btn btn-outline" href="#/courses">آشنایی با دوره‌های آموزشی</a></div></section></main>';
+ '<a class="btn btn-outline" href="#/courses">آشنایی با دوره‌های آموزشی</a></div></section>'+(window.RFFAMILY?.parent?.(parentDetails)||'')+'</main>';
 }
 
 function financePanel(){
@@ -210,7 +210,7 @@ function studentPage(){
  actions()+toast()+'<div class="rf-progress-wrap"><div><span class="rf-overline">YOUR PROGRESS</span><h2>'+num(progress)+'٪ <small>تکمیل پرونده</small></h2></div><div class="rf-track"><span style="width:'+Math.max(0,Math.min(100,progress))+'%"></span></div><p>'+esc(journey.message||"مسیر رشد شما آغاز شده است.")+'</p></div>'+
  '<div class="rf-stages">'+steps.map((s,i)=>'<button class="rf-stage '+(i===stageIndex?"is-selected":"")+'" data-rf="stage" data-step="'+i+'"><span>'+(s.done?"✓":num(i+1))+'</span><b>'+esc(s.title)+'</b><small>'+(s.done?"تکمیل‌شده":i===stageIndex?"مرحله جاری":"آماده تکمیل")+'</small></button>').join("")+'</div>'+
  '<section class="rf-grid-two">'+right+
- '<div class="rf-panel"><div class="rf-panel-title"><span>✧</span><h3>مأموریت‌های ۹۰روزه</h3></div><p>۲۴ پروژه در سه مرحله، با تحویل و تأیید واقعی مدرس یا مدیر.</p><div class="rf-meters"><span>مأموریت‌های پذیرفته‌شده</span><strong>'+num(journey.missions_approved||0)+' / ۲۴</strong></div><div class="rf-mini-missions">'+missions.slice(0,6).map(m=>'<div><span>'+num(m.mission_no)+'</span><b>'+esc(m.title)+'</b></div>').join("")+'</div><a class="btn btn-outline" href="#/missions">مشاهده مسیر پروژه‌ها ↗</a></div></section>'+financePanel()+'</main>';
+ '<div class="rf-panel"><div class="rf-panel-title"><span>✧</span><h3>مأموریت‌های ۹۰روزه</h3></div><p>۲۴ پروژه در سه مرحله، با تحویل و تأیید واقعی مدرس یا مدیر.</p><div class="rf-meters"><span>مأموریت‌های پذیرفته‌شده</span><strong>'+num(journey.missions_approved||0)+' / ۲۴</strong></div><div class="rf-mini-missions">'+missions.slice(0,6).map(m=>'<div><span>'+num(m.mission_no)+'</span><b>'+esc(m.title)+'</b></div>').join("")+'</div><a class="btn btn-outline" href="#/missions">مشاهده مسیر پروژه‌ها ↗</a></div></section>'+financePanel()+(window.RFFAMILY?.student?.(studentAssignments,studentSubmissions,studentNotifications)||'')+'</main>';
 }
 function missionsPage(){
  if(role?.kind!=="student")return '<main class="shell rf-panel-container"><div class="rf-empty">مشاهده مأموریت‌ها ویژه هنرجو است. <a href="#/access">ورود</a></div></main>';
@@ -223,45 +223,17 @@ function missionsPage(){
  '<p class="rf-caption">ارسال تنها پس از باز شدن روز مأموریت و احراز ثبت‌نام معتبر پذیرفته می‌شود.</p></main>';
 }
 function staffPage(){
- const title=role?.kind==="teacher"?"پنل مدرس":"مرکز کنترل مدیریت";
- const courses=staffData?.academy_courses||[],students=staffData?.academy_students||[],enroll=staffData?.academy_enrollments||[];
  const canManage=role?.kind==="staff"&&["owner","manager"].includes(String(role?.role||""));
- const registrations=role?.kind==="staff"?(staffData?.academy_registration_requests||[]):[];
- const assignments=role?.kind==="teacher"?(staffData?.academy_assignments||[]):[];
- const approved=registrations.filter(x=>x.status==="approved");
- const pending=registrations.filter(x=>["pending","contacted","awaiting_payment"].includes(String(x.status||"")));
- const registrationPanel=role?.kind==="staff"?'<section class="rf-panel rf-manage-extras"><div class="rf-panel-title"><span>◈</span><h3>درخواست‌های ثبت‌نام اخیر</h3></div><p>این فهرست از پرونده‌های واقعیِ قابل دسترسی با نقش فعلی خوانده می‌شود. تأیید نهایی و امور مالی فعلاً از محیط عملیاتی انجام می‌شود.</p>'+
- '<div class="rf-stats rf-inline-stats"><div>'+badge("در انتظار بررسی")+'<strong>'+num(pending.length)+'</strong></div><div>'+badge("تأییدشده در این نمای محدود")+'<strong>'+num(approved.length)+'</strong></div></div>'+
- '<div class="rf-admin-list">'+(registrations.length?registrations.slice(0,9).map(x=>'<div class="rf-req-row"><span><b>'+esc(x.full_name||"متقاضی")+'</b><small>'+esc(x.course_id||"")+'</small></span>'+badge(({pending:"منتظر",contacted:"در حال پیگیری",awaiting_payment:"منتظر پرداخت",approved:"تأییدشده",rejected:"ردشده"})[String(x.status||"")]||String(x.status||"ثبت‌شده"))+'</div>').join(""):'<div class="rf-empty">درخواستی با سطح دسترسی فعلی مشاهده نشد.</div>')+'</div></section>':
- '<section class="rf-panel rf-manage-extras"><div class="rf-panel-title"><span>◎</span><h3>تکالیف کلاس‌ها</h3></div><p>مرور تکالیف و فعالیت‌های تعریف‌شده در کلاس‌های مجاز شما.</p>'+
- '<div class="rf-admin-list">'+(assignments.length?assignments.slice(0,12).map(x=>'<div class="rf-req-row"><span><b>'+esc(x.title||"تکلیف کلاسی")+'</b><small>'+esc(x.instructions||"").slice(0,150)+'</small></span>'+badge(x.published?"منتشرشده":"پیش‌نویس")+'</div>').join(""):'<div class="rf-empty">تکلیفی برای این حساب نمایش داده نمی‌شود.</div>')+'</div></section>';
-
- const oldTools=role?.kind==="teacher"?
-  [{label:"کلاس‌ها و تکالیف",path:"/teacher",desc:"حضور، تکالیف و بازخورد"}]:
-  [
-   {label:"مدیریت اصلی و پرونده‌ها",path:"/manage",desc:"دوره‌ها، هنرجویان و تنظیمات"},
-   {label:"ثبت‌نام و پذیرش",path:"/admissions",desc:"درخواست‌ها و تأییدها"},
-   {label:"امور اداری و مالی",path:"/office",desc:"عملیات، قراردادها و پرداخت‌ها"},
-   {label:"پیگیری رشد",path:"/growth",desc:"مأموریت‌ها و ارزیابی"},
-   {label:"امروز آموزشگاه",path:"/manage/today",desc:"کارهای روزانه"}
-  ];
- const legacyHub='<section class="rf-panel rf-oldtools"><div class="rf-panel-title"><span>⌘</span><h3>امکانات کامل سامانه قبلی</h3></div>'+
-  '<p>برای امکاناتی که هنوز به نسخه جدید منتقل نشده‌اند، از مسیرهای عملیاتی اصلی استفاده کنید. ورود در دامنه قدیمی ممکن است یک‌بار دیگر لازم باشد.</p>'+
-  '<div class="rf-oldtools-grid">'+oldTools.map(t=>'<a target="_blank" rel="noopener noreferrer" href="'+OLD+esc(t.path)+'"><b>'+esc(t.label)+'</b><small>'+esc(t.desc)+'</small><span aria-hidden="true">↗</span></a>').join("")+'</div></section>';
- const options=courses.filter(c=>c.status==="active").map(c=>'<option value="'+esc(c.id)+'">'+esc(c.title)+'</option>').join("");
-
+ const students=staffData?.academy_students||[];
  const studentsOpt=students.filter(x=>!x.user_id&&x.archived_at==null).map(x=>'<option value="'+esc(x.id)+'">'+esc(x.full_name)+'</option>').join("");
- const inviteBlock=canManage?'<section class="rf-panel rf-invites"><span class="rf-overline">SECURE INVITATIONS</span><h2>دعوت و فعال‌سازی حساب‌ها</h2><p>دعوت هر حساب با لینک اختصاصی امضاشده و مهلت‌دار صادر می‌شود. مدیریت نباید این لینک‌ها را عمومی منتشر کند.</p>'+
+  const inviteBlock=canManage?'<section class="rf-panel rf-invites"><span class="rf-overline">SECURE INVITATIONS</span><h2>دعوت و فعال‌سازی حساب‌ها</h2><p>دعوت هر حساب با لینک اختصاصی امضاشده و مهلت‌دار صادر می‌شود. مدیریت نباید این لینک‌ها را عمومی منتشر کند.</p>'+
  '<div class="rf-invite-grid"><form id="rf-invite-staff" class="rf-form"><h3>همکار و مدرس</h3><label class="portal-field"><span>نام همکار</span><input name="full_name" minlength="3" required/></label><label class="portal-field"><span>ایمیل</span><input name="email" type="email" required dir="ltr"/></label><label class="portal-field"><span>نقش</span><select name="staff_role"><option value="teacher">مدرس</option><option value="viewer">مشاهده‌گر</option><option value="registrar">مسئول ثبت‌نام</option><option value="finance">امور مالی</option><option value="manager">مدیر</option></select></label><button class="btn btn-primary">صدور دعوت امن</button></form>'+
  '<form id="rf-invite-student" class="rf-form"><h3>فعال‌سازی هنرجو</h3><label class="portal-field"><span>پرونده بدون حساب</span><select name="student_id" required>'+studentsOpt+'</select></label><label class="portal-field"><span>ایمیل هنرجو</span><input type="email" name="email" dir="ltr" required/></label><button class="btn btn-outline" '+(studentsOpt?"":"disabled")+' type="submit">ایجاد لینک ورود</button></form>'+
  '<form id="rf-invite-guardian" class="rf-form"><h3>دعوت خانواده</h3><label class="portal-field"><span>هنرجو</span><select name="student_id" required>'+students.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.full_name)+'</option>').join("")+'</select></label><label class="portal-field"><span>نام سرپرست</span><input name="full_name" required minlength="3"/></label><label class="portal-field"><span>ایمیل سرپرست</span><input name="email" type="email" dir="ltr" required/></label><label class="portal-field"><span>شماره همراه (اختیاری)</span><input name="mobile" inputmode="numeric" dir="ltr"/></label><button class="btn btn-outline">ساخت لینک با مجوز والد</button></form></div><p class="rf-caption">با ارسال دعوت، لینک به حافظه کلیپ‌بورد منتقل می‌شود؛ آن را فقط برای شخص مشخص‌شده ارسال کنید. هیچ رمز عبوری به‌جای او تنظیم نمی‌شود.</p></section>':"";
-
- return '<main class="shell rf-dashboard">'+heading("ACADEMY CONTROL",title,"دسترسی به اطلاعات تنها با نقش معتبر و سیاست دسترسی سرور انجام می‌شود.")+actions()+toast()+
- '<div class="rf-stats"><div>'+badge("دوره‌های قابل مشاهده")+'<strong>'+num(courses.length)+'</strong></div><div>'+badge("هنرجویان قابل مشاهده")+'<strong>'+num(students.length)+'</strong></div><div>'+badge("ثبت‌نام‌های قابل مشاهده")+'<strong>'+num(enroll.length)+'</strong></div></div>'+
- '<section class="rf-grid-two"><div class="rf-panel"><h3>دوره‌های آموزشگاه</h3><div class="rf-admin-list">'+(courses.length?courses.slice(0,20).map(c=>'<div><b>'+esc(c.title)+'</b>'+badge(c.status||"فعال")+'</div>').join(""):'<div class="rf-empty">هنوز دوره مرتبطی برای این حساب قابل مشاهده نیست.</div>')+'</div><div class="rf-action-row"><a class="btn btn-outline" href="'+OLD+'/manage" rel="noopener noreferrer" target="_blank">پنل عملیات و قراردادها ↗</a>'+(role?.kind==="teacher"?'<a class="btn btn-outline" href="'+OLD+'/teacher" target="_blank" rel="noopener noreferrer">کلاس‌های مدرس ↗</a>':"")+'</div><p class="rf-caption">گردش‌کار قراردادها، بیعانه‌ها و اطلاع‌رسانی همچنان در سامانه عملیاتی قبلی محفوظ است.</p></div>'+
- (canManage?'<div class="rf-panel"><div class="rf-panel-title"><span>✧</span><h3>مدیریت AI MISSION 90</h3></div><p>برای راه‌اندازی ۲۴ مأموریت پروژه‌ای در یک دوره، تاریخ شروع و وضعیت فعال بودن آن را مشخص کنید.</p><form class="rf-form" id="rf-campaign-launch"><label class="portal-field"><span>دوره</span><select name="course_id" required>'+options+'</select></label><label class="portal-field"><span>تاریخ شروع دوره (میلادی، ذخیره و نمایش اصلی شمسی)</span><input type="date" name="start_date" required/></label><label class="rf-check"><input type="checkbox" name="active" checked/> مأموریت‌های دوره فعال شوند.</label><button type="submit" class="btn btn-primary">ذخیره مسیر ۹۰روزه ←</button></form><p class="rf-caption">فعال‌سازی فقط توسط مدیر یا مالک پذیرفته می‌شود؛ هر ارسال در دیتابیس اصلی ثبت خواهد شد.</p></div>':
- '<div class="rf-panel"><div class="rf-panel-title"><span>◈</span><h3>فضای تخصصی مدرس</h3></div><p>کلاس‌ها، حضور و غیاب، تکالیف و بازخورد همچنان در پنل آموزشی فعلی در دسترس‌اند.</p><a class="btn btn-outline" href="'+OLD+'/teacher" rel="noopener noreferrer" target="_blank">مشاهده کلاس‌ها ↗</a></div>')+'</section>'+legacyHub+registrationPanel+inviteBlock+'</main>';
+ return '<main class="shell rf-dashboard">'+heading("ACADEMY OPERATIONS",role?.kind==="teacher"?"فضای کاری مدرس":"مرکز مدیریت روشنفکران","اطلاعات دوره، پذیرش، مالی، خانواده و کلاس‌ها در همین سایت بررسی می‌شوند.")+
+ actions()+toast()+(window.RFOPS?.render?.(role)||'<div class="rf-panel">در حال بارگذاری عملیات…</div>')+inviteBlock+'</main>';
 }
+
 async function printResume(){
  const generation=authEpoch;
  const d=await rpc("academy_student_resume_snapshot",{p_include_contact:false});
