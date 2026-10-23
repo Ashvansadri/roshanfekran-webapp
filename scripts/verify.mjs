@@ -60,4 +60,7 @@ assert(ops.includes('manage()||meRole()==="viewer"'),"Viewer must retain the rea
 const isolation=spawnSync(process.execPath,[join(root,"scripts/ops-isolation.test.mjs")],{encoding:"utf8"});
 assert.equal(isolation.status,0,"Staff session isolation regression failed: "+isolation.stderr+" "+isolation.stdout);
 console.log(isolation.stdout.trim());
+const financeQA=spawnSync(process.execPath,[join(root,"scripts/ops-finance.test.mjs")],{encoding:"utf8"});
+assert.equal(financeQA.status,0,"Finance/viewer privacy regression failed: "+financeQA.stderr+" "+financeQA.stdout);
+console.log(financeQA.stdout.trim());
 console.log("PASS: 6 scripts, 6 CSS assets, referenced files, Persian typography, secure role-aware calls and PWA metadata.");
