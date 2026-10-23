@@ -30,6 +30,12 @@ const grants={
  viewer:["courses","students","enrollments","applications"],
 };
 let role=null, request=null, datasets={},failures={},inflight=null,selected="students",working=false,info="",warning="",generated="";
+let sessionEpoch=0;
+// Clear every private projection and invitation link on logout or account switch.
+function reset(){
+ sessionEpoch++;role=null;request=null;datasets={};failures={};inflight=null;
+ selected="students";working=false;info="";warning="";generated="";
+}
 const meRole=()=>String(role?.role||"");
 const manage=()=>["owner","manager"].includes(meRole());
 const financial=()=>["owner","manager","finance"].includes(meRole());
@@ -44,17 +50,23 @@ function alert(){return (info?'<div class="rfops-ok" role="status">'+esc(info)+'
 function refresh(){window.RFCORE?.render?.()}
 async function load(nextRole,apiFn){
  role=nextRole;request=apiFn;if(inflight)return inflight;
+ const generation=sessionEpoch;
  const keys=available();
- inflight=(async()=>{
+ let job;
+ job=(async()=>{
   const results=await Promise.allSettled(keys.map(async key=>{
    const [table,cols]=configs[key];
    return proxy("/rest/v1/"+table+"?select="+cols+"&limit=150&order="+(key==="applications"?"submitted_at":key==="payments"?"submitted_at":key==="assignments"?"created_at":"id")+".desc");
   }));
-  datasets={};failures={};
-  keys.forEach((key,i)=>{const r=results[i];if(r.status==="fulfilled"&&Array.isArray(r.value))datasets[key]=r.value;else failures[key]=r.status==="rejected"?String(r.reason?.message||r.reason):"داده معتبر دریافت نشد";});
+  // Never publish an old account's data after logout or account switching.
+  if(generation!==sessionEpoch)return false;
+  const nextData={},nextFailures={};
+  keys.forEach((key,i)=>{const r=results[i];if(r.status==="fulfilled"&&Array.isArray(r.value))nextData[key]=r.value;else nextFailures[key]=r.status==="rejected"?String(r.reason?.message||r.reason):"داده معتبر دریافت نشد";});
+  datasets=nextData;failures=nextFailures;
   return true;
- })().finally(()=>{inflight=null;refresh()});
- return inflight;
+ })().finally(()=>{if(generation===sessionEpoch&&inflight===job){inflight=null;refresh()}});
+ inflight=job;
+ return job;
 }
 const name=(table,id)=>{let x=row(table).find(r=>String(r.id)===String(id));return x?.title||x?.full_name||"—"};
 function section(label,content){return '<section class="rf-panel rfops-section"><div class="rf-panel-title"><span>◈</span><h3>'+esc(label)+'</h3></div>'+content+'</section>'}
@@ -135,7 +147,7 @@ function render(nextRole){
  return '<div class="rfops" id="rfops-main"><header class="rfops-top"><div><span>ACADEMY OPERATIONS / LIVE DATA</span><h2>مدیریت یکپارچه آموزشگاه</h2><p>دوره‌ها، ثبت‌نام‌ها، هنرجویان، خانواده، تکالیف و مالی در همین سامانه؛ بدون انتقال به Floot.</p></div><button data-rfops="reload" type="button">تازه‌سازی ↻</button></header>'+alert()+tabs()+(inflight?'<div class="rfops-loading">در حال دریافت اطلاعات مجاز…</div>':"")+content+'</div>';
 }
 async function act(action,element){
- if(working)return;warning="";info="";
+ if(working)return;const generation=sessionEpoch;warning="";info="";
  const id=String(element.dataset.id||""),link=String(element.dataset.link||"");
  try{
   if(action==="reload"){await load(role,request);return}
@@ -182,11 +194,11 @@ async function act(action,element){
    info="ارزیابی با کنترل مجوز در سرور ثبت شد.";
   }
   if(working)await load(role,request);
- }catch(e){warning=e instanceof Error?e.message:"عملیات انجام نشد";}
- finally{working=false;refresh()}
+ }catch(e){if(generation===sessionEpoch)warning=e instanceof Error?e.message:"عملیات انجام نشد";}
+ finally{if(generation===sessionEpoch){working=false;refresh()}}
 }
 async function formSubmit(form){
- if(working)return;warning="";info="";generated="";
+ if(working)return;const generation=sessionEpoch;warning="";info="";generated="";
  const data=new FormData(form);
  try{
   if(form.id==="rfops-invite-guardian"){
@@ -213,8 +225,8 @@ async function formSubmit(form){
    info="تکلیف منتشر شد و اعلان مربوطه در صورت مجاز بودن ثبت خواهد شد.";
   }
   if(working)await load(role,request);
- }catch(e){warning=e instanceof Error?e.message:"عملیات انجام نشد";}
- finally{working=false;refresh()}
+ }catch(e){if(generation===sessionEpoch)warning=e instanceof Error?e.message:"عملیات انجام نشد";}
+ finally{if(generation===sessionEpoch){working=false;refresh()}}
 }
 root?.addEventListener("click",event=>{
  const tab=event.target.closest("[data-rfops-tab]");if(tab&&root.contains(tab)){event.preventDefault();selected=String(tab.dataset.rfopsTab);info="";warning="";refresh();return}
@@ -226,5 +238,5 @@ root?.addEventListener("submit",event=>{
  if(form?.id!=="rfops-invite-guardian"&&form?.id!=="rfops-assignment")return;
  event.preventDefault();formSubmit(form);
 });
-window.RFOPS={load,render};
+window.RFOPS={load,render,reset};
 })();
