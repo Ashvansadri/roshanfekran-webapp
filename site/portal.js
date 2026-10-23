@@ -6,7 +6,7 @@ const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&
 const safeURL=v=>{try{let u=new URL(String(v));return u.protocol==="https:"?u.href:"#"}catch{return "#"}};
 const date=v=>{try{return new Intl.DateTimeFormat("fa-IR-u-ca-persian",{dateStyle:"medium"}).format(new Date(v))}catch{return "—"}};
 const num=v=>new Intl.NumberFormat("fa-IR").format(Number(v||0));
-let session=null,role=null,journey=null,parent=null,familyTip=null,resume=null,works=[],missions=[],campaigns=[],staffData=null,finance=null,profileFormOpen=false,workFormOpen=false,stage=0,busy=false,error="",notice="",loading=false,quizQuestions=null,quizLoading=false;
+let session=null,role=null,journey=null,parent=null,parentDetails=null,familyTip=null,resume=null,works=[],missions=[],campaigns=[],studentAssignments=[],studentSubmissions=[],studentNotifications=[],staffData=null,finance=null,profileFormOpen=false,workFormOpen=false,stage=0,busy=false,error="",notice="",loading=false,quizQuestions=null,quizLoading=false;
 try{const saved=sessionStorage.getItem("rf_safe_session_v1");if(saved)session=JSON.parse(saved)}catch{sessionStorage.removeItem("rf_safe_session_v1")}
 const token=()=>session?.access_token||"";
 const setSession=x=>{if(!x?.access_token||!x?.refresh_token)throw Error("پاسخ ورود ناقص است");session={access_token:x.access_token,refresh_token:x.refresh_token,expires_at:Date.now()+Math.max(1,Number(x.expires_in||3600))*1000};sessionStorage.setItem("rf_safe_session_v1",JSON.stringify(session))};
@@ -42,8 +42,8 @@ const clear=()=>{
  authEpoch++;
  for(const ctl of activeRequests)ctl.abort();
  activeRequests.clear();renewing=null;
- session=null;role=null;journey=null;parent=null;familyTip=null;resume=null;
- works=[];missions=[];campaigns=[];staffData=null;finance=null;quizQuestions=null;
+ session=null;role=null;journey=null;parent=null;parentDetails=null;familyTip=null;resume=null;
+ works=[];missions=[];campaigns=[];studentAssignments=[];studentSubmissions=[];studentNotifications=[];staffData=null;finance=null;quizQuestions=null;
  profileFormOpen=false;workFormOpen=false;loading=false;busy=false;
  sessionStorage.removeItem("rf_safe_session_v1");
  const print=document.getElementById("rf-print-content");if(print)print.replaceChildren();
@@ -85,7 +85,7 @@ async function loadWorkspace(){
  loading=true;finance=null;try{
   role=await api("resolve_portal",{},true);
   if(role.kind==="student"){journey=await rpc("academy_student_journey_snapshot");await loadStudentExtras()}
-  else if(role.kind==="guardian"){const a=await Promise.allSettled([rpc("academy_parent_journey_snapshot"),rpc("academy_family_tip_today")]);requireCurrent(generation);parent=a[0].status==="fulfilled"?a[0].value:null;familyTip=a[1].status==="fulfilled"?a[1].value:null}
+  else if(role.kind==="guardian"){const a=await Promise.allSettled([rpc("academy_parent_journey_snapshot"),rpc("academy_family_tip_today"),rpc("academy_parent_portal_snapshot")]);requireCurrent(generation);parent=a[0].status==="fulfilled"?a[0].value:null;familyTip=a[1].status==="fulfilled"?a[1].value:null;parentDetails=a[2].status==="fulfilled"?a[2].value:null}
   else if(role.kind==="staff"||role.kind==="teacher"){await loadStaffExtras()}
   error="";
  }catch(e){if(!currentEpoch(generation))return;error=e.message||"ارتباط امن با حساب برقرار نشد";if(/AUTH_REQUIRED|JWT|401|expired|Unauthorized/.test(error))clear()}
@@ -101,12 +101,18 @@ async function loadStudentExtras(){
   proxy("/rest/v1/academy_enrollments?select=id,course_id,final_fee,status&limit=100"),
   proxy("/rest/v1/academy_installments?select=id,enrollment_id,installment_no,amount,paid_amount,due_date,status&limit=100"),
   proxy("/rest/v1/academy_payments?select=id,enrollment_id,installment_id,amount,paid_at,status&limit=100"),
+  proxy("/rest/v1/academy_assignments?select=id,course_id,title,instructions,due_at,published&published=eq.true&limit=100"),
+  proxy("/rest/v1/academy_assignment_submissions?select=id,assignment_id,status,submitted_at,score&limit=100"),
+  proxy("/rest/v1/academy_notifications?select=id,student_id,kind,title,body,due_at,read_at&order=created_at.desc&limit=50"),
  ]);
  requireCurrent(generation);
  works=items[0].status==="fulfilled"&&Array.isArray(items[0].value)?items[0].value:[];
  missions=items[1].status==="fulfilled"&&Array.isArray(items[1].value)?items[1].value:[];
  campaigns=items[2].status==="fulfilled"&&Array.isArray(items[2].value)?items[2].value:[];
- const f=items.slice(3);
+ studentAssignments=items[6].status==="fulfilled"&&Array.isArray(items[6].value)?items[6].value:[];
+ studentSubmissions=items[7].status==="fulfilled"&&Array.isArray(items[7].value)?items[7].value:[];
+ studentNotifications=items[8].status==="fulfilled"&&Array.isArray(items[8].value)?items[8].value:[];
+ const f=items.slice(3,6);
  finance=f.every(x=>x.status==="fulfilled"&&Array.isArray(x.value))
   ?{ready:true,enrollments:f[0].value,installments:f[1].value,payments:f[2].value}
   :{ready:false};
@@ -126,6 +132,7 @@ async function loadStaffExtras(){
  const res=await Promise.allSettled(requests);
  requireCurrent(generation);
  staffData={};names.forEach((n,i)=>staffData[n]=res[i].status==="fulfilled"&&Array.isArray(res[i].value)?res[i].value:[]);
+ if(window.RFOPS?.load){await window.RFOPS.load(role,api);requireCurrent(generation)}
 }
 function heading(k,title,subtitle){return '<div class="rf-page-head"><div><div class="rf-overline">'+esc(k)+'</div><h1>'+title+'</h1><p>'+esc(subtitle)+'</p></div></div>'}
 function loginPage(){
