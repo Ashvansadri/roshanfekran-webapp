@@ -200,6 +200,19 @@ function staffPage(){
  '<div class="rf-admin-list">'+(registrations.length?registrations.slice(0,9).map(x=>'<div class="rf-req-row"><span><b>'+esc(x.full_name||"متقاضی")+'</b><small>'+esc(x.course_id||"")+'</small></span>'+badge(({pending:"منتظر",contacted:"در حال پیگیری",awaiting_payment:"منتظر پرداخت",approved:"تأییدشده",rejected:"ردشده"})[String(x.status||"")]||String(x.status||"ثبت‌شده"))+'</div>').join(""):'<div class="rf-empty">درخواستی با سطح دسترسی فعلی مشاهده نشد.</div>')+'</div></section>':
  '<section class="rf-panel rf-manage-extras"><div class="rf-panel-title"><span>◎</span><h3>تکالیف کلاس‌ها</h3></div><p>مرور تکالیف و فعالیت‌های تعریف‌شده در کلاس‌های مجاز شما.</p>'+
  '<div class="rf-admin-list">'+(assignments.length?assignments.slice(0,12).map(x=>'<div class="rf-req-row"><span><b>'+esc(x.title||"تکلیف کلاسی")+'</b><small>'+esc(x.instructions||"").slice(0,150)+'</small></span>'+badge(x.published?"منتشرشده":"پیش‌نویس")+'</div>').join(""):'<div class="rf-empty">تکلیفی برای این حساب نمایش داده نمی‌شود.</div>')+'</div></section>';
+
+ const oldTools=role?.kind==="teacher"?
+  [{label:"کلاس‌ها و تکالیف",path:"/teacher",desc:"حضور، تکالیف و بازخورد"}]:
+  [
+   {label:"مدیریت اصلی و پرونده‌ها",path:"/manage",desc:"دوره‌ها، هنرجویان و تنظیمات"},
+   {label:"ثبت‌نام و پذیرش",path:"/admissions",desc:"درخواست‌ها و تأییدها"},
+   {label:"امور اداری و مالی",path:"/office",desc:"عملیات، قراردادها و پرداخت‌ها"},
+   {label:"پیگیری رشد",path:"/growth",desc:"مأموریت‌ها و ارزیابی"},
+   {label:"امروز آموزشگاه",path:"/manage/today",desc:"کارهای روزانه"}
+  ];
+ const legacyHub='<section class="rf-panel rf-oldtools"><div class="rf-panel-title"><span>⌘</span><h3>امکانات کامل سامانه قبلی</h3></div>'+
+  '<p>برای امکاناتی که هنوز به نسخه جدید منتقل نشده‌اند، از مسیرهای عملیاتی اصلی استفاده کنید. ورود در دامنه قدیمی ممکن است یک‌بار دیگر لازم باشد.</p>'+
+  '<div class="rf-oldtools-grid">'+oldTools.map(t=>'<a target="_blank" rel="noopener noreferrer" href="'+OLD+esc(t.path)+'"><b>'+esc(t.label)+'</b><small>'+esc(t.desc)+'</small><span aria-hidden="true">↗</span></a>').join("")+'</div></section>';
  const options=courses.filter(c=>c.status==="active").map(c=>'<option value="'+esc(c.id)+'">'+esc(c.title)+'</option>').join("");
 
  const studentsOpt=students.filter(x=>!x.user_id&&x.archived_at==null).map(x=>'<option value="'+esc(x.id)+'">'+esc(x.full_name)+'</option>').join("");
@@ -212,7 +225,7 @@ function staffPage(){
  '<div class="rf-stats"><div>'+badge("دوره‌های قابل مشاهده")+'<strong>'+num(courses.length)+'</strong></div><div>'+badge("هنرجویان قابل مشاهده")+'<strong>'+num(students.length)+'</strong></div><div>'+badge("ثبت‌نام‌های قابل مشاهده")+'<strong>'+num(enroll.length)+'</strong></div></div>'+
  '<section class="rf-grid-two"><div class="rf-panel"><h3>دوره‌های آموزشگاه</h3><div class="rf-admin-list">'+(courses.length?courses.slice(0,20).map(c=>'<div><b>'+esc(c.title)+'</b>'+badge(c.status||"فعال")+'</div>').join(""):'<div class="rf-empty">هنوز دوره مرتبطی برای این حساب قابل مشاهده نیست.</div>')+'</div><div class="rf-action-row"><a class="btn btn-outline" href="'+OLD+'/manage" rel="noopener noreferrer" target="_blank">پنل عملیات و قراردادها ↗</a>'+(role?.kind==="teacher"?'<a class="btn btn-outline" href="'+OLD+'/teacher" target="_blank" rel="noopener noreferrer">کلاس‌های مدرس ↗</a>':"")+'</div><p class="rf-caption">گردش‌کار قراردادها، بیعانه‌ها و اطلاع‌رسانی همچنان در سامانه عملیاتی قبلی محفوظ است.</p></div>'+
  (canManage?'<div class="rf-panel"><div class="rf-panel-title"><span>✧</span><h3>مدیریت AI MISSION 90</h3></div><p>برای راه‌اندازی ۲۴ مأموریت پروژه‌ای در یک دوره، تاریخ شروع و وضعیت فعال بودن آن را مشخص کنید.</p><form class="rf-form" id="rf-campaign-launch"><label class="portal-field"><span>دوره</span><select name="course_id" required>'+options+'</select></label><label class="portal-field"><span>تاریخ شروع دوره (میلادی، ذخیره و نمایش اصلی شمسی)</span><input type="date" name="start_date" required/></label><label class="rf-check"><input type="checkbox" name="active" checked/> مأموریت‌های دوره فعال شوند.</label><button type="submit" class="btn btn-primary">ذخیره مسیر ۹۰روزه ←</button></form><p class="rf-caption">فعال‌سازی فقط توسط مدیر یا مالک پذیرفته می‌شود؛ هر ارسال در دیتابیس اصلی ثبت خواهد شد.</p></div>':
- '<div class="rf-panel"><div class="rf-panel-title"><span>◈</span><h3>فضای تخصصی مدرس</h3></div><p>کلاس‌ها، حضور و غیاب، تکالیف و بازخورد همچنان در پنل آموزشی فعلی در دسترس‌اند.</p><a class="btn btn-outline" href="'+OLD+'/teacher" rel="noopener noreferrer" target="_blank">مشاهده کلاس‌ها ↗</a></div>')+'</section>'+registrationPanel+inviteBlock+'</main>';
+ '<div class="rf-panel"><div class="rf-panel-title"><span>◈</span><h3>فضای تخصصی مدرس</h3></div><p>کلاس‌ها، حضور و غیاب، تکالیف و بازخورد همچنان در پنل آموزشی فعلی در دسترس‌اند.</p><a class="btn btn-outline" href="'+OLD+'/teacher" rel="noopener noreferrer" target="_blank">مشاهده کلاس‌ها ↗</a></div>')+'</section>'+legacyHub+registrationPanel+inviteBlock+'</main>';
 }
 async function printResume(){
  const d=await rpc("academy_student_resume_snapshot",{p_include_contact:false});

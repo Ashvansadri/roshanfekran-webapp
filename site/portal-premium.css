@@ -107,3 +107,15 @@
  .rf-stage,.rf-form .btn-primary,.portal-secondary{transition:none!important}
  .rf-stage:hover,.rf-form .btn-primary:hover{transform:none!important}
 }
+
+
+.rf-oldtools{margin-top:20px}
+.rf-oldtools-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px;margin-top:20px}
+.rf-oldtools-grid a{position:relative;display:flex;flex-direction:column;gap:9px;min-height:112px;background:linear-gradient(145deg,#17443e,#0b1d26);border:1px solid #adeec950;color:#e6fceb;padding:18px 18px;border-radius:10px}
+.rf-oldtools-grid a:hover{border-color:#b9ffd8;background:#245449}
+.rf-oldtools-grid a b{font-size:13px}.rf-oldtools-grid a small{color:#a9c9bb;font-size:11px;line-height:1.5}
+.rf-oldtools-grid a span{position:absolute;bottom:13px;left:14px;font-size:20px;color:#acf6d1}
+.rf-access-support{display:flex;flex-wrap:wrap;gap:12px;margin-top:18px}
+.rf-access-support a{border:1px solid #9ddebf66;border-radius:8px;padding:10px 14px;color:#b9f6d8;font-size:12px;min-height:42px;display:inline-flex;align-items:center}
+@media(max-width:860px){.rf-oldtools-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.rf-oldtools-grid{grid-template-columns:1fr}.rf-oldtools-grid a{min-height:90px}}
