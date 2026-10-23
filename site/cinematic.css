@@ -4,11 +4,11 @@
   The live content remains editable text over the artwork.
 */
 .rf26-home{
- --rf-image-hero:url("https://roshanfekran-academy-control.floot.app/_cdn/static/rf_hero_real3d.webp");
- --rf-image-ai:url("https://roshanfekran-academy-control.floot.app/_cdn/static/rf_ai_real3d.webp");
- --rf-image-crypto:url("https://roshanfekran-academy-control.floot.app/_cdn/static/rf_crypto_real3d.webp");
- --rf-image-forex:url("https://roshanfekran-academy-control.floot.app/_cdn/static/rf_forex_real3d.webp");
- --rf-image-architecture:url("https://roshanfekran-academy-control.floot.app/_cdn/static/rf_architecture_real3d.webp");
+ --rf-image-hero:url("/assets/rf_hero_real3d.webp");
+ --rf-image-ai:url("/assets/rf_ai_real3d.webp");
+ --rf-image-crypto:url("/assets/rf_crypto_real3d.webp");
+ --rf-image-forex:url("/assets/rf_forex_real3d.webp");
+ --rf-image-architecture:url("/assets/rf_architecture_real3d.webp");
 }
 /* Main scene is a true three-dimensionally rendered sci-fi environment */
 .rf26-hero{background:#061017}
@@ -173,9 +173,9 @@
 .rf-spatial-intro>span{font:700 11px Arial,sans-serif;letter-spacing:2px;color:#a9dec5}
 .rf-spatial-intro h2{font-size:clamp(30px,4vw,58px);margin:13px 0;font-weight:850}
 .rf-spatial-intro p{color:#afc9c0;font-size:13px;line-height:2.2}
-.rf-spatial-scene{min-height:490px;position:relative;overflow:hidden;border-radius:18px;background-image:linear-gradient(90deg,#07191ee8,#07191e40),url(https://roshanfekran-academy-control.floot.app/_cdn/static/rf_ai_real3d.webp);background-size:cover;background-position:center;border:1px solid #aadfce75;box-shadow:0 40px 90px #0007}
-.rf-spatial-scene[data-rf-room-active="1"]{background-image:linear-gradient(90deg,#091b1fe6,#08151e52),url(https://roshanfekran-academy-control.floot.app/_cdn/static/rf_crypto_real3d.webp)}
-.rf-spatial-scene[data-rf-room-active="2"]{background-image:linear-gradient(90deg,#091b24e6,#06151e52),url(https://roshanfekran-academy-control.floot.app/_cdn/static/rf_forex_real3d.webp)}
+.rf-spatial-scene{min-height:490px;position:relative;overflow:hidden;border-radius:18px;background-image:linear-gradient(90deg,#07191ee8,#07191e40),url(/assets/rf_ai_real3d.webp);background-size:cover;background-position:center;border:1px solid #aadfce75;box-shadow:0 40px 90px #0007}
+.rf-spatial-scene[data-rf-room-active="1"]{background-image:linear-gradient(90deg,#091b1fe6,#08151e52),url(/assets/rf_crypto_real3d.webp)}
+.rf-spatial-scene[data-rf-room-active="2"]{background-image:linear-gradient(90deg,#091b24e6,#06151e52),url(/assets/rf_forex_real3d.webp)}
 .rf-spatial-copy{padding:65px 50px 145px;max-width:610px;position:relative;z-index:1}
 .rf-spatial-kicker{color:#d2c3a5;letter-spacing:2px;font:700 11px Arial,sans-serif}
 .rf-spatial-title{font-size:clamp(30px,4vw,55px);margin:22px 0;color:#f8fff5}
