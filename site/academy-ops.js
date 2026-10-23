@@ -9,7 +9,7 @@ const when=v=>{if(!v)return "بدون تاریخ";try{return new Intl.DateTimeFo
 const uuid=v=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(v||""));
 const configs={
  courses:["academy_courses","id,title,code,status,teacher_name,start_date,capacity,session_count"],
- students:["academy_students","id,full_name,user_id,email,status,archived_at,portal_enabled,emergency_name,emergency_mobile"],
+ students:["academy_students","id,full_name,user_id,status"],
  enrollments:["academy_enrollments","id,student_id,course_id,status,final_fee,created_at"],
  applications:["academy_registration_requests","id,full_name,course_id,status,deposit_amount,installment_count,submitted_at,payment_plan"],
  payments:["academy_payment_submissions","id,student_id,enrollment_id,status,amount,submitted_at,method,reference_no"],
@@ -27,7 +27,7 @@ const grants={
  finance:["courses","enrollments","payments","installments","students"],
  teacher:["courses","classes","assignments","submissions"],
  registrar:["courses","students","enrollments","applications","guardians","links"],
- viewer:["courses","students","enrollments","applications"],
+ viewer:["courses"],
 };
 let role=null, request=null, datasets={},failures={},inflight=null,selected="students",working=false,info="",warning="",generated="";
 let sessionEpoch=0;
@@ -76,7 +76,7 @@ function tabs(){
  ["students","پرونده هنرجویان",enrollmentManager()],
  ["family","نظارت خانواده",familyManager()],
  ["applications","درخواست‌های ثبت‌نام",enrollmentManager()],
- ["courses","دوره‌ها و لینک‌ها",manage()],
+ ["courses","دوره‌ها و لینک‌ها",manage()||meRole()==="viewer"],
  ["finance","مالی و اقساط",financial()],
  ["tasks","تکالیف و کلاس‌ها",teacher()]
  ].filter(x=>x[2]);
