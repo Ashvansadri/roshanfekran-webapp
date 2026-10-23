@@ -119,7 +119,9 @@ async function loadStudentExtras(){
 }
 async function loadStaffExtras(){
  const generation=authEpoch;
- const names=role.kind==="teacher"?["academy_courses","academy_assignments"]:["academy_courses","academy_students","academy_enrollments","academy_registration_requests"];
+ // Teachers have no direct RLS access to course/roster tables. RFOPS uses the scoped RPC.
+ if(role.kind==="teacher"){staffData={};if(window.RFOPS?.load){await window.RFOPS.load(role,api);requireCurrent(generation)}return}
+ const names=["academy_courses","academy_students","academy_enrollments","academy_registration_requests"];
  // Fetch only fields used by this view; never request national ID, contact, finance or private notes.
  const projections={
   academy_courses:"id,title,status",

@@ -50,17 +50,76 @@ async function rpc(name,body={}){if(!/^academy_[a-z0-9_]+$/.test(name))throw Err
 function row(k){return Array.isArray(datasets[k])?datasets[k]:[]}
 function alert(){return (info?'<div class="rfops-ok" role="status">'+esc(info)+'</div>':"")+(warning?'<div class="rfops-warn" role="alert">'+esc(warning)+'</div>':"")}
 function refresh(){window.RFCORE?.render?.()}
+async function loadTeacher(generation){
+ // The legacy teacher role intentionally has NO direct RLS access to courses,
+ // enrollments or students. Only this server-scoped RPC supplies its roster.
+ let core;
+ try{core=await rpc("academy_teacher_workspace_core")}
+ catch(e){
+  if(generation!==sessionEpoch)return false;
+  datasets={};failures={assignments:"دسترسی امن به دوره‌های مدرس برقرار نشد: "+String(e?.message||e)};
+  return false;
+ }
+ if(generation!==sessionEpoch)return false;
+ if(!core||!Array.isArray(core.courses)||!Array.isArray(core.students)){
+  datasets={};failures={assignments:"پاسخ پرونده مدرس معتبر نیست؛ اطلاعاتی نمایش داده نشد."};
+  return false;
+ }
+ const courses=core.courses.filter(c=>uuid(c.id)).map(c=>({
+  id:c.id,title:String(c.title||""),code:String(c.code||""),status:String(c.status||"")
+ }));
+ const courseIds=new Set(courses.map(c=>c.id));
+ // Deliberately discard phone, national ID and any additional RPC fields.
+ const students=core.students.filter(s=>uuid(s.id)).map(s=>({
+  id:s.id,full_name:String(s.full_name||"هنرجو")
+ }));
+ const next={courses,students,classes:[],assignments:[],submissions:[]};
+ const failuresNext={};
+ if(!courseIds.size){
+  if(generation!==sessionEpoch)return false;
+  datasets=next;failures=failuresNext;return true;
+ }
+ const courseFilter="&course_id=in.("+[...courseIds].map(encodeURIComponent).join(",")+")";
+ const firstKeys=["classes","assignments"];
+ const first=await Promise.allSettled(firstKeys.map(key=>{
+  const [table,cols]=configs[key];
+  return proxy("/rest/v1/"+table+"?select="+cols+courseFilter+"&limit=150");
+ }));
+ if(generation!==sessionEpoch)return false;
+ firstKeys.forEach((key,i)=>{
+  const response=first[i];
+  if(response.status!=="fulfilled"||!Array.isArray(response.value)){
+   failuresNext[key]=response.status==="rejected"?String(response.reason?.message||response.reason):"پاسخ معتبر نیست";
+   return;
+  }
+  next[key]=response.value.filter(x=>courseIds.has(String(x.course_id)));
+ });
+ const assignmentIds=new Set(next.assignments.filter(a=>uuid(a.id)).map(a=>a.id));
+ if(assignmentIds.size){
+  try{
+   const [table,cols]=configs.submissions;
+   const filter="&assignment_id=in.("+[...assignmentIds].map(encodeURIComponent).join(",")+")";
+   const rows=await proxy("/rest/v1/"+table+"?select="+cols+filter+"&limit=150");
+   if(generation!==sessionEpoch)return false;
+   if(!Array.isArray(rows))throw Error("پاسخ معتبر نیست");
+   next.submissions=rows.filter(s=>assignmentIds.has(String(s.assignment_id)));
+  }catch(e){if(generation!==sessionEpoch)return false;failuresNext.submissions=String(e?.message||e)}
+ }
+ if(generation!==sessionEpoch)return false;
+ datasets=next;failures=failuresNext;
+ return true;
+}
 async function load(nextRole,apiFn){
  role=nextRole;request=apiFn;if(inflight)return inflight;
  const generation=sessionEpoch;
- const keys=available();
  let job;
  job=(async()=>{
+  if(nextRole?.kind==="teacher")return loadTeacher(generation);
+  const keys=available();
   const results=await Promise.allSettled(keys.map(async key=>{
    const [table,cols]=configs[key];
    return proxy("/rest/v1/"+table+"?select="+cols+"&limit=150&order="+(key==="applications"?"submitted_at":key==="payments"?"submitted_at":key==="assignments"?"created_at":"id")+".desc");
   }));
-  // Never publish an old account's data after logout or account switching.
   if(generation!==sessionEpoch)return false;
   const nextData={},nextFailures={};
   keys.forEach((key,i)=>{const r=results[i];if(r.status==="fulfilled"&&Array.isArray(r.value))nextData[key]=r.value;else nextFailures[key]=r.status==="rejected"?String(r.reason?.message||r.reason):"داده معتبر دریافت نشد";});
