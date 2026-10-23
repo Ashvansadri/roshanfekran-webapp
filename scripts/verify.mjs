@@ -52,4 +52,7 @@ assert(html.includes("motion.css") && html.includes("motion.js"),"Motion assets 
 assert(html.includes("homepage.css") && html.includes("homepage.js"),"New editorial homepage assets unlinked");
 assert(html.includes("portal-premium.css"),"Premium internal portal CSS not linked");
 assert(js.includes("RFHOMEPAGE"),"Conversion-focused homepage missing");
+const isolation=spawnSync(process.execPath,[join(root,"scripts/ops-isolation.test.mjs")],{encoding:"utf8"});
+assert.equal(isolation.status,0,"Staff session isolation regression failed: "+isolation.stderr+" "+isolation.stdout);
+console.log(isolation.stdout.trim());
 console.log("PASS: 6 scripts, 6 CSS assets, referenced files, Persian typography, secure role-aware calls and PWA metadata.");
