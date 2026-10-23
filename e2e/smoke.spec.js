@@ -350,7 +350,7 @@ test('logout remains available during an in-flight request and clears private pr
  await page.goto('/#/workspace',{waitUntil:'domcontentloaded'});
  await expect(page.locator('.rf-dashboard')).toBeVisible();
  await page.evaluate(()=>{document.getElementById('rf-print-content').textContent='PRIVATE_PRINT_SENTINEL'});
- const secondResolve=page.waitForRequest(request=>request.url().includes('academy-gateway')&&JSON.parse(request.postData()||'{}').action==='resolve_portal'&&resolves>=2);
+ const secondResolve=page.waitForRequest(request=>request.url().includes('academy-gateway')&&JSON.parse(request.postData()||'{}').action==='resolve_portal');
  await page.locator('[data-rf="refresh"]').click();
  await secondResolve;
  await page.locator('[data-rf="logout"]').click();
