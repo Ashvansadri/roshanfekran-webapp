@@ -11,15 +11,21 @@ try{const saved=sessionStorage.getItem("rf_safe_session_v1");if(saved)session=JS
 const token=()=>session?.access_token||"";
 const setSession=x=>{if(!x?.access_token||!x?.refresh_token)throw Error("پاسخ ورود ناقص است");session={access_token:x.access_token,refresh_token:x.refresh_token,expires_at:Date.now()+Math.max(1,Number(x.expires_in||3600))*1000};sessionStorage.setItem("rf_safe_session_v1",JSON.stringify(session))};
 let renewing=null;
+let authEpoch=0;
+const activeRequests=new Set();
+const currentEpoch=(generation)=>generation===authEpoch;
+const requireCurrent=(generation)=>{if(!currentEpoch(generation))throw Error("SESSION_CANCELLED")};
 async function renew(){
+ const generation=authEpoch;
  if(!session?.refresh_token)throw Error("نشست منقضی شده است. مجدداً وارد شوید.");
  if(!renewing)renewing=(async()=>{
   const abort=new AbortController(),id=setTimeout(()=>abort.abort(),15000);
+  activeRequests.add(abort);
   try{
    const r=await fetch(END,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"proxy",path:"/auth/v1/token?grant_type=refresh_token",method:"POST",body:{refresh_token:session.refresh_token}}),signal:abort.signal});
    const d=await r.json().catch(()=>({}));if(!r.ok||!d?.access_token||!d?.refresh_token)throw Error("نشست شما منقضی شده؛ دوباره وارد شوید.");
-   setSession(d);return token();
-  }finally{clearTimeout(id)}
+   requireCurrent(generation);setSession(d);return token();
+  }finally{clearTimeout(id);activeRequests.delete(abort)}
  })().finally(()=>{renewing=null});
  return renewing;
 }
@@ -32,20 +38,34 @@ function authError(s,d){
  if(s>=500)return "سرور آموزشگاه موقتاً در دسترس نیست.";
  return msg&&!/^(request failed|bad request|درخواست ناموفق بود)$/i.test(msg)?msg:"ورود انجام نشد؛ اتصال و اطلاعات حساب را بررسی کنید.";
 }
-const clear=()=>{session=null;role=null;journey=null;parent=null;familyTip=null;finance=null;works=[];missions=[];campaigns=[];sessionStorage.removeItem("rf_safe_session_v1")};
+const clear=()=>{
+ authEpoch++;
+ for(const ctl of activeRequests)ctl.abort();
+ activeRequests.clear();renewing=null;
+ session=null;role=null;journey=null;parent=null;familyTip=null;resume=null;
+ works=[];missions=[];campaigns=[];staffData=null;finance=null;quizQuestions=null;
+ profileFormOpen=false;workFormOpen=false;loading=false;busy=false;
+ sessionStorage.removeItem("rf_safe_session_v1");
+ const print=document.getElementById("rf-print-content");if(print)print.replaceChildren();
+ document.body.classList.remove("rf-print-mode");
+};
 async function api(action,body={},auth=false,retry=true){
+ const generation=authEpoch;
  if(auth&&session?.expires_at&&Number(session.expires_at)<Date.now()+15000){try{await renew()}catch(e){clear();throw e}}
+ requireCurrent(generation);
  const ctl=new AbortController(),timeout=setTimeout(()=>ctl.abort(),16000);
+ activeRequests.add(ctl);
  try{
   const r=await fetch(END,{method:"POST",headers:{"Content-Type":"application/json",...(auth&&token()?{Authorization:"Bearer "+token()}:{})},body:JSON.stringify({action,...body}),signal:ctl.signal});
   const d=await r.json().catch(()=>({}));
+  requireCurrent(generation);
   if(!r.ok||d?.error){
    if(auth&&retry&&(r.status===401||/JWT expired|invalid jwt|AUTH_REQUIRED/i.test(String(d?.error||"")))){try{await renew()}catch(e){clear();throw e}return api(action,body,auth,false)}
    throw Error(authError(r.status,d));
   }
-  return d;
- }catch(e){if(e?.name==="AbortError")throw Error("پاسخ سرور طولانی شد؛ دوباره امتحان کنید.");if(e instanceof TypeError)throw Error("ارتباط با سرور برقرار نیست؛ اتصال اینترنت را بررسی کنید.");throw e}
- finally{clearTimeout(timeout)}
+  requireCurrent(generation);return d;
+ }catch(e){if(!currentEpoch(generation))throw Error("SESSION_CANCELLED");if(e?.name==="AbortError")throw Error("پاسخ سرور طولانی شد؛ دوباره امتحان کنید.");if(e instanceof TypeError)throw Error("ارتباط با سرور برقرار نیست؛ اتصال اینترنت را بررسی کنید.");throw e}
+ finally{clearTimeout(timeout);activeRequests.delete(ctl)}
 }
 async function proxy(path,method="GET",body=null){return api("proxy",{path,method,body},true)}
 async function rpc(name,body={}){if(!/^academy_[a-z0-9_]+$/.test(name))throw Error("عملیات معتبر نیست");return proxy("/rest/v1/rpc/"+name,"POST",body)}
@@ -59,14 +79,15 @@ const badge=s=>'<span class="rf-chip">'+esc(s)+'</span>';
 const loadingHTML=()=>'<section class="shell rf-panel-container"><div class="rf-panel"><div class="rf-rotator"></div><h2>در حال دریافت اطلاعات امن...</h2><p>اطلاعات فقط پس از بررسی دسترسی شما نمایش داده می‌شوند.</p></div></section>';
 async function loadWorkspace(){
  if(!session||loading)return;
+ const generation=authEpoch;
  loading=true;finance=null;try{
   role=await api("resolve_portal",{},true);
   if(role.kind==="student"){journey=await rpc("academy_student_journey_snapshot");await loadStudentExtras()}
   else if(role.kind==="guardian"){const a=await Promise.allSettled([rpc("academy_parent_journey_snapshot"),rpc("academy_family_tip_today")]);parent=a[0].status==="fulfilled"?a[0].value:null;familyTip=a[1].status==="fulfilled"?a[1].value:null}
   else if(role.kind==="staff"||role.kind==="teacher"){await loadStaffExtras()}
   error="";
- }catch(e){error=e.message||"ارتباط امن با حساب برقرار نشد";if(/AUTH_REQUIRED|JWT|401|expired|Unauthorized/.test(error))clear()}
- finally{loading=false;refresh()}
+ }catch(e){if(!currentEpoch(generation))return;error=e.message||"ارتباط امن با حساب برقرار نشد";if(/AUTH_REQUIRED|JWT|401|expired|Unauthorized/.test(error))clear()}
+ finally{if(currentEpoch(generation)){loading=false;refresh()}}
 }
 async function loadStudentExtras(){
  const items=await Promise.allSettled([
@@ -228,12 +249,14 @@ function staffPage(){
  '<div class="rf-panel"><div class="rf-panel-title"><span>◈</span><h3>فضای تخصصی مدرس</h3></div><p>کلاس‌ها، حضور و غیاب، تکالیف و بازخورد همچنان در پنل آموزشی فعلی در دسترس‌اند.</p><a class="btn btn-outline" href="'+OLD+'/teacher" rel="noopener noreferrer" target="_blank">مشاهده کلاس‌ها ↗</a></div>')+'</section>'+legacyHub+registrationPanel+inviteBlock+'</main>';
 }
 async function printResume(){
+ const generation=authEpoch;
  const d=await rpc("academy_student_resume_snapshot",{p_include_contact:false});
  const rows=(d.verified_works||[]).map(w=>'<li><b>'+esc(w.title)+'</b> — '+esc(w.description||"")+'</li>').join("");
  const courses=(d.courses||[]).map(c=>'<li>'+esc(c.title)+' ('+esc(c.code)+')</li>').join("");
  const html='<section class="rf-resume"><header><span>روشنفکران | ROSHANFEKRAN ACADEMY</span><small>رزومه آموزشی؛ گواهی رسمی نیست</small></header><h1>'+esc(d.name)+'</h1><h2>'+esc(d.headline)+'</h2><p>'+esc(d.about)+'</p><div><b>مهارت‌ها: </b>'+esc(d.interests||"")+'</div><h3>دوره‌های مرتبط</h3><ul>'+courses+'</ul><h3>نمونه‌کارهای تأییدشده</h3><ul>'+rows+'</ul><h3>مسیر رشد</h3><p>'+num(d.mission_90?.approved||0)+' مأموریت پذیرفته‌شده از ۲۴ مأموریت</p><p class="rf-caption">'+esc(d.disclaimer)+'</p></section>';
  const target=document.getElementById("rf-print-content");
- if(target){target.innerHTML=html;document.body.classList.add("rf-print-mode");window.print();document.body.classList.remove("rf-print-mode")}
+ requireCurrent(generation);
+ if(target){try{target.innerHTML=html;document.body.classList.add("rf-print-mode");window.print()}finally{target.replaceChildren();document.body.classList.remove("rf-print-mode")}}
 }
 function workspace(){
  if(!session)return loginPage();
@@ -260,13 +283,13 @@ async function inviteLink(path,kind,email){
  catch{return "لینک اختصاصی ساخته شد؛ آن را کپی کنید: "+link}
 }
 async function submit(e){
- const f=e.target;if(!["rf-login","rf-activate","rf-profile-save","rf-work-save","rf-avatar-upload","rf-quiz","rf-campaign-launch","rf-invite-staff","rf-invite-student","rf-invite-guardian"].includes(f.id)&&!f.classList.contains("rf-mission-submit"))return;e.preventDefault();if(busy)return;busy=true;error="";notice="";
+ const f=e.target;if(!["rf-login","rf-activate","rf-profile-save","rf-work-save","rf-avatar-upload","rf-quiz","rf-campaign-launch","rf-invite-staff","rf-invite-student","rf-invite-guardian"].includes(f.id)&&!f.classList.contains("rf-mission-submit"))return;e.preventDefault();if(busy)return;const generation=authEpoch;busy=true;error="";notice="";
  try{
  const d=new FormData(f);
  if(f.id==="rf-login"){
   const response=await api("proxy",{path:"/auth/v1/token?grant_type=password",method:"POST",body:{email:String(d.get("email")||"").trim().toLowerCase(),password:String(d.get("password")||"")}});
   if(!response.access_token)throw Error("رمز یا ایمیل تأیید نشد");
-  setSession(response);try{role=await api("resolve_portal",{},true)}catch(e){clear();throw e}journey=null;parent=null;familyTip=null;staffData=null;
+  setSession(response);try{role=await api("resolve_portal",{},true)}catch(e){clear();error=e.message||"نقش حساب قابل تأیید نیست";throw e}journey=null;parent=null;familyTip=null;staffData=null;
   location.hash="#/workspace";loadWorkspace();
  }else if(f.id==="rf-activate"){
   const kind=d.get("kind"),act=kind==="staff"?"signup_invited":kind==="student"?"signup_student":"signup_guardian";
@@ -324,15 +347,17 @@ async function submit(e){
   const b64=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result||"").split(",")[1]);reader.onerror=reject;reader.readAsDataURL(file)});
   await api("avatar_upload",{mime:file.type,data_base64:b64},true);journey=await rpc("academy_student_journey_snapshot");showNotice("تصویر پروفایل بارگذاری شد.");
  }
- }catch(e){showError(e)}finally{busy=false;refresh()}
+ }catch(e){if(currentEpoch(generation))showError(e)}finally{if(currentEpoch(generation)){busy=false;refresh()}}
 }
 async function click(e){
  const control=e.target.closest("[data-rf]");if(!control)return;
  const action=control.dataset.rf;
  if(!["logout","refresh","stage","consent","resume","share-on","share-off"].includes(action))return;
- e.preventDefault();if(busy)return;
- try{
+ e.preventDefault();
  if(action==="logout"){clear();error="";notice="";location.hash="#/access";refresh();return}
+ if(busy)return;
+ const generation=authEpoch;
+ try{
  if(action==="stage"){stage=Number(control.dataset.step)||0;error="";refresh();return}
  busy=true;
  if(action==="refresh"){role=null;await loadWorkspace();return}
@@ -348,7 +373,7 @@ async function click(e){
    journey=await rpc("academy_student_journey_snapshot");
    if(enable&&res?.token){let url=location.origin+"/#/showcase/"+encodeURIComponent(res.token);try{await navigator.clipboard.writeText(url);showNotice("لینک رزومه فعال و کپی شد: "+url)}catch{showNotice("لینک رزومه: "+url)}}else if(enable)showNotice("درخواست انتشار ثبت شد اما لینک معتبر دریافت نشد؛ با مدیریت تماس بگیرید.");else showNotice("انتشار عمومی لغو شد و لینک قبلی دیگر نباید معتبر باشد.");
  }
- }catch(err){showError(err)}finally{busy=false;refresh()}
+ }catch(err){if(currentEpoch(generation))showError(err)}finally{if(currentEpoch(generation)){busy=false;refresh()}}
 }
 const box=document.getElementById("app");box.addEventListener("submit",submit);box.addEventListener("click",click);
 document.body.insertAdjacentHTML("beforeend",'<div id="rf-print-content" aria-hidden="true"></div>');
