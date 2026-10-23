@@ -419,3 +419,28 @@ test('revoked public resume cannot be restored by a late response after navigati
   await page.close();
  }
 });
+
+
+test('existing accounts can submit a short legacy password for server-side validation',async({browser})=>{
+ const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true});
+ await apiMock(page);
+ await page.goto('/#/access',{waitUntil:'domcontentloaded'});
+ const email=page.locator('#rf-login input[name="email"]');
+ const password=page.locator('#rf-login input[name="password"]');
+ await expect(password).toHaveAttribute('autocomplete','current-password');
+ await expect(password).not.toHaveAttribute('minlength',/./);
+ await email.fill('legacy@example.test');
+ await password.fill('abc');
+ const authRequest=page.waitForRequest(request=>{
+  if(!request.url().includes('/functions/v1/academy-gateway'))return false;
+  try{const data=JSON.parse(request.postData()||'{}');return data.action==='proxy'&&data.path==='/auth/v1/token?grant_type=password'}catch{return false}
+ });
+ await page.locator('#rf-login button[type="submit"]').click();
+ const request=await authRequest;
+ const body=JSON.parse(request.postData());
+ expect(body.body.email).toBe('legacy@example.test');
+ expect(body.body.password).toBe('abc');
+ await expect(page.locator('.portal-alert')).toBeVisible();
+ await expect(page.locator('#rf-login')).toBeVisible();
+ await page.close();
+});
