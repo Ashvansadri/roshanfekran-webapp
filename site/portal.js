@@ -1,7 +1,6 @@
 (function(){
 "use strict";
 const END="https://sdsdzktsqpahpdrgmzuo.supabase.co/functions/v1/academy-gateway";
-const OLD="https://roshanfekran-academy-control.floot.app";
 const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 const safeURL=v=>{try{let u=new URL(String(v));return u.protocol==="https:"?u.href:"#"}catch{return "#"}};
 const date=v=>{try{return new Intl.DateTimeFormat("fa-IR-u-ca-persian",{dateStyle:"medium"}).format(new Date(v))}catch{return "—"}};
@@ -269,7 +268,7 @@ async function inviteLink(path,kind,email){
  catch{return "لینک اختصاصی ساخته شد؛ آن را کپی کنید: "+link}
 }
 async function submit(e){
- const f=e.target;if(!["rf-login","rf-activate","rf-profile-save","rf-work-save","rf-avatar-upload","rf-quiz","rf-campaign-launch","rf-invite-staff","rf-invite-student","rf-invite-guardian"].includes(f.id)&&!f.classList.contains("rf-mission-submit"))return;e.preventDefault();if(busy)return;const generation=authEpoch;busy=true;error="";notice="";
+ const f=e.target;if(!["rf-login","rf-activate","rf-profile-save","rf-work-save","rf-avatar-upload","rf-quiz","rf-campaign-launch","rf-invite-staff","rf-invite-student","rf-invite-guardian","rf-student-task"].includes(f.id)&&!f.classList.contains("rf-mission-submit"))return;e.preventDefault();if(busy)return;const generation=authEpoch;busy=true;error="";notice="";
  try{
  const d=new FormData(f);
  if(f.id==="rf-login"){
@@ -282,6 +281,13 @@ async function submit(e){
   const response=await api(act,{email:d.get("email"),password:d.get("password"),invite_token:d.get("code")});
   if(!response.access_token)throw Error("حساب هنوز فعال نشده است");
   setSession(response);role=null;location.hash="#/workspace";loadWorkspace();
+ }else if(f.id==="rf-student-task"){
+  const taskId=String(d.get("assignment_id")||""),explanation=String(d.get("submission_text")||"").trim(),url=String(d.get("submission_url")||"").trim();
+  if(!/^[0-9a-f-]{36}$/i.test(taskId)||!studentAssignments.some(a=>a.id===taskId))throw Error("این تکلیف معتبر یا متعلق به حساب شما نیست.");
+  if(explanation.length<10)throw Error("شرح تحویل باید حداقل ۱۰ حرف باشد.");
+  if(url&&safeURL(url)==="#")throw Error("لینک پروژه باید HTTPS باشد.");
+  await rpc("academy_submit_assignment",{p_assignment_id:taskId,p_submission_text:explanation,p_submission_url:url||null});
+  await loadStudentExtras();showNotice("تکلیف در پرونده شما ثبت و برای مدرس ارسال شد.");
  }else if(f.id==="rf-profile-save"){
   const headline=document.getElementById("rf-headline")?.value||"",bio=document.getElementById("rf-bio")?.value||"";
   if(headline.trim().length<5||bio.trim().length<20)throw Error("عنوان دست‌کم ۵ حرف و معرفی دست‌کم ۲۰ حرف باشد.");
@@ -338,7 +344,7 @@ async function submit(e){
 async function click(e){
  const control=e.target.closest("[data-rf]");if(!control)return;
  const action=control.dataset.rf;
- if(!["logout","refresh","stage","consent","resume","share-on","share-off"].includes(action))return;
+ if(!["logout","refresh","stage","consent","resume","share-on","share-off","notification-read"].includes(action))return;
  e.preventDefault();
  if(action==="logout"){clear();error="";notice="";location.hash="#/access";refresh();return}
  if(busy)return;
@@ -351,6 +357,12 @@ async function click(e){
   const approve=control.dataset.allow==="true";
   if(!confirm(approve?"با آگاهی از شرایط، اجازه نمایش عمومی رزومه این هنرجو را می‌دهید؟":"رضایت انتشار عمومی را لغو می‌کنید؟"))return;
   await rpc("academy_consent_showcase",{p_student_id:control.dataset.student,p_allow:approve});parent=await rpc("academy_parent_journey_snapshot");showNotice(approve?"رضایت ثبت شد؛ انتشار همچنان نیازمند اقدام خود هنرجوست.":"رضایت لغو و انتشار عمومی غیرفعال شد.");
+ }
+ if(action==="notification-read"){
+  const id=String(control.dataset.id||"");if(!/^[0-9a-f-]{36}$/i.test(id))throw Error("اعلان معتبر نیست.");
+  await rpc("academy_mark_notification_read",{p_notification_id:id});
+  studentNotifications=studentNotifications.map(n=>n.id===id?{...n,read_at:new Date().toISOString()}:n);
+  showNotice("اعلان خوانده شد.");return;
  }
  if(action==="resume"){await printResume();return}
  if(action==="share-on"||action==="share-off"){
