@@ -383,3 +383,39 @@ test('expired session refresh succeeds only with a new valid token',async({brows
  expect(saved?.access_token).toBe('new-test-token');
  await page.close();
 });
+
+test('revoked public resume cannot be restored by a late response after navigation',async({browser})=>{
+ const page=await browser.newPage({viewport:{width:820,height:900}});
+ await apiMock(page);
+ const target='11111111-1111-4111-8111-111111111111';
+ let started,release;
+ const startedPromise=new Promise(resolve=>{started=resolve});
+ const releasePromise=new Promise(resolve=>{release=resolve});
+ let count=0;
+ await page.route('https://sdsdzktsqpahpdrgmzuo.supabase.co/functions/v1/academy-gateway',async route=>{
+  let payload={};try{payload=JSON.parse(route.request().postData()||'{}')}catch{}
+  if(payload.action!=='public_showcase')return route.fallback();
+  count++;
+  if(count===1){
+   started();
+   await releasePromise;
+   try{await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({ok:true,profile:{full_name:'PRIVATE_STALE_RESUME',works:[]}})})}catch{}
+  }else{
+   await route.fulfill({status:404,contentType:'application/json',body:JSON.stringify({error:'لینک لغو شده'})});
+  }
+ });
+ try{
+  await page.goto('/#/showcase/'+target,{waitUntil:'domcontentloaded'});
+  await startedPromise;
+  await page.goto('/#/courses',{waitUntil:'domcontentloaded'});
+  await page.goto('/#/showcase/'+target,{waitUntil:'domcontentloaded'});
+  await expect(page.getByText('این رزومه در دسترس نیست')).toBeVisible();
+  release();
+  await page.waitForTimeout(250);
+  expect(await page.locator('#app').innerText()).not.toContain('PRIVATE_STALE_RESUME');
+  expect(count).toBeGreaterThanOrEqual(2);
+ }finally{
+  release();
+  await page.close();
+ }
+});
