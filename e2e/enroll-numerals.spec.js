@@ -33,7 +33,7 @@ test('Persian and Arabic numerals are normalized before enrollment validation an
  await form.locator('button[type="submit"]').click();
  await expect(page.locator('.rf-enroll-success')).toContainText('SYNTHETIC-ONLY');
  expect(requests).toHaveLength(1);
- expect(requests[0].body.mobile).toBe('09123456789');
- expect(requests[0].body.national_id).toBe('0012345678');
- expect(requests[0].body.receipt_base64).toBeUndefined();
+ expect(requests[0].mobile).toBe('09123456789');
+ expect(requests[0].national_id).toBe('0012345678');
+ expect(requests[0].receipt_base64).toBeUndefined();
 });
