@@ -19,6 +19,8 @@ const configs={
  submissions:["academy_assignment_submissions","id,assignment_id,student_id,status,score,submitted_at,feedback"],
  guardians:["academy_guardians","id,full_name,email,user_id,active"],
  links:["academy_guardian_students","id,guardian_id,student_id,can_view_academic,can_view_attendance,can_view_finance,can_receive_notifications"],
+ studentContracts:["academy_student_contracts","id,student_id,course_id,contract_no,start_date,end_date,status,delivered_copy"],
+ staffContracts:["academy_staff_contracts","id,staff_user_id,contract_no,contract_type,start_date,end_date,status"],
  publicLinks:["academy_course_public_links","id,course_id,slug,active,show_in_public_catalog,deposit_amount,installment_enabled,installment_markup_percent,installment_max_count"]
 };
 const grants={
@@ -26,7 +28,7 @@ const grants={
  manager:Object.keys(configs),
  finance:["courses","enrollments","payments","installments","students"],
  teacher:["courses","classes","assignments","submissions"],
- registrar:["courses","students","enrollments","applications","guardians","links"],
+ registrar:["courses","students","enrollments","applications","guardians","links","studentContracts"],
  viewer:["courses"],
 };
 let role=null, request=null, datasets={},failures={},inflight=null,selected="students",working=false,info="",warning="",generated="";
@@ -78,6 +80,7 @@ function tabs(){
  ["applications","درخواست‌های ثبت‌نام",enrollmentManager()],
  ["courses","دوره‌ها و لینک‌ها",manage()||meRole()==="viewer"],
  ["finance","مالی و اقساط",financial()],
+ ["contracts","قراردادها",enrollmentManager()],
  ["tasks","تکالیف و کلاس‌ها",teacher()]
  ].filter(x=>x[2]);
  if(!allowed.some(x=>x[0]===selected))selected=allowed[0]?.[0]||"tasks";
@@ -121,6 +124,20 @@ function courses(){
  return '<article class="rfops-card"><strong>'+esc(x.title)+'</strong><p>کد: '+esc(x.code||"خودکار")+' · ظرفیت: '+fa(x.capacity||0)+' · وضعیت: '+esc(x.status)+'</p><div class="rfops-actions">'+(shared?'<a href="'+esc(shared)+'" target="_blank" rel="noopener">لینک دوره ↗</a><button data-rfops="copy-course" data-url="'+esc(shared)+'">کپی</button>':'<span>ثبت‌نام عمومی هنوز باز نشده است.</span>')+'</div></article>';
  }).join("")+'</div>':empty("courses","دوره‌ای ثبت نشده است.")));
 }
+function contracts(){
+ // Read-only summary; the authenticated user's RLS is enforced by Supabase.
+ // Do not expose file paths, private notes, or contract attachments here.
+ const studentItems=row("studentContracts"),staffItems=manage()?row("staffContracts"):[];
+ const studentRows=studentItems.map(c=>'<tr><td>'+esc(c.contract_no||"ثبت نشده")+'</td><td>'+esc(name("students",c.student_id))+'</td><td>'+esc(name("courses",c.course_id))+'</td><td>'+when(c.start_date)+'</td><td>'+when(c.end_date)+'</td><td>'+esc(c.status||"—")+'</td><td>'+(c.delivered_copy?"تحویل‌شده":"ثبت نشده")+'</td></tr>').join("");
+ const staffRows=staffItems.map(c=>'<tr><td>'+esc(c.contract_no||"ثبت نشده")+'</td><td>'+esc(c.contract_type||"—")+'</td><td>'+when(c.start_date)+'</td><td>'+when(c.end_date)+'</td><td>'+esc(c.status||"—")+'</td></tr>').join("");
+ const studentTable=studentRows?'<div class="rfops-table-wrap"><table><thead><tr><th>شماره قرارداد</th><th>هنرجو</th><th>دوره</th><th>شروع</th><th>پایان</th><th>وضعیت</th><th>نسخه تحویلی</th></tr></thead><tbody>'+studentRows+'</tbody></table></div>':empty("studentContracts","قرارداد هنرجویی قابل مشاهده‌ای وجود ندارد.");
+ const staffTable=staffRows?'<div class="rfops-table-wrap"><table><thead><tr><th>شماره قرارداد</th><th>نوع</th><th>شروع</th><th>پایان</th><th>وضعیت</th></tr></thead><tbody>'+staffRows+'</tbody></table></div>':empty("staffContracts","قرارداد کارکنان قابل مشاهده‌ای وجود ندارد.");
+ return section("قراردادها و وضعیت تحویل",'<p>این نما صرفاً خواندنی و محدود به مجوزهای سرور است. امضای الکترونیکی، دانلود فایل قرارداد و ثبت تعهد مالی در این نسخه فعال نیست.</p>'+
+ '<div class="rfops-summary"><div><strong>'+fa(studentItems.length)+'</strong><span>قرارداد هنرجویی قابل مشاهده</span></div>'+(manage()?'<div><strong>'+fa(staffItems.length)+'</strong><span>قرارداد کارکنان قابل مشاهده</span></div>':"")+'</div>'+
+ '<h4>قراردادهای هنرجویان</h4>'+studentTable+
+ (manage()?'<h4>قراردادهای کارکنان</h4>'+staffTable:"")+
+ '<p class="rf-caption">حداکثر ۱۵۰ رکورد اخیر در هر بخش نمایش داده می‌شود. وضعیت حقوقی قرارداد باید با نسخه امضاشده تطبیق داده شود.</p>');
+}
 function finance(){
  const items=row("payments"),inst=row("installments"),enrollments=row("enrollments");
  const byEnrollment=new Map(enrollments.map(e=>[String(e.id),e]));
@@ -156,7 +173,7 @@ function render(nextRole){
  // Resolve permitted tab before choosing the content; never render a stale tab from a previous role.
  const nav=tabs();
  let content="";
- switch(selected){case"family":content=family();break;case"applications":content=applications();break;case"courses":content=courses();break;case"finance":content=finance();break;case"tasks":content=tasks();break;default:content=students();}
+ switch(selected){case"family":content=family();break;case"applications":content=applications();break;case"courses":content=courses();break;case"finance":content=finance();break;case"contracts":content=contracts();break;case"tasks":content=tasks();break;default:content=students();}
  return '<div class="rfops" id="rfops-main"><header class="rfops-top"><div><span>ACADEMY OPERATIONS / LIVE DATA</span><h2>مدیریت یکپارچه آموزشگاه</h2><p>دوره‌ها، ثبت‌نام‌ها، هنرجویان، خانواده، تکالیف و مالی در همین سامانه؛ بدون انتقال به Floot.</p></div><button data-rfops="reload" type="button">تازه‌سازی ↻</button></header>'+alert()+nav+(inflight?'<div class="rfops-loading">در حال دریافت اطلاعات مجاز…</div>':"")+content+'</div>';
 }
 async function act(action,element){
