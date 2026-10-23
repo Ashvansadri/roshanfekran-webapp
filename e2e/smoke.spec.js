@@ -329,3 +329,57 @@ test('spatial-inspired navigation changes academy rooms without exposing data',a
  await expect(page.locator('.rf-spatial-scene')).toHaveAttribute('data-rf-room-active','2');
  await page.close();
 });
+
+
+test('logout remains available during an in-flight request and clears private print DOM',async({browser})=>{
+ const page=await browser.newPage({viewport:{width:1100,height:800}});
+ await apiMock(page,'student');
+ let resolves=0;
+ await page.route('https://sdsdzktsqpahpdrgmzuo.supabase.co/functions/v1/academy-gateway',async route=>{
+  const payload=JSON.parse(route.request().postData()||'{}');
+  if(payload.action!=='resolve_portal')return route.fallback();
+  resolves++;
+  if(resolves===2){
+   await new Promise(resolve=>setTimeout(resolve,2000));
+   try{await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({kind:'student'})})}catch{}
+   return;
+  }
+  return route.fallback();
+ });
+ await page.addInitScript(()=>sessionStorage.setItem('rf_safe_session_v1',JSON.stringify({access_token:'synthetic',refresh_token:'synthetic-refresh',expires_at:Date.now()+3600000})));
+ await page.goto('/#/workspace',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('.rf-dashboard')).toBeVisible();
+ await page.evaluate(()=>{document.getElementById('rf-print-content').textContent='PRIVATE_PRINT_SENTINEL'});
+ const secondResolve=page.waitForRequest(request=>request.url().includes('academy-gateway')&&JSON.parse(request.postData()||'{}').action==='resolve_portal'&&resolves>=2);
+ await page.locator('[data-rf="refresh"]').click();
+ await secondResolve;
+ await page.locator('[data-rf="logout"]').click();
+ await expect(page.locator('#rf-login')).toBeVisible();
+ await expect(page.locator('#rf-print-content')).toBeEmpty();
+ expect(await page.evaluate(()=>sessionStorage.getItem('rf_safe_session_v1'))).toBeNull();
+ await page.waitForTimeout(2300);
+ await expect(page.locator('#rf-login')).toBeVisible();
+ await expect(page.locator('#app')).not.toContainText('پرونده مهارتی');
+ await page.close();
+});
+
+test('expired session refresh succeeds only with a new valid token',async({browser})=>{
+ const page=await browser.newPage({viewport:{width:1100,height:800}});
+ await apiMock(page,'student');
+ let refreshed=0;
+ await page.route('https://sdsdzktsqpahpdrgmzuo.supabase.co/functions/v1/academy-gateway',route=>{
+  const payload=JSON.parse(route.request().postData()||'{}');
+  if(payload.action==='proxy'&&String(payload.path||'').includes('grant_type=refresh_token')){
+   refreshed++;
+   return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({access_token:'new-test-token',refresh_token:'new-test-refresh',expires_in:3600})});
+  }
+  return route.fallback();
+ });
+ await page.addInitScript(()=>sessionStorage.setItem('rf_safe_session_v1',JSON.stringify({access_token:'expired',refresh_token:'valid-synthetic-refresh',expires_at:Date.now()-60000})));
+ await page.goto('/#/workspace',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('.rf-dashboard')).toBeVisible();
+ const saved=await page.evaluate(()=>JSON.parse(sessionStorage.getItem('rf_safe_session_v1')||'null'));
+ expect(refreshed).toBe(1);
+ expect(saved?.access_token).toBe('new-test-token');
+ await page.close();
+});
