@@ -292,3 +292,27 @@ test('cinematic images load successfully over the public CDN',async({browser})=>
  expect(result.every(x=>x.ok),JSON.stringify(result)).toBe(true);
  await page.close();
 });
+
+test('invalid credentials explain the error without retaining a token',async({browser})=>{
+ const page=await browser.newPage({viewport:{width:1050,height:800}});
+ await page.route('https://sdsdzktsqpahpdrgmzuo.supabase.co/functions/v1/academy-gateway',route=>{
+ const b=JSON.parse(route.request().postData()||'{}');
+ return route.fulfill({status:400,contentType:'application/json',body:JSON.stringify({error:b.action==='proxy'?'Invalid login credentials':'AUTH_REQUIRED'})});
+ });
+ await page.goto('/#/access',{waitUntil:'domcontentloaded'});
+ await page.locator('#rf-login [name="email"]').fill('not-a-user@example.invalid');
+ await page.locator('#rf-login [name="password"]').fill('a-fake-test-password');
+ await page.locator('#rf-login button[type="submit"]').click();
+ await expect(page.getByRole('alert')).toContainText('ایمیل یا رمز');
+ expect(await page.evaluate(()=>sessionStorage.getItem('rf_safe_session_v1'))).toBeNull();
+ await page.close();
+});
+test('expired session refresh fails closed without exposing workspace',async({browser})=>{
+ const page=await browser.newPage({viewport:{width:1050,height:800}});
+ await page.addInitScript(()=>sessionStorage.setItem('rf_safe_session_v1',JSON.stringify({access_token:'expired',refresh_token:'invalid',expires_at:Date.now()-60000})));
+ await page.route('https://sdsdzktsqpahpdrgmzuo.supabase.co/functions/v1/academy-gateway',route=>route.fulfill({status:400,contentType:'application/json',body:JSON.stringify({error:'invalid_grant'})}));
+ await page.goto('/#/workspace',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('#app')).toContainText(/نشست|ورود|جلسه/);
+ expect(await page.evaluate(()=>sessionStorage.getItem('rf_safe_session_v1'))).toBeNull();
+ await page.close();
+});

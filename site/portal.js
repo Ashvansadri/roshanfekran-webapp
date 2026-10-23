@@ -9,9 +9,44 @@ const num=v=>new Intl.NumberFormat("fa-IR").format(Number(v||0));
 let session=null,role=null,journey=null,parent=null,familyTip=null,resume=null,works=[],missions=[],campaigns=[],staffData=null,finance=null,profileFormOpen=false,workFormOpen=false,stage=0,busy=false,error="",notice="",loading=false,quizQuestions=null,quizLoading=false;
 try{const saved=sessionStorage.getItem("rf_safe_session_v1");if(saved)session=JSON.parse(saved)}catch{sessionStorage.removeItem("rf_safe_session_v1")}
 const token=()=>session?.access_token||"";
-const setSession=x=>{session=x;sessionStorage.setItem("rf_safe_session_v1",JSON.stringify({access_token:x.access_token,refresh_token:x.refresh_token,expires_at:Date.now()+Number(x.expires_in||3600)*1000}))};
+const setSession=x=>{if(!x?.access_token||!x?.refresh_token)throw Error("پاسخ ورود ناقص است");session={access_token:x.access_token,refresh_token:x.refresh_token,expires_at:Date.now()+Math.max(1,Number(x.expires_in||3600))*1000};sessionStorage.setItem("rf_safe_session_v1",JSON.stringify(session))};
+let renewing=null;
+async function renew(){
+ if(!session?.refresh_token)throw Error("نشست منقضی شده است. مجدداً وارد شوید.");
+ if(!renewing)renewing=(async()=>{
+  const abort=new AbortController(),id=setTimeout(()=>abort.abort(),15000);
+  try{
+   const r=await fetch(END,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"proxy",path:"/auth/v1/token?grant_type=refresh_token",method:"POST",body:{refresh_token:session.refresh_token}}),signal:abort.signal});
+   const d=await r.json().catch(()=>({}));if(!r.ok||!d?.access_token||!d?.refresh_token)throw Error("نشست شما منقضی شده؛ دوباره وارد شوید.");
+   setSession(d);return token();
+  }finally{clearTimeout(id)}
+ })().finally(()=>{renewing=null});
+ return renewing;
+}
+function authError(s,d){
+ const msg=String(d?.error_description||d?.msg||d?.message||d?.error||"");
+ if(/Invalid login credentials|invalid_grant|Email not confirmed/i.test(msg))return "ایمیل یا رمز عبور صحیح نیست یا حساب هنوز تأیید نشده است.";
+ if(/NO_ACTIVE_ROLE/i.test(msg))return "حساب معتبر است، اما نقش فعال ندارد؛ برای فعال‌سازی با آموزشگاه تماس بگیرید.";
+ if(s===429)return "درخواست‌ها زیاد بوده؛ کمی بعد دوباره تلاش کنید.";
+ if(s===401)return "نشست ورود نامعتبر است؛ دوباره وارد شوید.";
+ if(s>=500)return "سرور آموزشگاه موقتاً در دسترس نیست.";
+ return msg&&!/^(request failed|bad request|درخواست ناموفق بود)$/i.test(msg)?msg:"ورود انجام نشد؛ اتصال و اطلاعات حساب را بررسی کنید.";
+}
 const clear=()=>{session=null;role=null;journey=null;parent=null;familyTip=null;finance=null;works=[];missions=[];campaigns=[];sessionStorage.removeItem("rf_safe_session_v1")};
-async function api(action,body={},auth=false){const ctl=new AbortController(),timeout=setTimeout(()=>ctl.abort(),16000);try{const r=await fetch(END,{method:"POST",headers:{"Content-Type":"application/json",...(auth&&token()?{Authorization:"Bearer "+token()}:{})},body:JSON.stringify({action,...body}),signal:ctl.signal});let d=await r.json().catch(()=>({error:"پاسخ سرور معتبر نیست"}));if(!r.ok||d?.error)throw Error(d?.error||"درخواست ناموفق بود");return d}finally{clearTimeout(timeout)}}
+async function api(action,body={},auth=false,retry=true){
+ if(auth&&session?.expires_at&&Number(session.expires_at)<Date.now()+15000){try{await renew()}catch(e){clear();throw e}}
+ const ctl=new AbortController(),timeout=setTimeout(()=>ctl.abort(),16000);
+ try{
+  const r=await fetch(END,{method:"POST",headers:{"Content-Type":"application/json",...(auth&&token()?{Authorization:"Bearer "+token()}:{})},body:JSON.stringify({action,...body}),signal:ctl.signal});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok||d?.error){
+   if(auth&&retry&&(r.status===401||/JWT expired|invalid jwt|AUTH_REQUIRED/i.test(String(d?.error||"")))){try{await renew()}catch(e){clear();throw e}return api(action,body,auth,false)}
+   throw Error(authError(r.status,d));
+  }
+  return d;
+ }catch(e){if(e?.name==="AbortError")throw Error("پاسخ سرور طولانی شد؛ دوباره امتحان کنید.");if(e instanceof TypeError)throw Error("ارتباط با سرور برقرار نیست؛ اتصال اینترنت را بررسی کنید.");throw e}
+ finally{clearTimeout(timeout)}
+}
 async function proxy(path,method="GET",body=null){return api("proxy",{path,method,body},true)}
 async function rpc(name,body={}){if(!/^academy_[a-z0-9_]+$/.test(name))throw Error("عملیات معتبر نیست");return proxy("/rest/v1/rpc/"+name,"POST",body)}
 function refresh(){if(window.RFCORE?.render)window.RFCORE.render();else window.dispatchEvent(new Event("hashchange"))}
@@ -70,7 +105,7 @@ function loginPage(){
  return '<main class="rf-auth shell"><section class="rf-auth-story"><div class="eyebrow">ROSHANFEKRAN · SECURE SPACE</div><h1>یک حساب،<br/><span class="gradient-text">یک مسیر رشد متفاوت.</span></h1><p>سامانه نقش شما را پس از تأیید هویت شناسایی می‌کند؛ هنرجو، خانواده، مدرس و مدیریت هرکدام به محیط اختصاصی خود هدایت می‌شوند.</p><div class="rf-tick">◈ حریم خصوصی و امنیت اطلاعات اولویت ماست.</div></section><div class="rf-auth-card">'+
  '<div class="rf-auth-symbol">✧</div><span class="rf-overline">ACCOUNT ACCESS</span><h2>ورود به پورتال</h2><p>اطلاعات حساب فعال آموزشگاه را وارد کنید.</p>'+toast()+
  '<form id="rf-login" class="rf-form"><label class="portal-field"><span>ایمیل</span><input name="email" type="email" required autocomplete="username" placeholder="name@example.com" dir="ltr"/></label><label class="portal-field"><span>رمز عبور</span><input name="password" type="password" required autocomplete="current-password" minlength="8" placeholder="حداقل ۸ کاراکتر" dir="ltr"/></label><button class="btn btn-primary" type="submit" '+(busy?"disabled":"")+'>'+(busy?"در حال بررسی...":"ورود امن ←")+'</button></form>'+
- '<p class="rf-caption">هنوز حساب ندارید؟ پس از ثبت‌نام در دوره، لینک فعال‌سازی اختصاصی برایتان صادر می‌شود.</p><a class="thin-link" href="#/courses">مشاهده دوره‌ها ↗</a></div></main>';
+ '<p class="rf-caption">با ایمیل و رمز فعال همین آموزشگاه وارد شوید. لطفاً رمز خود را در گفت‌وگو ارسال نکنید.</p><div class="rf-access-support"><a href="#/courses">ثبت‌نام یا فعال‌سازی هنرجو ↗</a><a href="tel:09164880996">راهنمایی ورود و رمز عبور ↗</a></div></div></main>';
 }
 function activate(){
  const frag=location.hash.split("?")[1]||"",q=new URLSearchParams(frag);
@@ -218,7 +253,7 @@ async function submit(e){
  if(f.id==="rf-login"){
   const response=await api("proxy",{path:"/auth/v1/token?grant_type=password",method:"POST",body:{email:String(d.get("email")||"").trim().toLowerCase(),password:String(d.get("password")||"")}});
   if(!response.access_token)throw Error("رمز یا ایمیل تأیید نشد");
-  setSession(response);role=await api("resolve_portal",{},true);journey=null;parent=null;familyTip=null;staffData=null;
+  setSession(response);try{role=await api("resolve_portal",{},true)}catch(e){clear();throw e}journey=null;parent=null;familyTip=null;staffData=null;
   location.hash="#/workspace";loadWorkspace();
  }else if(f.id==="rf-activate"){
   const kind=d.get("kind"),act=kind==="staff"?"signup_invited":kind==="student"?"signup_student":"signup_guardian";
