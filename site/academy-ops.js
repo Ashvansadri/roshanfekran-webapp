@@ -122,9 +122,20 @@ function courses(){
  }).join("")+'</div>':empty("courses","دوره‌ای ثبت نشده است.")));
 }
 function finance(){
- const items=row("payments"),inst=row("installments");
- return section("کنترل رسیدها و اقساط",'<p>تأیید فیش فقط از طریق عملیات امن دیتابیس انجام می‌شود و پس از بررسی واقعی باید ثبت شود. هیچ مبلغی از روی اطلاعات نمایشی به حساب افزوده نمی‌شود.</p>'+
- '<div class="rfops-summary"><div><strong>'+fa(inst.filter(i=>i.status==="open"||i.status==="partial").length)+'</strong><span>اقساط باز</span></div><div><strong>'+fa(items.filter(i=>i.status==="pending").length)+'</strong><span>فیش‌های در انتظار</span></div></div>'+
+ const items=row("payments"),inst=row("installments"),enrollments=row("enrollments");
+ const byEnrollment=new Map(enrollments.map(e=>[String(e.id),e]));
+ const open=inst.filter(i=>i.status==="open"||i.status==="partial");
+ const remaining=open.reduce((total,i)=>total+Math.max(0,Number(i.amount||0)-Number(i.paid_amount||0)),0);
+ const schedule=inst.slice().sort((a,b)=>String(a.due_date||"").localeCompare(String(b.due_date||"")));
+ return section("کنترل رسیدها و اقساط",'<p>تأیید فیش فقط از طریق عملیات امن دیتابیس انجام می‌شود و پس از بررسی واقعی باید ثبت شود. مبالغ و شمارش‌ها مربوط به رکوردهای مجازِ بارگذاری‌شده‌اند و گزارش حسابداری قطعی نیستند.</p>'+
+ '<div class="rfops-summary"><div><strong>'+fa(open.length)+'</strong><span>اقساط باز</span></div><div><strong>'+fa(items.filter(i=>i.status==="pending").length)+'</strong><span>فیش‌های در انتظار</span></div><div><strong>'+money(remaining)+'</strong><span>مانده اقساط بازِ بارگذاری‌شده</span></div></div>'+
+ '<h4>سررسید و وضعیت اقساط</h4>'+
+ (schedule.length?'<div class="rfops-table-wrap"><table><thead><tr><th>هنرجو / دوره</th><th>قسط</th><th>سررسید</th><th>مبلغ</th><th>پرداخت‌شده</th><th>مانده</th><th>وضعیت</th></tr></thead><tbody>'+schedule.map(i=>{
+  const e=byEnrollment.get(String(i.enrollment_id));
+  const left=Math.max(0,Number(i.amount||0)-Number(i.paid_amount||0));
+  return '<tr><td>'+esc(e?name("students",e.student_id):"—")+'<small>'+esc(e?name("courses",e.course_id):"—")+'</small></td><td>'+fa(i.installment_no)+'</td><td>'+when(i.due_date)+'</td><td>'+money(i.amount)+'</td><td>'+money(i.paid_amount)+'</td><td>'+money(left)+'</td><td>'+esc(i.status||"—")+'</td></tr>';
+ }).join("")+'</tbody></table></div>':empty("installments","قسطی در سطح دسترسی فعلی ثبت نشده است."))+
+ '<h4>بررسی فیش‌های واریزی</h4>'+
  (items.length?'<div class="rfops-cards">'+items.map(x=>'<article class="rfops-card"><strong>درخواست پرداخت '+money(x.amount)+'</strong><p>روش: '+esc(x.method||"—")+' · وضعیت: '+esc(x.status)+'</p><small>ثبت: '+when(x.submitted_at)+'</small>'+(x.status==="pending"?'<div class="rfops-actions"><button data-rfops="payment-approve" data-id="'+esc(x.id)+'">تأیید بررسی‌شده</button><button data-rfops="payment-reject" data-id="'+esc(x.id)+'">رد فیش</button></div>':"")+'</article>').join("")+'</div>':empty("payments","فیش پرداختی در این نما ثبت نشده است.")));
 }
 function tasks(){
