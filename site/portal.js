@@ -83,13 +83,14 @@ async function loadWorkspace(){
  loading=true;finance=null;try{
   role=await api("resolve_portal",{},true);
   if(role.kind==="student"){journey=await rpc("academy_student_journey_snapshot");await loadStudentExtras()}
-  else if(role.kind==="guardian"){const a=await Promise.allSettled([rpc("academy_parent_journey_snapshot"),rpc("academy_family_tip_today")]);parent=a[0].status==="fulfilled"?a[0].value:null;familyTip=a[1].status==="fulfilled"?a[1].value:null}
+  else if(role.kind==="guardian"){const a=await Promise.allSettled([rpc("academy_parent_journey_snapshot"),rpc("academy_family_tip_today")]);requireCurrent(generation);parent=a[0].status==="fulfilled"?a[0].value:null;familyTip=a[1].status==="fulfilled"?a[1].value:null}
   else if(role.kind==="staff"||role.kind==="teacher"){await loadStaffExtras()}
   error="";
  }catch(e){if(!currentEpoch(generation))return;error=e.message||"ارتباط امن با حساب برقرار نشد";if(/AUTH_REQUIRED|JWT|401|expired|Unauthorized/.test(error))clear()}
  finally{if(currentEpoch(generation)){loading=false;refresh()}}
 }
 async function loadStudentExtras(){
+ const generation=authEpoch;
  const items=await Promise.allSettled([
   proxy("/rest/v1/academy_showcase_works?select=id,title,description,category,project_url,review_status,review_note,created_at&order=created_at.desc"),
   proxy("/rest/v1/academy_mission_templates?select=id,mission_no,phase,title,objective,release_day,deliverable&order=mission_no.asc"),
@@ -99,6 +100,7 @@ async function loadStudentExtras(){
   proxy("/rest/v1/academy_installments?select=id,enrollment_id,installment_no,amount,paid_amount,due_date,status&limit=100"),
   proxy("/rest/v1/academy_payments?select=id,enrollment_id,installment_id,amount,paid_at,status&limit=100"),
  ]);
+ requireCurrent(generation);
  works=items[0].status==="fulfilled"&&Array.isArray(items[0].value)?items[0].value:[];
  missions=items[1].status==="fulfilled"&&Array.isArray(items[1].value)?items[1].value:[];
  campaigns=items[2].status==="fulfilled"&&Array.isArray(items[2].value)?items[2].value:[];
@@ -108,6 +110,7 @@ async function loadStudentExtras(){
   :{ready:false};
 }
 async function loadStaffExtras(){
+ const generation=authEpoch;
  const names=role.kind==="teacher"?["academy_courses","academy_assignments"]:["academy_courses","academy_students","academy_enrollments","academy_registration_requests"];
  // Fetch only fields used by this view; never request national ID, contact, finance or private notes.
  const projections={
@@ -119,6 +122,7 @@ async function loadStaffExtras(){
  };
  const requests=names.map(n=>proxy("/rest/v1/"+n+"?select="+projections[n]+"&limit=50"));
  const res=await Promise.allSettled(requests);
+ requireCurrent(generation);
  staffData={};names.forEach((n,i)=>staffData[n]=res[i].status==="fulfilled"&&Array.isArray(res[i].value)?res[i].value:[]);
 }
 function heading(k,title,subtitle){return '<div class="rf-page-head"><div><div class="rf-overline">'+esc(k)+'</div><h1>'+title+'</h1><p>'+esc(subtitle)+'</p></div></div>'}
@@ -184,7 +188,8 @@ function studentPage(){
  }else if(stageIndex===3){
  if(quizQuestions===null&&!quizLoading){
   quizLoading=true;
-  rpc("academy_showcase_quiz_questions").then(data=>{quizQuestions=Array.isArray(data)?data:[]}).catch(e=>{quizQuestions=[];error=e.message}).finally(()=>{quizLoading=false;refresh()});
+  const generation=authEpoch;
+  rpc("academy_showcase_quiz_questions").then(data=>{if(currentEpoch(generation))quizQuestions=Array.isArray(data)?data:[]}).catch(e=>{if(currentEpoch(generation)){quizQuestions=[];error=e.message}}).finally(()=>{if(currentEpoch(generation)){quizLoading=false;refresh()}});
  }
  const canTake=(journey.showcase_works_approved||0)>0;
  right='<div class="rf-panel"><h3>مرحله ۴ · آزمون مهارت</h3><p>پس از تأیید حداقل یک نمونه‌کار، به هشت سؤال واقعی آزمون پاسخ دهید. سقف تلاش: ۳ بار در ۲۴ ساعت.</p><div class="rf-meters"><span>بهترین نمره</span><b>'+num(journey.quiz_best_score||0)+'</b></div>'+
