@@ -163,11 +163,11 @@ function empty(k,label){return failures[k]?'<div class="rfops-warn">این بخ�
 function tabs(){
  const allowed=[
  ["students","پرونده هنرجویان",enrollmentManager()],
- ["risk","پایش هنرجویان",["owner","manager","registrar","finance"].includes(meRole())],
  ["family","نظارت خانواده",familyManager()],
  ["applications","درخواست‌های ثبت‌نام",enrollmentManager()],
  ["courses","دوره‌ها و لینک‌ها",enrollmentManager()||meRole()==="viewer"],
  ["finance","مالی و اقساط",financial()],
+ ["risk","پایش هنرجویان",["owner","manager","registrar","finance"].includes(meRole())],
  ["contracts","قراردادها",enrollmentManager()],
  ["tasks","تکالیف و کلاس‌ها",teacher()]
  ].filter(x=>x[2]);
