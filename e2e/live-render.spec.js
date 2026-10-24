@@ -22,7 +22,7 @@ test('Render staging serves working interactive rooms and protected login screen
   // Hash-only SPA navigation does not issue an HTTP request: Playwright returns null.
   // Verify the URL and rendered form instead of asserting a nonexistent response status.
   await page.goto(LIVE+'/#/access',{waitUntil:'domcontentloaded',timeout:45000});
-  await expect(page).toHaveURL(/#\\/access$/);
+  await expect(page).toHaveURL(LIVE+'/#/access');
   await expect(page.locator('#rf-login input[name="email"]')).toBeVisible({timeout:15000});
   await expect(page.locator('#rf-login input[name="password"]')).toBeVisible();
   await page.goto(LIVE+'/#/workspace',{waitUntil:'domcontentloaded',timeout:45000});
