@@ -10,19 +10,27 @@ try{const saved=sessionStorage.getItem("rf_safe_session_v1");if(saved)session=JS
 const token=()=>session?.access_token||"";
 const setSession=x=>{if(!x?.access_token||!x?.refresh_token)throw Error("پاسخ ورود ناقص است");session={access_token:x.access_token,refresh_token:x.refresh_token,expires_at:Date.now()+Math.max(1,Number(x.expires_in||3600))*1000};sessionStorage.setItem("rf_safe_session_v1",JSON.stringify(session))};
 let renewing=null;
+// Only a definitive invalid refresh credential should end the session.
+// Temporary gateway outages and timeouts must leave the session retryable.
+const permanentAuthError=message=>Object.assign(new Error(message),{authPermanent:true});
 let authEpoch=0;
 const activeRequests=new Set();
 const currentEpoch=(generation)=>generation===authEpoch;
 const requireCurrent=(generation)=>{if(!currentEpoch(generation))throw Error("SESSION_CANCELLED")};
 async function renew(){
  const generation=authEpoch;
- if(!session?.refresh_token)throw Error("نشست منقضی شده است. مجدداً وارد شوید.");
+ if(!session?.refresh_token)throw permanentAuthError("نشست منقضی شده است. مجدداً وارد شوید.");
  if(!renewing)renewing=(async()=>{
   const abort=new AbortController(),id=setTimeout(()=>abort.abort(),15000);
   activeRequests.add(abort);
   try{
    const r=await fetch(END,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"proxy",path:"/auth/v1/token?grant_type=refresh_token",method:"POST",body:{refresh_token:session.refresh_token}}),signal:abort.signal});
-   const d=await r.json().catch(()=>({}));if(!r.ok||!d?.access_token||!d?.refresh_token)throw Error("نشست شما منقضی شده؛ دوباره وارد شوید.");
+   const d=await r.json().catch(()=>({}));
+   if(!r.ok){
+    if([400,401,403].includes(r.status))throw permanentAuthError("نشست شما منقضی شده؛ دوباره وارد شوید.");
+    throw Error(r.status===429?"درخواست‌ها زیاد بوده؛ کمی بعد دوباره تلاش کنید.":"سرور احراز هویت موقتاً در دسترس نیست؛ با «تلاش مجدد» ادامه دهید.");
+   }
+   if(!d?.access_token||!d?.refresh_token)throw Error("پاسخ سرور احراز هویت ناقص بود؛ با «تلاش مجدد» ادامه دهید.");
    requireCurrent(generation);setSession(d);return token();
   }finally{clearTimeout(id);activeRequests.delete(abort)}
  })().finally(()=>{renewing=null});
@@ -53,7 +61,7 @@ const clear=()=>{
 };
 async function api(action,body={},auth=false,retry=true){
  const generation=authEpoch;
- if(auth&&session?.expires_at&&Number(session.expires_at)<Date.now()+15000){try{await renew()}catch(e){clear();throw e}}
+ if(auth&&session?.expires_at&&Number(session.expires_at)<Date.now()+15000){try{await renew()}catch(e){if(e.authPermanent)clear();throw e}}
  requireCurrent(generation);
  const ctl=new AbortController(),timeout=setTimeout(()=>ctl.abort(),16000);
  activeRequests.add(ctl);
@@ -62,7 +70,7 @@ async function api(action,body={},auth=false,retry=true){
   const d=await r.json().catch(()=>({}));
   requireCurrent(generation);
   if(!r.ok||d?.error){
-   if(auth&&retry&&(r.status===401||/JWT expired|invalid jwt|AUTH_REQUIRED/i.test(String(d?.error||"")))){try{await renew()}catch(e){clear();throw e}return api(action,body,auth,false)}
+   if(auth&&retry&&(r.status===401||/JWT expired|invalid jwt|AUTH_REQUIRED/i.test(String(d?.error||"")))){try{await renew()}catch(e){if(e.authPermanent)clear();throw e}return api(action,body,auth,false)}
    throw Error(authError(r.status,d));
   }
   requireCurrent(generation);return d;
