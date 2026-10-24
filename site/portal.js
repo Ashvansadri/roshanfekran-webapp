@@ -88,7 +88,7 @@ async function loadWorkspace(){
   else if(role.kind==="guardian"){const a=await Promise.allSettled([rpc("academy_parent_journey_snapshot"),rpc("academy_family_tip_today"),rpc("academy_parent_portal_snapshot")]);requireCurrent(generation);parent=a[0].status==="fulfilled"?a[0].value:null;familyTip=a[1].status==="fulfilled"?a[1].value:null;parentDetails=a[2].status==="fulfilled"?a[2].value:null}
   else if(role.kind==="staff"||role.kind==="teacher"){await loadStaffExtras()}
   error="";
- }catch(e){if(!currentEpoch(generation))return;error=e.message||"ارتباط امن با حساب برقرار نشد";if(/AUTH_REQUIRED|JWT|401|expired|Unauthorized/.test(error))clear()}
+ }catch(e){if(!currentEpoch(generation))return;error=e.message||"ارتباط امن با حساب برقرار نشد";if(/AUTH_REQUIRED|JWT|401|expired|Unauthorized|NO_ACTIVE_ROLE|نقش فعال ندارد/i.test(error))clear()}
  finally{if(currentEpoch(generation)){loading=false;refresh()}}
 }
 async function loadStudentExtras(){
