@@ -77,3 +77,20 @@
 .rfops-course-editor .rfops-form label{min-width:0}
 .rfops-course-editor .rfops-form textarea{min-height:86px;resize:vertical}
 .rfops-course-editor .rfops-form small{line-height:2;color:#aacfb9}
+
+
+/* Class attendance — accessible glass cards, compact on phones. */
+.rfops-attendance-picks{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0}
+.rfops-attendance-picks button{cursor:pointer;font:750 12px Estedad,Vazirmatn,Tahoma,sans-serif;background:linear-gradient(140deg,#133a39,#0b2029);color:#c9f8de;border:1px solid #92e7c66b;border-radius:12px;padding:13px 16px;min-height:46px}
+.rfops-attendance-picks button[aria-pressed=true]{color:#09291e;background:linear-gradient(125deg,#b5ffe3,#8bd8be);border-color:#e0fff3}
+.rfops-attendance-board{margin:16px 0 28px;padding:16px;border:1px solid #9be1bf55;border-radius:16px;background:linear-gradient(140deg,#16383e88,#0b2029d9);box-shadow:0 14px 34px #0005}
+.rfops-attendance-form{display:grid;grid-template-columns:minmax(145px,1.2fr) minmax(115px,.8fr) minmax(160px,1.4fr) auto;gap:12px;align-items:end;padding:15px 5px;border-bottom:1px solid #9cdbc03a}
+.rfops-attendance-form:last-child{border-bottom:0}
+.rfops-attendance-form label{display:flex;flex-direction:column;gap:7px;font-size:11px;color:#b8e9d3;font-weight:700}
+.rfops-attendance-form input,.rfops-attendance-form select{min-height:43px;width:100%;background:#091f26;color:#e8fff0;border:1px solid #91d6bd80;border-radius:9px;padding:8px 10px;font-family:inherit}
+.rfops-attendance-form button{min-height:43px;border:1px solid #b8f9db;border-radius:9px;padding:8px 15px;background:#a3e8c9;color:#092a23;font-family:inherit;font-weight:800;cursor:pointer}
+.rfops-attendance-form button:disabled{opacity:.4;cursor:not-allowed}
+.rfops-attendance-person strong{display:block;color:#f0fff5;font-size:13px}
+.rfops-attendance-person small{display:block;color:#9fc4b4;font-size:10px;margin-top:6px}
+@media(max-width:750px){.rfops-attendance-form{grid-template-columns:1fr 1fr}.rfops-attendance-person{grid-column:1/-1}.rfops-attendance-form button{grid-column:1/-1}}
+@media(max-width:440px){.rfops-attendance-form{grid-template-columns:1fr}.rfops-attendance-person{grid-column:auto}.rfops-attendance-form button{grid-column:auto}}
