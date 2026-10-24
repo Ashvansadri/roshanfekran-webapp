@@ -273,7 +273,7 @@ Deno.serve(async(req:Request)=>{
      const key='students/'+targetStudent+'/'+crypto.randomUUID()+'.'+ext;await uploadObject('academy-avatars',key,bytes,mime);url=SUPA+'/storage/v1/object/public/academy-avatars/'+key;
      await jo(await svc('/rest/v1/academy_students?id=eq.'+encodeURIComponent(targetStudent),'PATCH',{avatar_url:url},'return=representation'));
    }else{
-     const st=await studentByUser(u.id);
+     const st=role?null:await studentByUser(u.id);
      if(st&&!role){const key='students/'+st.id+'/'+crypto.randomUUID()+'.'+ext;await uploadObject('academy-avatars',key,bytes,mime);url=SUPA+'/storage/v1/object/public/academy-avatars/'+key;await jo(await svc('/rest/v1/academy_students?id=eq.'+encodeURIComponent(st.id),'PATCH',{avatar_url:url},'return=representation'));}
      else{if(!role)throw new Error('حساب مجاز پیدا نشد');const key='staff/'+u.id+'/'+crypto.randomUUID()+'.'+ext;await uploadObject('academy-avatars',key,bytes,mime);url=SUPA+'/storage/v1/object/public/academy-avatars/'+key;await jo(await svc('/rest/v1/academy_staff?user_id=eq.'+encodeURIComponent(u.id),'PATCH',{avatar_url:url},'return=representation'));}
    }
