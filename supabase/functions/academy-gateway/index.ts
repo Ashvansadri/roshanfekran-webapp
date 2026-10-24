@@ -49,7 +49,7 @@ async function invitedAccount(email:string,password:string,name:string){
  return {user,session};
 }
 async function currentUser(token:string){if(!token)throw new Error('ابتدا وارد حساب کاربری شوید');return jo(await supa('/auth/v1/user','GET',null,token))}
-async function currentRole(token:string,userId:string){const rows=await jo(await supa('/rest/v1/academy_staff?select=role,active&user_id=eq.'+encodeURIComponent(userId)+'&active=eq.true','GET',null,token));return Array.isArray(rows)&&rows.length?rows[0].role:null}
+async function currentRole(token:string,userId:string){const rows=await jo(await supa('/rest/v1/academy_staff?select=role,active&user_id=eq.'+encodeURIComponent(userId)+'&active=eq.true&archived_at=is.null','GET',null,token));return Array.isArray(rows)&&rows.length?rows[0].role:null}
 async function studentByUser(userId:string){
  const rows=await jo(await svc('/rest/v1/academy_students?select=id,user_id,full_name,email,portal_enabled,avatar_url,status,archived_at&user_id=eq.'+encodeURIComponent(userId)+'&limit=1','GET',null));
  const student=Array.isArray(rows)&&rows.length?rows[0]:null;
@@ -447,7 +447,7 @@ Deno.serve(async(req:Request)=>{
    const u=await currentUser(bt(req));
    if(!u?.id)return jr({error:'AUTH_REQUIRED'},401);
 
-   const staff=await jo(await svc('/rest/v1/academy_staff?select=role,active&user_id=eq.'+encodeURIComponent(u.id)+'&active=eq.true&limit=1','GET',null));
+   const staff=await jo(await svc('/rest/v1/academy_staff?select=role,active&user_id=eq.'+encodeURIComponent(u.id)+'&active=eq.true&archived_at=is.null&limit=1','GET',null));
    if(Array.isArray(staff)&&staff.length){
      const role=String(staff[0].role||'');
      return jr({ok:true,kind:role==='teacher'?'teacher':'staff',role,route:role==='teacher'?'/teacher':'/manage'});

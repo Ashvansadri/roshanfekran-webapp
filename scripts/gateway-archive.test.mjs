@@ -34,3 +34,21 @@ for(const [name,next,record] of [
 const roleBlock=section("resolve_portal","ai_public_quota");
 assert(roleBlock.includes("students[0].status!=='archived'"),"Archived students must not resolve to student role");
 console.log("PASS: active/unlinked student lookup, status/date archive denial and six gateway role/write guards.");
+
+
+const roleStart=source.indexOf("async function currentRole(");
+const roleEnd=source.indexOf("async function studentByUser(",roleStart);
+assert(roleStart>=0&&roleEnd>roleStart,"Missing central staff role resolver");
+const roleHelper=source.slice(roleStart,roleEnd).trim().replace("token:string,userId:string","token,userId");
+let roleRows=[];
+const currentRole=new Function("supa","jo",roleHelper+"\nreturn currentRole;")(
+ async path=>{assert(path.includes("&active=eq.true&archived_at=is.null"),"Archived staff must be excluded by the role lookup");return path;},
+ async()=>roleRows
+);
+roleRows=[{role:"owner",active:true}];
+assert.equal(await currentRole("synthetic-token","synthetic-id"),"owner","Eligible staff must retain their role");
+roleRows=[];
+assert.equal(await currentRole("synthetic-token","synthetic-id"),null,"Ineligible staff must not receive a role");
+const staffResolver=section("resolve_portal","ai_public_quota");
+assert(staffResolver.includes("&active=eq.true&archived_at=is.null&limit=1"),"Portal must not resolve archived staff");
+console.log("PASS: archived staff excluded from central role and portal resolution; active staff preserved.");
