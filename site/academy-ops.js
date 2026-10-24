@@ -35,10 +35,11 @@ const grants={
 };
 let role=null, request=null, datasets={},failures={},inflight=null,selected="students",working=false,info="",warning="",generated="";
 let sessionEpoch=0;
+let attendanceClassId="",attendanceSnapshot=null;
 // Clear every private projection and invitation link on logout or account switch.
 function reset(){
  sessionEpoch++;role=null;request=null;datasets={};failures={};inflight=null;
- selected="students";working=false;info="";warning="";generated="";
+ selected="students";working=false;info="";warning="";generated="";attendanceClassId="";attendanceSnapshot=null;
 }
 const meRole=()=>String(role?.role||"");
 const manage=()=>["owner","manager"].includes(meRole());
@@ -226,8 +227,38 @@ function tasks(){
  const assigned=courses.filter(c=>c.status==="active"||c.status==="planned");
  const classEditor=assigned.length?'<details class="rfops-course-editor rfops-session-editor"><summary>برنامه‌ریزی جلسه جدید</summary><form id="rfops-class" class="rfops-form"><label>دوره<select name="course_id" required>'+assigned.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.title)+'</option>').join("")+'</select></label><label>عنوان جلسه<input name="title" minlength="3" maxlength="120" required placeholder="مثلاً کارگاه پروژه عملی"/></label><label>شماره جلسه<input name="session_no" type="number" min="1" max="200" step="1" required/></label><label>شروع جلسه<input name="starts_at" type="datetime-local" required/></label><label>پایان جلسه<input name="ends_at" type="datetime-local" required/></label><label>شیوه برگزاری<select name="mode"><option value="in_person">حضوری</option><option value="online">آنلاین</option><option value="hybrid">ترکیبی</option></select></label><label>اتاق یا محل برگزاری<input name="room" maxlength="100" placeholder="اختیاری"/></label><label class="rfops-consent"><input type="checkbox" name="published"/> جلسه همین حالا منتشر شود و برای هنرجویان ثبت‌نام‌شده اعلان داخلی ایجاد شود.</label><button class="btn btn-primary" type="submit" '+(working?"disabled":"")+'>ثبت جلسه در تقویم</button><small>به‌صورت پیش‌فرض پیش‌نویس است و اعلانی ارسال نمی‌شود. زمان‌ها براساس ساعت دستگاه شما وارد می‌شوند.</small></form></details>':'<p class="rf-caption">برای برنامه‌ریزی جلسه، ابتدا یک دوره فعال یا برنامه‌ریزی‌شده لازم است.</p>';
  const classTimeline=classes.length?'<div class="rfops-table-wrap"><table><thead><tr><th>دوره و جلسه</th><th>زمان شروع و پایان</th><th>نوع و مکان</th><th>وضعیت</th></tr></thead><tbody>'+classes.slice().sort((a,b)=>String(a.starts_at||"").localeCompare(String(b.starts_at||""))).map(c=>'<tr><td><strong>'+esc(c.title||"جلسه "+fa(c.session_no||0))+'</strong><small>'+esc(name("courses",c.course_id))+' · جلسه '+fa(c.session_no||0)+'</small></td><td>'+dateTime(c.starts_at)+'<small>تا '+dateTime(c.ends_at)+'</small></td><td>'+esc(({"in_person":"حضوری","online":"آنلاین","hybrid":"ترکیبی"})[c.mode]||"—")+'<small>'+esc(c.room||"—")+'</small></td><td>'+esc(c.status||"—")+'<small>'+(c.published?"منتشرشده":"پیش‌نویس")+'</small></td></tr>').join("")+'</tbody></table></div>':empty("classes","هنوز جلسه‌ای برای دوره‌های مجاز ثبت نشده است.");
+
+ const attendanceClasses=classes.filter(c=>c.published&&["scheduled","completed"].includes(c.status));
+ const attendanceSelector=attendanceClasses.length?
+  '<div class="rfops-attendance-picks" role="group" aria-label="انتخاب جلسه برای حضور و غیاب">'+
+  attendanceClasses.map(c=>'<button type="button" data-rfops="attendance-open" data-id="'+esc(c.id)+'" aria-pressed="'+String(attendanceClassId===c.id)+'">'+esc(c.title||"جلسه "+fa(c.session_no||0))+' · '+esc(name("courses",c.course_id))+'</button>').join("")+'</div>':
+  '<div class="rf-empty">برای حضور و غیاب، ابتدا یک جلسه منتشرشده لازم است.</div>';
+ let attendancePanel="";
+ if(attendanceClassId){
+  const currentClass=attendanceClasses.find(c=>c.id===attendanceClassId);
+  if(!currentClass)attendancePanel='<div class="rfops-warn">این جلسه دیگر در فهرست مجاز نیست؛ صفحه را تازه‌سازی کنید.</div>';
+  else if(attendanceSnapshot?.class_id!==attendanceClassId||!Array.isArray(attendanceSnapshot.roster))
+   attendancePanel='<div class="rf-empty">فهرست امن هنرجویان این جلسه هنوز دریافت نشده است.</div>';
+  else {
+   const ready=Date.parse(currentClass.starts_at)<=Date.now();
+   const forms=attendanceSnapshot.roster.map(s=>{
+    const options=[["","انتخاب وضعیت"],["present","حاضر"],["absent","غایب"],["late","با تأخیر"],["excused","موجه"]]
+     .map(([value,label])=>'<option value="'+value+'" '+(s.status===value?'selected':"")+'>'+label+'</option>').join("");
+    return '<form class="rfops-attendance-form" data-rfops-form="attendance">'+
+     '<input type="hidden" name="class_id" value="'+esc(attendanceClassId)+'"/>'+
+     '<input type="hidden" name="student_id" value="'+esc(s.student_id)+'"/>'+
+     '<div class="rfops-attendance-person"><strong>'+esc(s.name)+'</strong><small>'+(s.marked_at?'آخرین ثبت: '+esc(dateTime(s.marked_at)):'هنوز ثبت نشده')+'</small></div>'+
+     '<label>وضعیت<select name="status" required>'+options+'</select></label>'+
+     '<label>توضیح (اختیاری)<input name="note" maxlength="250" value="'+esc(s.note||"")+'" placeholder="توضیح کوتاه"/></label>'+
+     '<button type="submit" '+(working||!ready?'disabled':'')+'>ثبت و تأیید</button></form>';
+   }).join("");
+   attendancePanel='<div class="rfops-attendance-board"><p class="rf-caption">'+
+    (ready?'حضور هر هنرجو به‌صورت مستقل ثبت و با پاسخ سرور تأیید می‌شود.':'ثبت حضور فقط پس از شروع جلسه فعال می‌شود.')+
+    '</p>'+(forms||'<div class="rf-empty">هنرجوی فعال ثبت‌نام‌شده‌ای برای این جلسه وجود ندارد.</div>')+'</div>';
+  }
+ }
  return section("کلاس‌ها، تکالیف و ارزیابی",'<p>می‌توانید تکلیف منتشر کنید و وضعیت تحویل آن را از همین سامانه بررسی کنید. اگر گزینه اعلان سرپرست فعال باشد، تکالیف جدید و تکالیف عقب‌افتاده برای سرپرست دارای مجوز در مرکز اعلان ثبت می‌شوند.</p>'+
- classEditor+'<h4>تقویم جلسات ثبت‌شده</h4>'+classTimeline+'<h4>تعریف تکلیف</h4>'+'<form id="rfops-assignment" class="rfops-form"><label>دوره<select name="course_id" required>'+assigned.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.title)+'</option>').join("")+'</select></label><label>عنوان تکلیف<input name="title" minlength="4" maxlength="150" required/></label><label>مهلت تکلیف<input name="due_at" type="datetime-local" required/></label><label class="rfops-wide">شرح تمرین<textarea name="instructions" rows="3" required minlength="8"></textarea></label><label class="rfops-consent"><input type="checkbox" name="notify_guardians" checked/> در صورت فعال بودن نظارت، خانواده هم تکلیف و تأخیر را ببیند.</label><button class="btn btn-primary" '+(!assigned.length||working?"disabled":"")+' type="submit">انتشار تکلیف و آگاه‌سازی</button></form>'+
+ classEditor+'<h4>تقویم جلسات ثبت‌شده</h4>'+classTimeline+'<h4>حضور و غیاب جلسات</h4>'+attendanceSelector+attendancePanel+'<h4>تعریف تکلیف</h4>'+'<form id="rfops-assignment" class="rfops-form"><label>دوره<select name="course_id" required>'+assigned.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.title)+'</option>').join("")+'</select></label><label>عنوان تکلیف<input name="title" minlength="4" maxlength="150" required/></label><label>مهلت تکلیف<input name="due_at" type="datetime-local" required/></label><label class="rfops-wide">شرح تمرین<textarea name="instructions" rows="3" required minlength="8"></textarea></label><label class="rfops-consent"><input type="checkbox" name="notify_guardians" checked/> در صورت فعال بودن نظارت، خانواده هم تکلیف و تأخیر را ببیند.</label><button class="btn btn-primary" '+(!assigned.length||working?"disabled":"")+' type="submit">انتشار تکلیف و آگاه‌سازی</button></form>'+
  '<div class="rfops-summary"><div><strong>'+fa(classes.length)+'</strong><span>جلسه ثبت‌شده</span></div><div><strong>'+fa(items.length)+'</strong><span>تکلیف</span></div><div><strong>'+fa(submissions.length)+'</strong><span>تحویل انجام‌شده</span></div></div>'+
  (items.length?'<div class="rfops-cards">'+items.map(x=>{
  const subs=submissions.filter(s=>s.assignment_id===x.id);
@@ -254,7 +285,14 @@ async function act(action,element){
    if(!value)throw Error("لینک هنوز موجود نیست.");await navigator.clipboard.writeText(value);
    info="لینک کپی شد.";return;
   }
-  if(action==="family-switch"){
+  if(action==="attendance-open"){
+   if(!teacher()||!uuid(id)||!row("classes").some(c=>c.id===id&&c.published&&["scheduled","completed"].includes(c.status)))throw Error("این جلسه برای حضور و غیاب در دسترس نیست.");
+   attendanceClassId=id;attendanceSnapshot=null;
+   const snapshot=await rpc("academy_attendance_roster",{p_class_id:id});
+   if(generation!==sessionEpoch)return;
+   if(!snapshot||snapshot.class_id!==id||!Array.isArray(snapshot.roster))throw Error("فهرست امن حضور و غیاب معتبر دریافت نشد.");
+   attendanceSnapshot=snapshot;info="فهرست هنرجویان مجاز جلسه دریافت شد.";
+  }else if(action==="family-switch"){
    if(!familyManager())throw Error("فقط مدیر مجاز به تغییر دسترسی سرپرست است.");
    const rowValue=row("links").find(x=>x.id===link);if(!rowValue)throw Error("پیوند سرپرست یافت نشد.");
    const enable=element.dataset.enabled==="true";
@@ -306,7 +344,26 @@ async function formSubmit(form){
  if(working)return;const generation=sessionEpoch;warning="";info="";generated="";
  const data=new FormData(form);
  try{
-  if(form.id==="rfops-invite-guardian"){
+  if(form.dataset?.rfopsForm==="attendance"){
+   if(!teacher())throw Error("مجوز ثبت حضور و غیاب ندارید.");
+   const class_id=String(data.get("class_id")||""),student_id=String(data.get("student_id")||"");
+   const status=String(data.get("status")||""),note=String(data.get("note")||"").trim();
+   const cls=row("classes").find(c=>c.id===class_id&&c.published&&["scheduled","completed"].includes(c.status));
+   if(!uuid(class_id)||!uuid(student_id)||!cls||Date.parse(cls.starts_at)>Date.now()||
+      attendanceClassId!==class_id||attendanceSnapshot?.class_id!==class_id||
+      !attendanceSnapshot.roster.some(x=>x.student_id===student_id))throw Error("جلسه یا هنرجوی انتخاب‌شده مجاز نیست.");
+   if(!["present","absent","late","excused"].includes(status)||note.length>250)throw Error("وضعیت حضور یا توضیح معتبر نیست.");
+   if(!confirm("وضعیت حضور این هنرجو در جلسه ثبت شود؟"))return;
+   working=true;
+   const saved=await rpc("academy_mark_class_attendance",{p_class_id:class_id,p_student_id:student_id,p_status:status,p_note:note||null});
+   if(!saved||saved.class_id!==class_id||saved.student_id!==student_id||saved.status!==status)
+    throw Error("ثبت حضور توسط سرور تأیید نشد؛ پیش از تلاش دوباره وضعیت جلسه را بررسی کنید.");
+   const snapshot=await rpc("academy_attendance_roster",{p_class_id:class_id});
+   if(generation!==sessionEpoch)return;
+   if(!snapshot||snapshot.class_id!==class_id||!Array.isArray(snapshot.roster))
+    throw Error("ثبت تأیید شد اما تازه‌سازی فهرست انجام نشد؛ دوباره فهرست را باز کنید.");
+   attendanceSnapshot=snapshot;info="وضعیت حضور هنرجو با تأیید سرور ثبت شد.";
+  }else if(form.id==="rfops-invite-guardian"){
    if(!familyManager()||!data.get("verified"))throw Error("مجوز مدیر و تأیید رابطه قانونی لازم است.");
    const student_id=String(data.get("student_id")||""),full_name=String(data.get("full_name")||"").trim(),email=String(data.get("email")||"").trim().toLowerCase();
    if(!uuid(student_id)||full_name.length<3||!email.includes("@"))throw Error("اطلاعات سرپرست کامل نیست.");
@@ -374,7 +431,7 @@ async function formSubmit(form){
      throw Error("انتشار تکلیف در پایگاه داده تأیید نشد؛ لطفاً وضعیت دوره را دوباره بررسی کنید.");
    info="تکلیف منتشر شد و اعلان مربوطه در صورت مجاز بودن ثبت خواهد شد.";
   }
-  if(working)await load(role,request);
+  if(working&&form.dataset?.rfopsForm!=="attendance")await load(role,request);
  }catch(e){if(generation===sessionEpoch)warning=e instanceof Error?e.message:"عملیات انجام نشد";}
  finally{if(generation===sessionEpoch){working=false;refresh()}}
 }
@@ -385,7 +442,7 @@ root?.addEventListener("click",event=>{
 });
 root?.addEventListener("submit",event=>{
  const form=event.target;
- if(form?.id!=="rfops-invite-guardian"&&form?.id!=="rfops-assignment"&&form?.id!=="rfops-course-ops"&&form?.id!=="rfops-class")return;
+ if(form?.dataset?.rfopsForm!=="attendance"&&form?.id!=="rfops-invite-guardian"&&form?.id!=="rfops-assignment"&&form?.id!=="rfops-course-ops"&&form?.id!=="rfops-class")return;
  event.preventDefault();formSubmit(form);
 });
 window.RFOPS={load,render,reset};
