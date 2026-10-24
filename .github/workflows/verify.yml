@@ -16,6 +16,8 @@ jobs:
           node-version: '22'
       - name: Validate frontend source, privacy and public assets
         run: node scripts/verify.mjs
+      - name: Verify archived-teacher and staff authorization guards
+        run: node scripts/archived-teacher-guards.test.mjs
       - name: Read-only smoke test against live Supabase public gateway
         run: node scripts/api-smoke.mjs
   browser-smoke:
