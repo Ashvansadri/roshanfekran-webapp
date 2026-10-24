@@ -9,6 +9,7 @@ const when=v=>{if(!v)return "بدون تاریخ";try{return new Intl.DateTimeFo
 const uuid=v=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(v||""));
 const configs={
  courses:["academy_courses","id,title,code,status,teacher_name,start_date,capacity,session_count"],
+ courseOps:["academy_courses","id,course_type,session_count,schedule_note,status"],
  students:["academy_students","id,full_name,user_id,status,archived_at"],
  enrollments:["academy_enrollments","id,student_id,course_id,status,final_fee,created_at"],
  applications:["academy_registration_requests","id,full_name,course_id,status,deposit_amount,installment_count,submitted_at,payment_plan"],
@@ -28,7 +29,7 @@ const grants={
  manager:Object.keys(configs),
  finance:["courses","enrollments","payments","installments","students"],
  teacher:["courses","classes","assignments","submissions"],
- registrar:["courses","students","enrollments","applications","guardians","links","studentContracts"],
+ registrar:["courses","courseOps","students","enrollments","applications","guardians","links","studentContracts"],
  viewer:["courses"],
 };
 let role=null, request=null, datasets={},failures={},inflight=null,selected="students",working=false,info="",warning="",generated="";
@@ -137,7 +138,7 @@ function tabs(){
  ["students","پرونده هنرجویان",enrollmentManager()],
  ["family","نظارت خانواده",familyManager()],
  ["applications","درخواست‌های ثبت‌نام",enrollmentManager()],
- ["courses","دوره‌ها و لینک‌ها",manage()||meRole()==="viewer"],
+ ["courses","دوره‌ها و لینک‌ها",enrollmentManager()||meRole()==="viewer"],
  ["finance","مالی و اقساط",financial()],
  ["contracts","قراردادها",enrollmentManager()],
  ["tasks","تکالیف و کلاس‌ها",teacher()]
@@ -175,13 +176,18 @@ function applications(){
  }).join("")+'</div>':empty("applications","درخواست جدیدی وجود ندارد.")));
 }
 function courses(){
- const items=row("courses"), links=row("publicLinks");
+ const items=row("courses"), links=row("publicLinks"),operations=row("courseOps");
  return section("مدیریت دوره‌ها و لینک ثبت‌نام",'<p>نمایش عمومی هر دوره تابع تنظیمات ثبت‌نام باز و لینک فعال در دیتابیس است؛ دوره بسته به‌صورت خودکار تبلیغ نمی‌شود.</p>'+
  (items.length?'<div class="rfops-cards">'+items.map(x=>{
  const link=links.find(y=>y.course_id===x.id&&y.active&&y.show_in_public_catalog);
  const shared=link?location.origin+"/#/course/"+encodeURIComponent(link.slug||""):"";
- return '<article class="rfops-card"><strong>'+esc(x.title)+'</strong><p>کد: '+esc(x.code||"خودکار")+' · ظرفیت: '+fa(x.capacity||0)+' · وضعیت: '+esc(x.status)+'</p><div class="rfops-actions">'+(shared?'<a href="'+esc(shared)+'" target="_blank" rel="noopener">لینک دوره ↗</a><button data-rfops="copy-course" data-url="'+esc(shared)+'">کپی</button>':'<span>ثبت‌نام عمومی هنوز باز نشده است.</span>')+'</div></article>';
- }).join("")+'</div>':empty("courses","دوره‌ای ثبت نشده است.")));
+ const current=operations.find(y=>y.id===x.id);
+ const canEdit=enrollmentManager()&&x.status!=="archived"&&current;
+ const type=String(current?.course_type||"group");
+ const typeSelect=[["group","گروهی"],["private","خصوصی"],["semi_private","نیمه‌خصوصی"]].map(([value,label])=>'<option value="'+value+'" '+(type===value?'selected':"")+'>'+label+'</option>').join("");
+ const edit=canEdit?'<details class="rfops-course-editor"><summary>ویرایش برنامه آموزشی دوره</summary><form id="rfops-course-ops" class="rfops-form"><input type="hidden" name="course_id" value="'+esc(x.id)+'"/><label>نوع دوره<select name="course_type" required>'+typeSelect+'</select></label><label>تعداد جلسات<input name="session_count" type="number" min="1" max="200" step="1" required value="'+esc(current.session_count||x.session_count||1)+'"/></label><label>توضیحات برنامه<textarea name="schedule_note" maxlength="500" rows="3" placeholder="روز و ساعت برگزاری، شرایط کلاس">'+esc(current.schedule_note||"")+'</textarea></label><button class="btn btn-primary" type="submit">ذخیره برنامه دوره</button><small>فقط نوع دوره، تعداد جلسات و توضیحات برنامه تغییر می‌کند؛ شهریه، اقساط و ثبت‌نام‌ها دست‌نخورده می‌مانند.</small></form></details>':"";
+ return '<article class="rfops-card"><strong>'+esc(x.title)+'</strong><p>کد: '+esc(x.code||"خودکار")+' · ظرفیت: '+fa(x.capacity||0)+' · وضعیت: '+esc(x.status)+'</p><div class="rfops-actions">'+(shared?'<a href="'+esc(shared)+'" target="_blank" rel="noopener">لینک دوره ↗</a><button data-rfops="copy-course" data-url="'+esc(shared)+'">کپی</button>':'<span>ثبت‌نام عمومی هنوز باز نشده است.</span>')+'</div>'+edit+'</article>';
+ }).join("")+'</div>':empty("courses","دوره‌ای ثبت نشده است."))+(enrollmentManager()&&failures.courseOps?'<p class="rfops-warn">ویرایش دوره فعلاً در دسترس نیست: '+esc(failures.courseOps)+'</p>':""));
 }
 function contracts(){
  // Read-only summary; the authenticated user's RLS is enforced by Supabase.
@@ -312,7 +318,22 @@ async function formSubmit(form){
    if(!/^[a-f0-9]{64}$/i.test(code))throw Error("لینک امن صادر نشد.");
    generated=location.origin+"/#/activate?kind=guardian&email="+encodeURIComponent(email)+"&code="+code;
    try{await navigator.clipboard.writeText(generated);info="سرپرست ثبت شد. لینک امن کپی شد؛ برای خودش بفرستید."}catch{info="سرپرست ثبت شد. لینک فعال‌سازی را فقط برای خودش ارسال کنید."}
-  }else if(form.id==="rfops-assignment"){
+  }else if(form.id==="rfops-course-ops"){
+    if(!enrollmentManager())throw Error("مجوز ویرایش برنامه دوره وجود ندارد.");
+    const course_id=String(data.get("course_id")||"");
+    const course=row("courses").find(c=>c.id===course_id&&c.status!=="archived");
+    const existing=row("courseOps").find(c=>c.id===course_id&&c.status!=="archived");
+    const course_type=String(data.get("course_type")||"");
+    const session_count=Number(data.get("session_count"));
+    const schedule_note=String(data.get("schedule_note")||"").trim();
+    if(!uuid(course_id)||!course||!existing)throw Error("این دوره برای ویرایش در دسترس نیست.");
+    if(!["group","private","semi_private"].includes(course_type)||!Number.isInteger(session_count)||session_count<1||session_count>200||schedule_note.length>500)throw Error("نوع دوره، تعداد جلسات یا توضیحات برنامه معتبر نیست.");
+    if(!confirm("برنامه آموزشی این دوره به‌روزرسانی شود؟ شهریه و اقساط تغییر نمی‌کنند."))return;
+    working=true;
+    const result=await rpc("academy_update_course_ops",{p_course_id:course_id,p_course_type:course_type,p_session_count:session_count,p_schedule_note:schedule_note});
+    if(!result||String(result.id)!==course_id||result.course_type!==course_type||Number(result.session_count)!==session_count||String(result.schedule_note||"")!==schedule_note)throw Error("ذخیره برنامه در سرور تأیید نشد؛ پیش از تلاش دوباره وضعیت دوره را بررسی کنید.");
+    info="برنامه دوره با تأیید سرور به‌روزرسانی شد.";
+   }else if(form.id==="rfops-assignment"){
    if(!teacher())throw Error("فقط مدرس یا مدیر می‌تواند تکلیف بسازد.");
    const course_id=String(data.get("course_id")||""),title=String(data.get("title")||"").trim(),instructions=String(data.get("instructions")||"").trim(),due=String(data.get("due_at")||"");
    if(!uuid(course_id)||title.length<4||instructions.length<8||!due)throw Error("دوره، عنوان، توضیح و مهلت معتبر لازم است.");
@@ -335,7 +356,7 @@ root?.addEventListener("click",event=>{
 });
 root?.addEventListener("submit",event=>{
  const form=event.target;
- if(form?.id!=="rfops-invite-guardian"&&form?.id!=="rfops-assignment")return;
+ if(form?.id!=="rfops-invite-guardian"&&form?.id!=="rfops-assignment"&&form?.id!=="rfops-course-ops")return;
  event.preventDefault();formSubmit(form);
 });
 window.RFOPS={load,render,reset};
