@@ -17,7 +17,7 @@ WITH expected(name) AS (VALUES
   ('academy_student_resume_snapshot')
 )
 SELECT e.name, count(p.oid) AS signatures,
-       bool_and(pg_get_functiondef(p.oid) ~* 'archived_at\\s+is\\s+null') AS checks_archive_timestamp,
-       bool_and(pg_get_functiondef(p.oid) ~* 'status\\s+is\\s+distinct\\s+from\\s+''archived''') AS checks_archive_status
+       bool_and(pg_get_functiondef(p.oid) ~* 'archived_at\s+is\s+null') AS checks_archive_timestamp,
+       bool_and(pg_get_functiondef(p.oid) ~* 'status\s+is\s+distinct\s+from\s+''archived''') AS checks_archive_status
 FROM expected e LEFT JOIN pg_proc p ON p.proname=e.name AND p.pronamespace='public'::regnamespace
 GROUP BY e.name ORDER BY e.name;
