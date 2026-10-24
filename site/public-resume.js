@@ -58,7 +58,40 @@ function route(parts){
  return '<main class="shell rf-public-resume"><div class="rf-overline">VERIFIED STUDENT WORK • ROSHANFEKRAN</div><div class="rf-resume-header"><div><h1>'+esc(d.full_name)+'</h1><h2>'+esc(d.headline)+'</h2><p>'+esc(d.bio)+'</p><div class="rf-action-row"><button class="btn btn-primary" type="button" data-rf-public="print">چاپ یا ذخیره PDF</button><a class="btn btn-outline" href="#/">صفحه اصلی آموزشگاه ←</a></div></div>'+(safeURL(d.avatar_url)!=="#"?'<img src="'+esc(safeURL(d.avatar_url))+'" alt="تصویر هنرجو با اجازه انتشار" loading="lazy" referrerpolicy="no-referrer"/>':'<span class="rf-resume-initial">✧</span>')+'</div><section class="rf-resume-section"><span class="rf-overline">PORTFOLIO</span><h2>نمونه‌کارهای تأییدشده</h2><div class="rf-mission-grid">'+(works.length?works.map(w=>'<article class="rf-mission"><div class="rf-mission-top"><span>تأیید آموزشگاه</span><span>'+esc(w.category)+'</span></div><h3>'+esc(w.title)+'</h3><p>'+esc(w.description)+'</p>'+(safeURL(w.project_url)!=="#"?'<a class="thin-link" href="'+esc(safeURL(w.project_url))+'" rel="noopener noreferrer" target="_blank">مشاهده پروژه ↗</a>':"")+'</article>').join(""):'<p class="rf-empty">نمونه‌کار قابل مشاهده‌ای وجود ندارد.</p>')+'</div></section><section class="rf-resume-section"><h2>علایق و هدف</h2><p>'+esc(d.interest_tags||"")+'</p><p>'+esc(d.career_goal||"")+'</p><div class="rf-caption">'+esc(d.notice||"این رزومه آموزشی است و گواهینامه رسمی نیست.")+'</div><div class="rf-caption">اعتبار لینک تا: '+esc(d.expires_at?new Intl.DateTimeFormat("fa-IR-u-ca-persian",{dateStyle:"medium"}).format(new Date(d.expires_at)):"—")+'</div></section></main>';
 }
 window.addEventListener("hashchange",syncRoute);
-document.getElementById("app").addEventListener("click",e=>{if(e.target.closest("[data-rf-public='print']"))window.print()});
+// Printing is a new disclosure of personal data: revalidate consent and the
+// public token immediately, even when the displayed preview is still cached.
+let printing=false;
+async function printVerified(){
+ const token=activeToken();
+ if(printing||!token||!cache.get(token)?.data)return;
+ printing=true;
+ const revision=routeRevision,controller=new AbortController();
+ const button=document.querySelector('[data-rf-public="print"]');
+ controllers.set("print",controller);
+ if(button){button.disabled=true;button.setAttribute("aria-busy","true")}
+ const timeout=setTimeout(()=>controller.abort(),12000);
+ try{
+  const response=await fetch(END,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"public_showcase",token}),cache:"no-store",signal:controller.signal});
+  const result=await response.json().catch(()=>({}));
+  if(revision!==routeRevision||activeToken()!==token)return;
+  if(!response.ok||result.ok!==true||!result.profile)throw Error("Consent no longer valid");
+  // Print the freshly authorized server projection, not the old preview.
+  cache.set(token,{data:result.profile,checkedAt:Date.now()});
+  window.RFCORE?.render?.();
+  if(revision!==routeRevision||activeToken()!==token)return;
+  window.print();
+ }catch{
+  if(revision!==routeRevision||activeToken()!==token)return;
+  cache.set(token,{error:"مجوز انتشار رزومه در لحظه چاپ تأیید نشد؛ چاپ متوقف شد.",checkedAt:Date.now()});
+  window.RFCORE?.render?.();
+ }finally{
+  clearTimeout(timeout);
+  if(controllers.get("print")===controller)controllers.delete("print");
+  printing=false;
+  if(button?.isConnected){button.disabled=false;button.removeAttribute("aria-busy")}
+ }
+}
+document.getElementById("app").addEventListener("click",e=>{if(e.target.closest("[data-rf-public='print']"))void printVerified()});
 document.addEventListener("visibilitychange",()=>{
  if(document.hidden)cache.clear();
  else invalidateActive();
