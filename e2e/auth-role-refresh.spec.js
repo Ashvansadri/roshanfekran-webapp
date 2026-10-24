@@ -92,3 +92,61 @@ test('temporary role lookup failure preserves the valid login and allows explici
  expect(passwords).toBe(1);
  await page.close();
 });
+
+
+test('temporary refresh failure preserves the existing session and explicit retry succeeds',async({browser})=>{
+ const page=await browser.newPage({viewport:{width:1100,height:800}});
+ let refreshes=0,roleChecks=0;
+ await page.addInitScript(s=>sessionStorage.setItem('rf_safe_session_v1',JSON.stringify({...s,expires_at:Date.now()-1000})),session);
+ await page.route(GATEWAY,route=>{
+  const req=route.request(),b=JSON.parse(req.postData()||'{}');
+  if(b.action==='proxy'&&String(b.path).includes('grant_type=refresh_token')){
+   refreshes++;
+   if(refreshes===1)return reply(route,503,{error:'temporary gateway outage'});
+   return reply(route,200,{access_token:'refreshed-synthetic-token',refresh_token:'refreshed-synthetic-refresh',expires_in:3600});
+  }
+  if(b.action==='resolve_portal'){roleChecks++;return reply(route,200,{ok:true,kind:'student',role:'student'})}
+  if(b.action==='proxy'&&String(b.path).includes('academy_student_journey_snapshot'))
+   return reply(route,200,{student_name:'هنرجوی آزمایشی',stages:[],percentage:25,missions_approved:0});
+  if(b.action==='proxy')return reply(route,200,[]);
+  if(b.action==='public_catalog')return reply(route,200,{ok:true,courses:[],settings:{}});
+  if(b.action==='public_news')return reply(route,200,{ok:true,ai:[],markets:[],world:[]});
+  return reply(route,200,{ok:true});
+ });
+ await page.goto('/#/workspace',{waitUntil:'domcontentloaded'});
+ await expect(page.getByRole('alert')).toContainText('سرور احراز هویت موقتاً در دسترس نیست');
+ expect(refreshes).toBe(1);
+ expect(roleChecks).toBe(0);
+ const retained=await page.evaluate(()=>JSON.parse(sessionStorage.getItem('rf_safe_session_v1')||'null'));
+ expect(retained?.refresh_token).toBe('old-synthetic-refresh');
+ await page.getByRole('button',{name:'تلاش مجدد'}).click();
+ await expect(page.locator('.rf-dashboard')).toBeVisible();
+ expect(refreshes).toBe(2);
+ expect(roleChecks).toBe(1);
+ const saved=await page.evaluate(()=>JSON.parse(sessionStorage.getItem('rf_safe_session_v1')||'null'));
+ expect(saved?.access_token).toBe('refreshed-synthetic-token');
+ await page.close();
+});
+
+test('invalid refresh credential clears stored tokens and requires login',async({browser})=>{
+ const page=await browser.newPage({viewport:{width:1100,height:800}});
+ let refreshes=0,roleChecks=0;
+ await page.addInitScript(s=>sessionStorage.setItem('rf_safe_session_v1',JSON.stringify({...s,expires_at:Date.now()-1000})),session);
+ await page.route(GATEWAY,route=>{
+  const b=JSON.parse(route.request().postData()||'{}');
+  if(b.action==='proxy'&&String(b.path).includes('grant_type=refresh_token')){
+   refreshes++;return reply(route,401,{error:'invalid_grant'});
+  }
+  if(b.action==='resolve_portal'){roleChecks++;return reply(route,200,{ok:true,kind:'student'})}
+  if(b.action==='public_catalog')return reply(route,200,{ok:true,courses:[],settings:{}});
+  if(b.action==='public_news')return reply(route,200,{ok:true,ai:[],markets:[],world:[]});
+  return reply(route,401,{error:'AUTH_REQUIRED'});
+ });
+ await page.goto('/#/workspace',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('#rf-login')).toBeVisible();
+ expect(refreshes).toBe(1);
+ expect(roleChecks).toBe(0);
+ expect(await page.evaluate(()=>sessionStorage.getItem('rf_safe_session_v1'))).toBeNull();
+ await expect(page.locator('.rf-dashboard')).toHaveCount(0);
+ await page.close();
+});
