@@ -249,7 +249,7 @@ async function printResume(){
 }
 function workspace(){
  if(!session)return loginPage();
- if(!role&&!loading){loadWorkspace();return loadingHTML()}
+ if(!role&&!loading&&!error){loadWorkspace();return loadingHTML()}
  if(loading)return loadingHTML();
  if(!role)return '<main class="shell rf-panel-container"><div class="rf-panel"><h2>اتصال به پورتال برقرار نشد</h2>'+toast()+'<button class="btn btn-outline" data-rf="refresh">تلاش مجدد</button><button class="portal-secondary" data-rf="logout">خروج</button></div></main>';
  if(role.kind==="student")return studentPage();
@@ -278,8 +278,9 @@ async function submit(e){
  if(f.id==="rf-login"){
   const response=await api("proxy",{path:"/auth/v1/token?grant_type=password",method:"POST",body:{email:String(d.get("email")||"").trim().toLowerCase(),password:String(d.get("password")||"")}});
   if(!response.access_token)throw Error("رمز یا ایمیل تأیید نشد");
-  window.RFOPS?.reset?.();setSession(response);try{role=await api("resolve_portal",{},true)}catch(e){clear();error=e.message||"نقش حساب قابل تأیید نیست";throw e}journey=null;parent=null;familyTip=null;staffData=null;
-  location.hash="#/workspace";loadWorkspace();
+  window.RFOPS?.reset?.();setSession(response);role=null;journey=null;parent=null;familyTip=null;staffData=null;
+  // Keep a valid session if the role endpoint is temporarily unavailable; the workspace offers an explicit retry.
+  location.hash="#/workspace";await loadWorkspace();
  }else if(f.id==="rf-activate"){
   const kind=d.get("kind"),act=kind==="staff"?"signup_invited":kind==="student"?"signup_student":"signup_guardian";
   const response=await api(act,{email:d.get("email"),password:d.get("password"),invite_token:d.get("code")});
