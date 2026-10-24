@@ -94,3 +94,13 @@
 .rfops-attendance-person small{display:block;color:#9fc4b4;font-size:10px;margin-top:6px}
 @media(max-width:750px){.rfops-attendance-form{grid-template-columns:1fr 1fr}.rfops-attendance-person{grid-column:1/-1}.rfops-attendance-form button{grid-column:1/-1}}
 @media(max-width:440px){.rfops-attendance-form{grid-template-columns:1fr}.rfops-attendance-person{grid-column:auto}.rfops-attendance-form button{grid-column:auto}}
+
+/* Attendance reporting — high-contrast, responsive summary and privacy-conscious export. */
+.rfops-attendance-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;margin:14px 0}
+.rfops-attendance-summary>div{border:1px solid #a7eac05e;border-radius:12px;padding:14px 8px;text-align:center;background:linear-gradient(150deg,#244c4677,#091d25b5)}
+.rfops-attendance-summary strong{display:block;font-size:23px;color:#d7ffdf;font-weight:850}
+.rfops-attendance-summary span{display:block;font-size:11px;color:#b3d7c8;margin-top:6px}
+.rfops-export{font:750 12px Estedad,Vazirmatn,Tahoma,sans-serif;border:1px solid #b5f4d2;border-radius:10px;background:#b2efd2;color:#082e26;padding:12px 17px;min-height:45px;cursor:pointer}
+.rfops-export:focus-visible{outline:3px solid #fff;outline-offset:3px}
+@media(max-width:700px){.rfops-attendance-summary{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:420px){.rfops-attendance-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.rfops-export{width:100%}}
