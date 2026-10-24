@@ -97,4 +97,7 @@ assert(portal.includes('placeholder="رمز حساب فعال شما"'),"Existin
 const gatewayArchiveQA=spawnSync(process.execPath,[join(root,"scripts/gateway-archive.test.mjs")],{encoding:"utf8"});
 assert.equal(gatewayArchiveQA.status,0,"Gateway archived-student regression failed: "+gatewayArchiveQA.stderr+" "+gatewayArchiveQA.stdout);
 console.log(gatewayArchiveQA.stdout.trim());
+const courseQA=spawnSync(process.execPath,[join(root,"scripts/ops-course.test.mjs")],{encoding:"utf8"});
+assert.equal(courseQA.status,0,"Course operations role/write regression failed: "+courseQA.stderr+" "+courseQA.stdout);
+console.log(courseQA.stdout.trim());
 console.log("PASS: 6 scripts, 6 CSS assets, referenced files, Persian typography, secure role-aware calls and PWA metadata.");
