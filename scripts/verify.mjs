@@ -115,4 +115,7 @@ console.log(attendanceExportQA.stdout.trim());
 const staffGuardsQA=spawnSync(process.execPath,[join(root,"scripts/staff-guard-migration.test.mjs")],{encoding:"utf8"});
 assert.equal(staffGuardsQA.status,0,"Staff/finance archive guard regression failed: "+staffGuardsQA.stderr+" "+staffGuardsQA.stdout);
 console.log(staffGuardsQA.stdout.trim());
+const assignmentAuthQA=spawnSync(process.execPath,[join(root,"scripts/assignment-download-auth.test.mjs")],{encoding:"utf8"});
+assert.equal(assignmentAuthQA.status,0,"Private assignment download authorization regression failed: "+assignmentAuthQA.stderr+" "+assignmentAuthQA.stdout);
+console.log(assignmentAuthQA.stdout.trim());
 console.log("PASS: frontend, private projections, archive role guards and PWA metadata.");

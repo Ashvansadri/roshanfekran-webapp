@@ -306,11 +306,29 @@ Deno.serve(async(req:Request)=>{
    }
   }
   if(b.action==='assignment_file_url'){
-   const token=bt(req);await currentUser(token);
-   const id=String(b.submission_id||'');if(!id)throw new Error('شناسه ارسال لازم است');
-   const rows=await jo(await supa('/rest/v1/academy_assignment_submissions?select=id,file_path,file_name,mime_type&id=eq.'+encodeURIComponent(id)+'&limit=1','GET',null,token));
-   if(!Array.isArray(rows)||!rows.length||!rows[0].file_path)throw new Error('فایل قابل دسترسی نیست');
-   return jr({ok:true,url:await signedObject('academy-assignment-submissions',rows[0].file_path,600),file_name:rows[0].file_name,mime_type:rows[0].mime_type});
+   const token=bt(req),u=await currentUser(token),role=await currentRole(token,u.id),sid=String(b.submission_id||'');
+   if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sid))throw new Error('شناسه تحویل معتبر نیست');
+   const rows=await jo(await svc('/rest/v1/academy_assignment_submissions?select=id,assignment_id,student_id,file_path,file_name,mime_type&id=eq.'+encodeURIComponent(sid)+'&limit=1','GET',null));
+   if(!Array.isArray(rows)||rows.length!==1||!rows[0].file_path)throw new Error('فایل تکلیف پیدا نشد');
+   const sub=rows[0];
+   if(role==='teacher'){
+    // SECURITY: a global teacher role never authorizes access to another teacher's course.
+    const assignments=await jo(await svc('/rest/v1/academy_assignments?select=id,course_id&id=eq.'+encodeURIComponent(sub.assignment_id)+'&limit=1','GET',null));
+    if(!Array.isArray(assignments)||assignments.length!==1||!assignments[0].course_id)throw new Error('Not authorized');
+    const courses=await jo(await svc('/rest/v1/academy_courses?select=id,teacher_user_id,status,archived_at&id=eq.'+encodeURIComponent(assignments[0].course_id)+'&teacher_user_id=eq.'+encodeURIComponent(u.id)+'&archived_at=is.null&status=neq.archived&limit=1','GET',null));
+    if(!Array.isArray(courses)||courses.length!==1||courses[0].teacher_user_id!==u.id||courses[0].archived_at!==null||courses[0].status==='archived')throw new Error('Not authorized');
+   }else if(!['owner','manager'].includes(String(role||''))){
+    const st=await studentByUser(u.id);
+    if(!st||st.id!==sub.student_id)throw new Error('Not authorized');
+   }
+   // Both upload flows use private buckets; infer the bucket from a validated stored path.
+   const legacyPrefix=sub.student_id+'/'+sub.assignment_id+'/';
+   const modernPrefix=sub.student_id+'/assignments/'+sub.assignment_id+'/';
+   const path=String(sub.file_path);
+   const prefix=path.startsWith(modernPrefix)?modernPrefix:path.startsWith(legacyPrefix)?legacyPrefix:'';
+   if(!prefix||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png|webp|pdf)$/i.test(path.slice(prefix.length)))throw new Error('مسیر فایل معتبر نیست');
+   const bucket=prefix===modernPrefix?'academy-student-documents':'academy-assignment-submissions';
+   return jr({ok:true,url:await signedObject(bucket,path,600),file_name:sub.file_name,mime_type:sub.mime_type});
   }
 
   if(b.action==='payment_receipt_upload'){
@@ -773,12 +791,6 @@ Deno.serve(async(req:Request)=>{
    const payload={submission_text:String(b.submission_text||'').trim()||null,submission_url:String(b.submission_url||'').trim()||null,file_path:key,file_name,mime_type:mime,status:'submitted',submitted_at:new Date().toISOString(),score:null,feedback:null,reviewed_by:null,reviewed_at:null};
    const row=old?.length?await jo(await svc('/rest/v1/academy_assignment_submissions?id=eq.'+encodeURIComponent(old[0].id),'PATCH',payload,'return=representation')):await jo(await svc('/rest/v1/academy_assignment_submissions','POST',{assignment_id:aid,student_id:st.id,...payload},'return=representation'));
    return jr({ok:true,record:Array.isArray(row)?row[0]:row});
-  }
-  if(b.action==='assignment_file_url'){
-   const token=bt(req),u=await currentUser(token),role=await currentRole(token,u.id),sid=String(b.submission_id||'');
-   const rows=await jo(await svc('/rest/v1/academy_assignment_submissions?select=id,student_id,file_path,file_name,mime_type&id=eq.'+encodeURIComponent(sid)+'&limit=1','GET',null));if(!rows?.length||!rows[0].file_path)throw new Error('فایل تکلیف پیدا نشد');const sub=rows[0];
-   if(!['owner','manager','teacher'].includes(String(role||''))){const st=await studentByUser(u.id);if(!st||st.id!==sub.student_id)throw new Error('Not authorized');}
-   return jr({ok:true,url:await signedObject('academy-student-documents',sub.file_path,600),file_name:sub.file_name,mime_type:sub.mime_type});
   }
   if(b.action==='student_document_upload'){
    const token=bt(req),u=await currentUser(token),st=await studentByUser(u.id);if(!st||!st.portal_enabled)throw new Error('Student portal access required');
