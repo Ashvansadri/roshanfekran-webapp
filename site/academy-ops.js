@@ -42,10 +42,12 @@ const grants={
 let role=null, request=null, datasets={},failures={},inflight=null,selected="students",working=false,info="",warning="",generated="";
 let sessionEpoch=0;
 let attendanceClassId="",attendanceSnapshot=null;
+let riskRows=[],riskFailure="";
 // Clear every private projection and invitation link on logout or account switch.
 function reset(){
  sessionEpoch++;role=null;request=null;datasets={};failures={};inflight=null;
  selected="students";working=false;info="";warning="";generated="";attendanceClassId="";attendanceSnapshot=null;
+ riskRows=[];riskFailure="";
 }
 const meRole=()=>String(role?.role||"");
 const manage=()=>["owner","manager"].includes(meRole());
@@ -123,16 +125,33 @@ async function load(nextRole,apiFn){
  const generation=sessionEpoch;
  let job;
  job=(async()=>{
-  if(nextRole?.kind==="teacher")return loadTeacher(generation);
+  if(nextRole?.kind==="teacher"){riskRows=[];riskFailure="";return loadTeacher(generation);}
   const keys=available();
-  const results=await Promise.allSettled(keys.map(async key=>{
+  const canSeeRisk=["owner","manager","registrar","finance"].includes(String(nextRole?.role||""));
+  // The RPC checks the staff role server-side. Select only the fields shown; never request phone numbers.
+  const riskPath="/rest/v1/rpc/academy_list_student_risk?select=student_id,full_name,status,risk_score,risk_reasons,overdue_count,overdue_amount,absent_count,required_docs,approved_docs";
+  const jobs=keys.map(async key=>{
    const [table,cols]=configs[key];
    return proxy("/rest/v1/"+table+"?select="+cols+"&limit=150&order="+(key==="applications"?"submitted_at":key==="payments"?"submitted_at":key==="assignments"?"created_at":"id")+".desc");
-  }));
+  });
+  if(canSeeRisk)jobs.push(proxy(riskPath,"POST",{}));
+  const results=await Promise.allSettled(jobs);
   if(generation!==sessionEpoch)return false;
   const nextData={},nextFailures={};
   keys.forEach((key,i)=>{const r=results[i];if(r.status==="fulfilled"&&Array.isArray(r.value))nextData[key]=r.value;else nextFailures[key]=r.status==="rejected"?String(r.reason?.message||r.reason):"داده معتبر دریافت نشد";});
   datasets=nextData;failures=nextFailures;
+  const riskResult=canSeeRisk?results[keys.length]:null;
+  const activeIds=new Set((nextData.students||[]).filter(s=>s.status!=="archived"&&s.archived_at==null).map(s=>String(s.id)));
+  riskRows=canSeeRisk&&riskResult?.status==="fulfilled"&&Array.isArray(riskResult.value)?
+   riskResult.value.filter(s=>activeIds.has(String(s.student_id))&&s.status!=="archived")
+    .map(s=>({student_id:String(s.student_id),full_name:String(s.full_name||"—"),risk_score:Number(s.risk_score||0),
+      risk_reasons:String(s.risk_reasons||""),overdue_count:Number(s.overdue_count||0),
+      overdue_amount:Number(s.overdue_amount||0),absent_count:Number(s.absent_count||0),
+      required_docs:Number(s.required_docs||0),approved_docs:Number(s.approved_docs||0)}))
+    .sort((a,b)=>b.risk_score-a.risk_score).slice(0,150):[];
+  riskFailure=!canSeeRisk?"":!Array.isArray(nextData.students)?"فهرست فعال هنرجویان دریافت نشد؛ گزارش برای حفظ حریم خصوصی نمایش داده نمی‌شود.":
+   riskResult?.status==="rejected"?String(riskResult.reason?.message||riskResult.reason):
+   !Array.isArray(riskResult?.value)?"پاسخ پایش هنرجویان معتبر نیست.":"";
   return true;
  })().finally(()=>{if(generation===sessionEpoch&&inflight===job){inflight=null;refresh()}});
  inflight=job;
@@ -144,6 +163,7 @@ function empty(k,label){return failures[k]?'<div class="rfops-warn">این بخ�
 function tabs(){
  const allowed=[
  ["students","پرونده هنرجویان",enrollmentManager()],
+ ["risk","پایش هنرجویان",["owner","manager","registrar","finance"].includes(meRole())],
  ["family","نظارت خانواده",familyManager()],
  ["applications","درخواست‌های ثبت‌نام",enrollmentManager()],
  ["courses","دوره‌ها و لینک‌ها",enrollmentManager()||meRole()==="viewer"],
@@ -161,6 +181,21 @@ function students(){
  const links=row("links").filter(l=>l.student_id===s.id&&l.can_view_academic);
  return '<tr><td><strong>'+esc(s.full_name)+'</strong></td><td>'+esc(s.status||"—")+'</td><td>'+(s.user_id?"حساب متصل":'فعالسازی نشده')+'</td><td>'+(links.length?'فعال برای '+fa(links.length)+' سرپرست':'هنوز فعال نیست')+'</td></tr>';
  }).join("")+'</tbody></table></div>':empty("students","هنرجویی یافت نشد.")));
+}
+function riskDashboard(){
+ const high=riskRows.filter(s=>s.risk_score>=50).length;
+ const overdue=riskRows.filter(s=>s.overdue_count>0).length;
+ const missingDocs=riskRows.filter(s=>s.required_docs>s.approved_docs).length;
+ const summary='<div class="rfops-summary"><div><strong>'+fa(riskRows.length)+'</strong><span>هنرجوی فعال بررسی‌شده</span></div>'+
+  '<div><strong>'+fa(high)+'</strong><span>امتیاز پیگیری ۵۰ یا بیشتر</span></div>'+
+  '<div><strong>'+fa(overdue)+'</strong><span>دارای قسط معوق</span></div>'+
+  '<div><strong>'+fa(missingDocs)+'</strong><span>مدارک نیازمند تکمیل</span></div></div>';
+ const table=riskRows.length?'<div class="rfops-table-wrap"><table><thead><tr><th>هنرجو</th><th>امتیاز پیگیری</th><th>دلیل</th><th>غیبت</th><th>اقساط معوق</th><th>مبلغ معوق</th><th>مدارک تأییدشده</th></tr></thead><tbody>'+
+  riskRows.map(s=>'<tr><td><strong>'+esc(s.full_name)+'</strong></td><td>'+fa(s.risk_score)+' / ۱۰۰</td><td>'+esc(s.risk_reasons||"موردی ثبت نشده")+'</td><td>'+fa(s.absent_count)+'</td><td>'+fa(s.overdue_count)+'</td><td>'+money(s.overdue_amount)+'</td><td>'+fa(s.approved_docs)+' / '+fa(s.required_docs)+'</td></tr>').join("")+
+  '</tbody></table></div>':'<div class="rf-empty">در سطح دسترسی فعلی هنرجوی فعالی برای پایش موجود نیست.</div>';
+ return section("پایش آموزشی و مالی هنرجویان",'<p>گزارش فقط خواندنی و مخصوص کارکنان مجاز است. امتیازها بر اساس قواعد ثبت‌شده محاسبه می‌شوند، نه پیش‌بینی هوش مصنوعی؛ برای تصمیم‌گیری با پرونده اصلی تطبیق دهید. هیچ اعلان یا تغییری به‌صورت خودکار انجام نمی‌شود.</p>'+
+  (riskFailure?'<div class="rfops-warn" role="alert">'+esc(riskFailure)+'</div>':summary+table)+
+  '<p class="rf-caption">پرونده‌های آرشیوشده نمایش داده نمی‌شوند. شماره تماس، کد ملی و اطلاعات شناسایی اضافی در این نما دریافت نمی‌شوند.</p>');
 }
 function family(){
  const students=row("students").filter(s=>s.status!=="archived"&&s.archived_at==null),guardians=row("guardians"),links=row("links");
@@ -287,7 +322,7 @@ function render(nextRole){
  // Resolve permitted tab before choosing the content; never render a stale tab from a previous role.
  const nav=tabs();
  let content="";
- switch(selected){case"family":content=family();break;case"applications":content=applications();break;case"courses":content=courses();break;case"finance":content=finance();break;case"contracts":content=contracts();break;case"tasks":content=tasks();break;default:content=students();}
+ switch(selected){case"family":content=family();break;case"risk":content=riskDashboard();break;case"applications":content=applications();break;case"courses":content=courses();break;case"finance":content=finance();break;case"contracts":content=contracts();break;case"tasks":content=tasks();break;default:content=students();}
  return '<div class="rfops" id="rfops-main"><header class="rfops-top"><div><span>ACADEMY OPERATIONS / LIVE DATA</span><h2>مدیریت یکپارچه آموزشگاه</h2><p>دوره‌ها، ثبت‌نام‌ها، هنرجویان، خانواده، تکالیف و مالی در همین سامانه؛ بدون انتقال به Floot.</p></div><button data-rfops="reload" type="button">تازه‌سازی ↻</button></header>'+alert()+nav+(inflight?'<div class="rfops-loading">در حال دریافت اطلاعات مجاز…</div>':"")+content+'</div>';
 }
 async function act(action,element){

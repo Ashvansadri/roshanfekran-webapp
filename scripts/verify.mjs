@@ -81,6 +81,9 @@ assert(ops.includes('enrollmentManager()||meRole()==="viewer"'),"Viewer must ret
 const isolation=spawnSync(process.execPath,[join(root,"scripts/ops-isolation.test.mjs")],{encoding:"utf8"});
 assert.equal(isolation.status,0,"Staff session isolation regression failed: "+isolation.stderr+" "+isolation.stdout);
 console.log(isolation.stdout.trim());
+const riskQA=spawnSync(process.execPath,[join(root,"scripts/ops-risk.test.mjs")],{encoding:"utf8"});
+assert.equal(riskQA.status,0,"Student risk role/privacy regression failed: "+riskQA.stderr+" "+riskQA.stdout);
+console.log(riskQA.stdout.trim());
 const financeQA=spawnSync(process.execPath,[join(root,"scripts/ops-finance.test.mjs")],{encoding:"utf8"});
 assert.equal(financeQA.status,0,"Finance/viewer privacy regression failed: "+financeQA.stderr+" "+financeQA.stdout);
 console.log(financeQA.stdout.trim());
