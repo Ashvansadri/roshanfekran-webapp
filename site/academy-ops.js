@@ -9,7 +9,7 @@ const when=v=>{if(!v)return "بدون تاریخ";try{return new Intl.DateTimeFo
 const uuid=v=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(v||""));
 const configs={
  courses:["academy_courses","id,title,code,status,teacher_name,start_date,capacity,session_count"],
- students:["academy_students","id,full_name,user_id,status"],
+ students:["academy_students","id,full_name,user_id,status,archived_at"],
  enrollments:["academy_enrollments","id,student_id,course_id,status,final_fee,created_at"],
  applications:["academy_registration_requests","id,full_name,course_id,status,deposit_amount,installment_count,submitted_at,payment_plan"],
  payments:["academy_payment_submissions","id,student_id,enrollment_id,status,amount,submitted_at,method"],
@@ -154,7 +154,7 @@ function students(){
  }).join("")+'</tbody></table></div>':empty("students","هنرجویی یافت نشد.")));
 }
 function family(){
- const students=row("students"),guardians=row("guardians"),links=row("links");
+ const students=row("students").filter(s=>s.status!=="archived"&&s.archived_at==null),guardians=row("guardians"),links=row("links");
  const options=students.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.full_name)+'</option>').join("");
  return section("فعالسازی نظارت خانواده با یک تیک",'<p>سرپرست برای مشاهده پرونده فرزند، فقط هویت و ایمیل خودش را تأیید می‌کند؛ پس از آن همان صفحه ورود روشنفکران برای همه نقش‌ها استفاده می‌شود. این اتصال برای مشاهده خصوصی است و اجازه انتشار عمومی رزومه نیست.</p>'+
  '<form id="rfops-invite-guardian" class="rfops-form rfops-invite"><label>انتخاب هنرجو<select name="student_id" required>'+options+'</select></label><label>نام قانونی سرپرست<input name="full_name" minlength="3" maxlength="90" required placeholder="نام پدر، مادر یا سرپرست قانونی"/></label><label>ایمیل سرپرست<input type="email" name="email" required dir="ltr" placeholder="guardian@example.com"/></label><label>تلفن اختیاری<input name="mobile" dir="ltr" inputmode="tel" /></label><label class="rfops-consent"><input type="checkbox" name="verified" required/> من به‌عنوان مدیر، هویت و رابطه قانونی سرپرست را بررسی کرده‌ام و اجازه دسترسی آموزشی را تأیید می‌کنم.</label><button class="btn btn-primary" type="submit" '+(working||!students.length?"disabled":"")+'>✓ فعال‌سازی نظارت و دریافت لینک امن</button></form>'+
@@ -301,6 +301,7 @@ async function formSubmit(form){
    if(!familyManager()||!data.get("verified"))throw Error("مجوز مدیر و تأیید رابطه قانونی لازم است.");
    const student_id=String(data.get("student_id")||""),full_name=String(data.get("full_name")||"").trim(),email=String(data.get("email")||"").trim().toLowerCase();
    if(!uuid(student_id)||full_name.length<3||!email.includes("@"))throw Error("اطلاعات سرپرست کامل نیست.");
+   if(!row("students").some(s=>s.id===student_id&&s.status!=="archived"&&s.archived_at==null))throw Error("این هنرجو فعال نیست و نمی‌توان نظارت جدید ایجاد کرد.");
    if(row("links").some(l=>l.student_id===student_id&&row("guardians").some(g=>g.id===l.guardian_id&&g.email?.toLowerCase()===email)))
     throw Error("برای این سرپرست پیوند موجود است؛ از کلید روشن/خاموش همان ردیف استفاده کنید.");
    if(!confirm("هویت و رابطه سرپرست را تأیید می‌کنید و لینک فعال‌سازی اختصاصی صادر شود؟"))return;
