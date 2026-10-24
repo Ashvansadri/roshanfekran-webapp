@@ -106,4 +106,7 @@ console.log(classQA.stdout.trim());
 const attendanceQA=spawnSync(process.execPath,[join(root,"scripts/ops-attendance.test.mjs")],{encoding:"utf8"});
 assert.equal(attendanceQA.status,0,"Attendance role/write confirmation regression failed: "+attendanceQA.stderr+" "+attendanceQA.stdout);
 console.log(attendanceQA.stdout.trim());
+const attendanceExportQA=spawnSync(process.execPath,[join(root,"scripts/ops-attendance-export.test.mjs")],{encoding:"utf8"});
+assert.equal(attendanceExportQA.status,0,"Attendance export privacy/CSV regression failed: "+attendanceExportQA.stderr+" "+attendanceExportQA.stdout);
+console.log(attendanceExportQA.stdout.trim());
 console.log("PASS: 6 scripts, 6 CSS assets, referenced files, Persian typography, secure role-aware calls and PWA metadata.");
