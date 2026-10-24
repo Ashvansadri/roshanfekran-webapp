@@ -100,4 +100,7 @@ console.log(gatewayArchiveQA.stdout.trim());
 const courseQA=spawnSync(process.execPath,[join(root,"scripts/ops-course.test.mjs")],{encoding:"utf8"});
 assert.equal(courseQA.status,0,"Course operations role/write regression failed: "+courseQA.stderr+" "+courseQA.stdout);
 console.log(courseQA.stdout.trim());
+const classQA=spawnSync(process.execPath,[join(root,"scripts/ops-class.test.mjs")],{encoding:"utf8"});
+assert.equal(classQA.status,0,"Class scheduling role/validation regression failed: "+classQA.stderr+" "+classQA.stdout);
+console.log(classQA.stdout.trim());
 console.log("PASS: 6 scripts, 6 CSS assets, referenced files, Persian typography, secure role-aware calls and PWA metadata.");
