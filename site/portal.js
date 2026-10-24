@@ -71,6 +71,13 @@ async function api(action,body={},auth=false,retry=true){
   requireCurrent(generation);
   if(!r.ok||d?.error){
    if(auth&&retry&&(r.status===401||/JWT expired|invalid jwt|AUTH_REQUIRED/i.test(String(d?.error||"")))){try{await renew()}catch(e){if(e.authPermanent)clear();throw e}return api(action,body,auth,false)}
+   // A second 401 after a successful refresh means the new access token is still rejected.
+   // Revoke the local session instead of trapping the user in a retry-only workspace.
+   if(auth&&!retry&&r.status===401){
+    const message=authError(r.status,d);
+    clear();error=message;
+    throw Error("SESSION_CANCELLED");
+   }
    throw Error(authError(r.status,d));
   }
   requireCurrent(generation);return d;
