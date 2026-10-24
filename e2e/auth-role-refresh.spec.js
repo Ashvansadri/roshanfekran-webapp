@@ -150,3 +150,51 @@ test('invalid refresh credential clears stored tokens and requires login',async(
  await expect(page.locator('.rf-dashboard')).toHaveCount(0);
  await page.close();
 });
+
+
+test('repeated 401 after successful refresh revokes the unusable session and returns to login',async({browser})=>{
+ const page=await browser.newPage({viewport:{width:1100,height:800}});
+ let roleChecks=0,refreshes=0;
+ await page.addInitScript(s=>sessionStorage.setItem('rf_safe_session_v1',JSON.stringify({...s,expires_at:Date.now()+3600000})),session);
+ await page.route(GATEWAY,route=>{
+  const b=JSON.parse(route.request().postData()||'{}');
+  if(b.action==='resolve_portal'){roleChecks++;return reply(route,401,{error:'JWT expired'})}
+  if(b.action==='proxy'&&String(b.path).includes('grant_type=refresh_token')){
+   refreshes++;return reply(route,200,{access_token:'new-but-rejected-synthetic-token',refresh_token:'new-synthetic-refresh',expires_in:3600});
+  }
+  if(b.action==='public_catalog')return reply(route,200,{ok:true,courses:[],settings:{}});
+  if(b.action==='public_news')return reply(route,200,{ok:true,ai:[],markets:[],world:[]});
+  return reply(route,401,{error:'AUTH_REQUIRED'});
+ });
+ await page.goto('/#/workspace',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('#rf-login')).toBeVisible();
+ await expect(page.getByRole('alert')).toContainText('نشست ورود نامعتبر است');
+ expect(roleChecks).toBe(2);
+ expect(refreshes).toBe(1);
+ expect(await page.evaluate(()=>sessionStorage.getItem('rf_safe_session_v1'))).toBeNull();
+ await expect(page.locator('.rf-dashboard')).toHaveCount(0);
+ await page.close();
+});
+
+test('generic role 403 retains a valid session for investigation rather than deleting credentials',async({browser})=>{
+ const page=await browser.newPage({viewport:{width:1100,height:800}});
+ let roleChecks=0,refreshes=0;
+ await page.addInitScript(s=>sessionStorage.setItem('rf_safe_session_v1',JSON.stringify({...s,expires_at:Date.now()+3600000})),session);
+ await page.route(GATEWAY,route=>{
+  const b=JSON.parse(route.request().postData()||'{}');
+  if(b.action==='resolve_portal'){roleChecks++;return reply(route,403,{error:'FORBIDDEN'})}
+  if(b.action==='proxy'&&String(b.path).includes('grant_type=refresh_token')){refreshes++;return reply(route,500,{error:'unexpected refresh'})}
+  if(b.action==='public_catalog')return reply(route,200,{ok:true,courses:[],settings:{}});
+  if(b.action==='public_news')return reply(route,200,{ok:true,ai:[],markets:[],world:[]});
+  return reply(route,401,{error:'AUTH_REQUIRED'});
+ });
+ await page.goto('/#/workspace',{waitUntil:'domcontentloaded'});
+ await expect(page.getByText('اتصال به پورتال برقرار نشد')).toBeVisible();
+ await expect(page.getByRole('alert')).toContainText('FORBIDDEN');
+ expect(roleChecks).toBe(1);
+ expect(refreshes).toBe(0);
+ const saved=await page.evaluate(()=>JSON.parse(sessionStorage.getItem('rf_safe_session_v1')||'null'));
+ expect(saved?.access_token).toBe('old-synthetic-token');
+ await expect(page.locator('.rf-dashboard')).toHaveCount(0);
+ await page.close();
+});
