@@ -1,4 +1,4 @@
-const CACHE="rf-academy-public-v13";
+const CACHE="rf-academy-public-v14";
 const SHELL=["/","/index.html","/manifest.webmanifest","/assets/rf-icon-180.png","/assets/rf-icon-192.png","/assets/rf-icon-512.png","/styles.css","/experience.css","/portal.css","/app.js","/portal.js","/public-resume.js","/enroll.js","/enroll.css","/scene.js","/scene.css","/invites.css","/luxury.css","/luxury.js","/motion.css","/motion.js","/homepage.css","/homepage.js","/portal-premium.css","/cinematic.css","/cinematic.js","/academy-ops.css","/academy-ops.js","/family-monitor.css","/family-monitor.js","/assets/rf_hero_real3d.webp","/assets/rf_ai_real3d.webp","/assets/rf_crypto_real3d.webp","/assets/rf_forex_real3d.webp","/assets/rf_architecture_real3d.webp","/favicon.svg"];
 self.addEventListener("install",event=>{event.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)));self.skipWaiting()});
 self.addEventListener("activate",event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith("rf-academy-")&&k!==CACHE).map(k=>caches.delete(k)))));self.clients.claim()});
