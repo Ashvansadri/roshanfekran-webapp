@@ -8,6 +8,12 @@ const fa=v=>new Intl.NumberFormat("fa-IR").format(Number(v||0));
 const when=v=>{if(!v)return "بدون تاریخ";try{return new Intl.DateTimeFormat("fa-IR-u-ca-persian",{dateStyle:"medium"}).format(new Date(v))}catch{return "—"}};
 const dateTime=v=>{if(!v)return "بدون زمان";try{return new Intl.DateTimeFormat("fa-IR-u-ca-persian",{dateStyle:"medium",timeStyle:"short"}).format(new Date(v))}catch{return "—"}};
 const uuid=v=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(v||""));
+// Excel-compatible UTF-8 CSV; escape formula prefixes even after invisible leading characters.
+const csvCell=value=>{
+ const raw=String(value??"");
+ const safe=/^[\s\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2060-\u2069\ufeff]*[=+\-@]/u.test(raw)?"'"+raw:raw;
+ return '"'+safe.replace(/"/g,'""')+'"';
+};
 const configs={
  courses:["academy_courses","id,title,code,status,teacher_name,start_date,capacity,session_count"],
  courseOps:["academy_courses","id,course_type,session_count,schedule_note,status"],
@@ -241,6 +247,15 @@ function tasks(){
    attendancePanel='<div class="rf-empty">فهرست امن هنرجویان این جلسه هنوز دریافت نشده است.</div>';
   else {
    const ready=Date.parse(currentClass.starts_at)<=Date.now();
+   const summary={present:0,absent:0,late:0,excused:0,unmarked:0};
+   for(const person of attendanceSnapshot.roster){
+    if(Object.hasOwn(summary,person.status))summary[person.status]++;else summary.unmarked++;
+   }
+   const summaryHTML='<div class="rfops-attendance-summary" aria-label="خلاصه حضور و غیاب">'+
+    [['present','حاضر'],['absent','غایب'],['late','با تأخیر'],['excused','موجه'],['unmarked','ثبت‌نشده']]
+     .map(([key,label])=>'<div><strong>'+fa(summary[key])+'</strong><span>'+label+'</span></div>').join('')+
+    '</div><button type="button" class="rfops-export" data-rfops="attendance-export" data-id="'+esc(attendanceClassId)+'">دریافت گزارش CSV این جلسه</button>'+
+    '<p class="rf-caption">گزارش شامل اطلاعات هنرجویان همین جلسه است؛ فایل را فقط در محل امن نگهداری کنید.</p>';
    const forms=attendanceSnapshot.roster.map(s=>{
     const options=[["","انتخاب وضعیت"],["present","حاضر"],["absent","غایب"],["late","با تأخیر"],["excused","موجه"]]
      .map(([value,label])=>'<option value="'+value+'" '+(s.status===value?'selected':"")+'>'+label+'</option>').join("");
@@ -254,7 +269,7 @@ function tasks(){
    }).join("");
    attendancePanel='<div class="rfops-attendance-board"><p class="rf-caption">'+
     (ready?'حضور هر هنرجو به‌صورت مستقل ثبت و با پاسخ سرور تأیید می‌شود.':'ثبت حضور فقط پس از شروع جلسه فعال می‌شود.')+
-    '</p>'+(forms||'<div class="rf-empty">هنرجوی فعال ثبت‌نام‌شده‌ای برای این جلسه وجود ندارد.</div>')+'</div>';
+    '</p>'+summaryHTML+(forms||'<div class="rf-empty">هنرجوی فعال ثبت‌نام‌شده‌ای برای این جلسه وجود ندارد.</div>')+'</div>';
   }
  }
  return section("کلاس‌ها، تکالیف و ارزیابی",'<p>می‌توانید تکلیف منتشر کنید و وضعیت تحویل آن را از همین سامانه بررسی کنید. اگر گزینه اعلان سرپرست فعال باشد، تکالیف جدید و تکالیف عقب‌افتاده برای سرپرست دارای مجوز در مرکز اعلان ثبت می‌شوند.</p>'+
@@ -284,6 +299,25 @@ async function act(action,element){
    const value=action==="copy-link"?generated:element.dataset.url;
    if(!value)throw Error("لینک هنوز موجود نیست.");await navigator.clipboard.writeText(value);
    info="لینک کپی شد.";return;
+  }
+  if(action==="attendance-export"){
+   const cls=row("classes").find(c=>c.id===id&&c.published&&["scheduled","completed"].includes(c.status));
+   if(!teacher()||!cls||!uuid(id)||attendanceClassId!==id||
+      attendanceSnapshot?.class_id!==id||attendanceSnapshot.course_id!==cls.course_id||
+      !Array.isArray(attendanceSnapshot.roster))throw Error("گزارش این جلسه در سطح دسترسی فعلی موجود نیست.");
+   if(!confirm("گزارش حضور و غیاب این جلسه شامل نام هنرجویان است. فایل CSV دانلود شود؟"))return;
+   const labels={present:"حاضر",absent:"غایب",late:"با تأخیر",excused:"موجه"};
+   const rows=[["هنرجو","وضعیت","توضیح","زمان آخرین ثبت"],...attendanceSnapshot.roster.map(s=>[
+    s.name,labels[s.status]||"ثبت‌نشده",s.note||"",s.marked_at?dateTime(s.marked_at):""
+   ])];
+   const csv="\uFEFF"+rows.map(columns=>columns.map(csvCell).join(",")).join("\r\n");
+   const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+   try{
+    const a=document.createElement("a");
+    a.href=url;a.download="roshanfekran-attendance-"+id+".csv";a.style.display="none";
+    document.body.appendChild(a);try{a.click()}finally{a.remove()}
+   }finally{setTimeout(()=>URL.revokeObjectURL(url),1000)}
+   info="گزارش این جلسه آماده دانلود شد.";return;
   }
   if(action==="attendance-open"){
    if(!teacher()||!uuid(id)||!row("classes").some(c=>c.id===id&&c.published&&["scheduled","completed"].includes(c.status)))throw Error("این جلسه برای حضور و غیاب در دسترس نیست.");
