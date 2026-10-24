@@ -43,6 +43,25 @@ assert(portal.includes("finance=f.every"),"Finance query failures must fail clos
 assert(/href="#\/access">ورود\s*</.test(html),"Public login button must say ورود");
 const manifest=JSON.parse(readFileSync(join(site,"manifest.webmanifest"),"utf8"));
 assert.equal(manifest.lang,"fa");assert.equal(manifest.display,"standalone");
+for(const size of [192,512]){
+ const icon=manifest.icons.find(x=>x.sizes===size+"x"+size&&x.type==="image/png");
+ assert(icon,"PWA raster icon missing: "+size);
+ if(size===512)assert(icon.purpose.includes("maskable"),"Maskable PWA icon required");
+}
+for(const size of [180,192,512]){
+ const path=join(site,"assets","rf-icon-"+size+".png");
+ assert(existsSync(path),"PWA icon missing: "+size);
+ const bytes=readFileSync(path);
+ assert.equal(bytes.readUInt32BE(0),0x89504e47,"Invalid PNG signature");
+ assert.equal(bytes.readUInt32BE(16),size,"Incorrect PNG width");
+ assert.equal(bytes.readUInt32BE(20),size,"Incorrect PNG height");
+}
+assert(html.includes('rel="apple-touch-icon"'),"Apple touch icon missing");
+const sw=readFileSync(join(site,"sw.js"),"utf8");
+for(const size of [180,192,512])assert(sw.includes("/assets/rf-icon-"+size+".png"),"PWA icon not precached: "+size);
+for(const name of ["rf_hero_real3d.webp","rf_ai_real3d.webp","rf_crypto_real3d.webp","rf_forex_real3d.webp","rf_architecture_real3d.webp"])assert(existsSync(join(site,"assets",name)),"Local cinematic asset missing: "+name);
+assert(!css.includes("roshanfekran-academy-control.floot.app/_cdn/"),"Cinematic CSS must not depend on legacy Floot CDN");
+
 const motion=readFileSync(join(site,"motion.js"),"utf8");
 assert(motion.includes("ScrollTrigger") && motion.includes("Lenis"),"Missing GSAP / Lenis integration");
 assert(motion.includes("prefers-reduced-motion"),"Motion must honor user preference");

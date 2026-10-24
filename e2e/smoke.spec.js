@@ -273,26 +273,35 @@ test('photorealistic assets are used in live home and all course worlds',async({
  await page.close();
 });
 
-test('cinematic images load successfully over the public CDN',async({browser})=>{
+test('five cinematic images load locally without Floot CDN',async({browser})=>{
  const page=await browser.newPage({viewport:{width:1280,height:800}});
- await apiMock(page);
- await page.goto('/',{waitUntil:'domcontentloaded'});
- const result=await page.evaluate(async()=>{
-  const urls=['rf_hero_real3d.webp','rf_ai_real3d.webp','rf_crypto_real3d.webp','rf_forex_real3d.webp'];
-  return await Promise.all(urls.map(async name=>{
-   const src='https://roshanfekran-academy-control.floot.app/_cdn/static/'+name;
-   return await new Promise(resolve=>{
-    const img=new Image(); const timeout=setTimeout(()=>resolve({name,ok:false,reason:'timeout'}),12000);
-    img.onload=()=>{clearTimeout(timeout);resolve({name,ok:img.naturalWidth>50,w:img.naturalWidth})};
-    img.onerror=()=>{clearTimeout(timeout);resolve({name,ok:false,reason:'image-error'})};
-    img.src=src;
-   });
-  }));
- });
- expect(result.every(x=>x.ok),JSON.stringify(result)).toBe(true);
+ await apiMock(page);await page.goto('/',{waitUntil:'domcontentloaded'});
+ const report=await page.evaluate(async()=>Promise.all(['rf_hero_real3d.webp','rf_ai_real3d.webp','rf_crypto_real3d.webp','rf_forex_real3d.webp','rf_architecture_real3d.webp'].map(name=>new Promise(resolve=>{
+  const img=new Image(),timer=setTimeout(()=>resolve({name,ok:false}),12000);
+  img.onload=()=>{clearTimeout(timer);resolve({name,ok:img.naturalWidth>50,origin:new URL(img.src).origin})};
+  img.onerror=()=>{clearTimeout(timer);resolve({name,ok:false})};
+  img.src='/assets/'+name;
+ }))));
+ expect(report.every(x=>x.ok&&x.origin===new URL(page.url()).origin),JSON.stringify(report)).toBe(true);
  await page.close();
 });
-
+test('PWA install metadata and local Android/iOS icons are valid',async({browser})=>{
+ const page=await browser.newPage();await apiMock(page);await page.goto('/',{waitUntil:'domcontentloaded'});
+ const report=await page.evaluate(async()=>{
+  const manifest=await(await fetch('/manifest.webmanifest')).json();
+  const icons=await Promise.all([180,192,512].map(async size=>{
+   const r=await fetch('/assets/rf-icon-'+size+'.png');const bytes=await r.arrayBuffer(),v=new DataView(bytes);
+   return {size,ok:r.ok,signature:v.getUint32(0),width:v.getUint32(16),height:v.getUint32(20)};
+  }));
+  return {manifest,icons,touch:document.querySelector('link[rel="apple-touch-icon"]')?.getAttribute('href')};
+ });
+ expect(report.manifest.display).toBe('standalone');
+ expect(report.manifest.icons.some(x=>x.sizes==='192x192'&&x.type==='image/png')).toBe(true);
+ expect(report.manifest.icons.some(x=>x.sizes==='512x512'&&x.type==='image/png'&&x.purpose.includes('maskable'))).toBe(true);
+ expect(report.touch).toBe('/assets/rf-icon-180.png');
+ for(const x of report.icons){expect(x.ok).toBe(true);expect(x.signature).toBe(0x89504e47);expect(x.width).toBe(x.size);expect(x.height).toBe(x.size)}
+ await page.close();
+});
 test('invalid credentials explain the error without retaining a token',async({browser})=>{
  const page=await browser.newPage({viewport:{width:1050,height:800}});
  await page.route('https://sdsdzktsqpahpdrgmzuo.supabase.co/functions/v1/academy-gateway',route=>{
