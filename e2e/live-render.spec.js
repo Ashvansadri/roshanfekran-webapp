@@ -19,8 +19,10 @@ test('Render staging serves working interactive rooms and protected login screen
   await page.locator('[data-rf-room="2"]').click();
   await expect(scene).toHaveAttribute('data-rf-room-active','2');
   await expect(scene.locator('.rf-spatial-title')).toHaveText('اتاق تحلیل بازار');
-  const login=await page.goto(LIVE+'/#/access',{waitUntil:'domcontentloaded',timeout:45000});
-  expect(login?.status(),'Render login route HTTP status').toBe(200);
+  // Hash-only SPA navigation does not issue an HTTP request: Playwright returns null.
+  // Verify the URL and rendered form instead of asserting a nonexistent response status.
+  await page.goto(LIVE+'/#/access',{waitUntil:'domcontentloaded',timeout:45000});
+  await expect(page).toHaveURL(/#\\/access$/);
   await expect(page.locator('#rf-login input[name="email"]')).toBeVisible({timeout:15000});
   await expect(page.locator('#rf-login input[name="password"]')).toBeVisible();
   await page.goto(LIVE+'/#/workspace',{waitUntil:'domcontentloaded',timeout:45000});
