@@ -64,3 +64,16 @@
  .rfops-card{padding:17px}
  .rfops-summary div{flex:1;min-width:100px}
 }
+
+/* Course editor: compact, accessible disclosure within premium course cards. */
+.rfops-course-editor{margin-top:8px;border:1px solid #9bdfc04a;border-radius:12px;background:linear-gradient(150deg,#102c30cc,#10251fd9);overflow:hidden}
+.rfops-course-editor>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 17px;color:#d4ffe7;font-size:12px;font-weight:800}
+.rfops-course-editor>summary::-webkit-details-marker{display:none}
+.rfops-course-editor>summary:after{content:"＋";font-size:19px;line-height:1;color:#a4f1cf}
+.rfops-course-editor[open]>summary:after{content:"−"}
+.rfops-course-editor>summary:hover{background:#b6f5d312}
+.rfops-course-editor>summary:focus-visible{outline:2px solid #b5fedd;outline-offset:-3px}
+.rfops-course-editor .rfops-form{grid-template-columns:minmax(0,1fr);margin:0;padding:16px;border:0;border-top:1px solid #9bdfc032;border-radius:0;background:#061b20b5}
+.rfops-course-editor .rfops-form label{min-width:0}
+.rfops-course-editor .rfops-form textarea{min-height:86px;resize:vertical}
+.rfops-course-editor .rfops-form small{line-height:2;color:#aacfb9}
