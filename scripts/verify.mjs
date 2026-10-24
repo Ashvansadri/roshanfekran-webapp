@@ -92,4 +92,7 @@ const writesQA=spawnSync(process.execPath,[join(root,"scripts/ops-write-confirma
 assert.equal(writesQA.status,0,"Guardian/assignment write confirmation regression failed: "+writesQA.stderr+" "+writesQA.stdout);
 console.log(writesQA.stdout.trim());
 assert(portal.includes('placeholder="رمز حساب فعال شما"'),"Existing-account login must not claim an 8-character minimum");
+const gatewayArchiveQA=spawnSync(process.execPath,[join(root,"scripts/gateway-archive.test.mjs")],{encoding:"utf8"});
+assert.equal(gatewayArchiveQA.status,0,"Gateway archived-student regression failed: "+gatewayArchiveQA.stderr+" "+gatewayArchiveQA.stdout);
+console.log(gatewayArchiveQA.stdout.trim());
 console.log("PASS: 6 scripts, 6 CSS assets, referenced files, Persian typography, secure role-aware calls and PWA metadata.");
