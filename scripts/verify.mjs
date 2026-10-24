@@ -109,4 +109,7 @@ console.log(attendanceQA.stdout.trim());
 const attendanceExportQA=spawnSync(process.execPath,[join(root,"scripts/ops-attendance-export.test.mjs")],{encoding:"utf8"});
 assert.equal(attendanceExportQA.status,0,"Attendance export privacy/CSV regression failed: "+attendanceExportQA.stderr+" "+attendanceExportQA.stdout);
 console.log(attendanceExportQA.stdout.trim());
-console.log("PASS: 6 scripts, 6 CSS assets, referenced files, Persian typography, secure role-aware calls and PWA metadata.");
+const staffGuardsQA=spawnSync(process.execPath,[join(root,"scripts/staff-guard-migration.test.mjs")],{encoding:"utf8"});
+assert.equal(staffGuardsQA.status,0,"Staff/finance archive guard regression failed: "+staffGuardsQA.stderr+" "+staffGuardsQA.stdout);
+console.log(staffGuardsQA.stdout.trim());
+console.log("PASS: frontend, private projections, archive role guards and PWA metadata.");
