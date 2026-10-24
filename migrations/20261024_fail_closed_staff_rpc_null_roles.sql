@@ -33,7 +33,7 @@ BEGIN
       END IF;
       v_updated := replace(v_original,v_pattern,'if v_role is distinct from ''teacher'' then');
     ELSE
-      v_pattern := 'if[[:space:]]+v_role[[:space:]]+not[[:space:]]+in[[:space:]]*\\(';
+      v_pattern := 'if[[:space:]]+v_role[[:space:]]+not[[:space:]]+in[[:space:]]*[(]';
       SELECT count(*) INTO v_matches FROM regexp_matches(v_original,v_pattern,'gi');
       IF v_matches <> 1 THEN
         RAISE EXCEPTION 'Expected exactly one role NOT IN guard in %, found %',v_name,v_matches;
