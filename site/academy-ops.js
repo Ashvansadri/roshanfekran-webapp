@@ -21,6 +21,7 @@ const configs={
  enrollments:["academy_enrollments","id,student_id,course_id,status,final_fee,created_at"],
  applications:["academy_registration_requests","id,full_name,course_id,status,deposit_amount,installment_count,submitted_at,payment_plan"],
  payments:["academy_payment_submissions","id,student_id,enrollment_id,status,amount,submitted_at,method"],
+ ledgerPayments:["academy_payments","id,enrollment_id,installment_id,amount,paid_at,status"],
  installments:["academy_installments","id,enrollment_id,installment_no,amount,paid_amount,due_date,status"],
  classes:["academy_classes","id,course_id,title,session_no,starts_at,ends_at,room,mode,status,published"],
  assignments:["academy_assignments","id,course_id,title,instructions,due_at,published,notify_guardians,created_at"],
@@ -34,7 +35,7 @@ const configs={
 const grants={
  owner:Object.keys(configs),
  manager:Object.keys(configs),
- finance:["courses","enrollments","payments","installments","students"],
+ finance:["courses","enrollments","payments","ledgerPayments","installments","students"],
  teacher:["courses","classes","assignments","submissions"],
  registrar:["courses","courseOps","students","enrollments","applications","guardians","links","studentContracts"],
  viewer:["courses"],
@@ -247,21 +248,44 @@ function contracts(){
  '<p class="rf-caption">حداکثر ۱۵۰ رکورد اخیر در هر بخش نمایش داده می‌شود. وضعیت حقوقی قرارداد باید با نسخه امضاشده تطبیق داده شود.</p>');
 }
 function finance(){
- const items=row("payments"),inst=row("installments"),enrollments=row("enrollments");
- const byEnrollment=new Map(enrollments.map(e=>[String(e.id),e]));
- const open=inst.filter(i=>i.status==="open"||i.status==="partial");
+ const items=row("payments"),ledger=row("ledgerPayments"),inst=row("installments"),enrollments=row("enrollments");
+ const enrollmentMap=new Map(enrollments.map(e=>[String(e.id),e]));
+ const scheduleIds=new Set(inst.map(i=>String(i.enrollment_id)));
+ const missingSchedules=enrollments.filter(e=>["active","pending"].includes(String(e.status))&&!scheduleIds.has(String(e.id)));
+ const open=inst.filter(i=>["open","partial"].includes(String(i.status)));
  const remaining=open.reduce((total,i)=>total+Math.max(0,Number(i.amount||0)-Number(i.paid_amount||0)),0);
+ const posted=ledger.filter(p=>p.status==="posted");
+ const postedTotal=posted.reduce((sum,p)=>sum+(Number(p.amount)||0),0);
  const schedule=inst.slice().sort((a,b)=>String(a.due_date||"").localeCompare(String(b.due_date||"")));
- return section("کنترل رسیدها و اقساط",'<p>تأیید فیش فقط از طریق عملیات امن دیتابیس انجام می‌شود و پس از بررسی واقعی باید ثبت شود. مبالغ و شمارش‌ها مربوط به رکوردهای مجازِ بارگذاری‌شده‌اند و گزارش حسابداری قطعی نیستند.</p>'+
- '<div class="rfops-summary"><div><strong>'+fa(open.length)+'</strong><span>اقساط باز</span></div><div><strong>'+fa(items.filter(i=>i.status==="pending").length)+'</strong><span>فیش‌های در انتظار</span></div><div><strong>'+money(remaining)+'</strong><span>مانده اقساط بازِ بارگذاری‌شده</span></div></div>'+
+ const ready=key=>Array.isArray(datasets[key]);
+ const figure=(key,value)=>ready(key)?fa(value):"—";
+ const currency=(key,value)=>ready(key)?money(value):"—";
+ const ledgerTable=ready("ledgerPayments")?(ledger.length?
+  '<div class="rfops-table-wrap"><table><thead><tr><th>هنرجو / دوره</th><th>تاریخ ثبت</th><th>مبلغ</th><th>وضعیت دفتر مالی</th></tr></thead><tbody>'+
+  ledger.slice().sort((a,b)=>String(b.paid_at||"").localeCompare(String(a.paid_at||""))).slice(0,25).map(p=>{
+   const enrollment=enrollmentMap.get(String(p.enrollment_id));
+   return '<tr><td>'+esc(enrollment?name("students",enrollment.student_id):"—")+'<small>'+esc(enrollment?name("courses",enrollment.course_id):"—")+'</small></td><td>'+when(p.paid_at)+'</td><td>'+money(p.amount)+'</td><td>'+esc(p.status||"—")+'</td></tr>';
+  }).join("")+'</tbody></table></div>':
+  '<div class="rf-empty">در دفتر مالی پرداخت قابل مشاهده‌ای ثبت نشده است.</div>'):
+  '<div class="rfops-warn" role="alert">دفتر پرداخت‌ها بارگذاری نشد؛ مجموع پرداخت‌ها نامشخص است. '+esc(failures.ledgerPayments||"")+'</div>';
+ return section("کنترل پرداخت‌ها، فیش‌ها و اقساط",
+ '<p>دفتر پرداخت‌های ثبت‌شده از فیش‌های ارسالی برای بررسی جداست. مبلغ مانده فقط مربوط به اقساط ثبت‌شده است و به معنی کل بدهی هنرجویان نیست. گزارش حداکثر ۱۵۰ رکورد مجاز در هر جدول را پوشش می‌دهد.</p>'+
+ '<div class="rfops-summary"><div><strong>'+figure("installments",open.length)+'</strong><span>اقساط بازِ ثبت‌شده</span></div>'+
+ '<div><strong>'+figure("payments",items.filter(i=>i.status==="pending").length)+'</strong><span>فیش در انتظار بررسی</span></div>'+
+ '<div><strong>'+currency("installments",remaining)+'</strong><span>مانده اقساط ثبت‌شده</span></div>'+
+ '<div><strong>'+currency("ledgerPayments",postedTotal)+'</strong><span>جمع پرداخت‌های ثبت‌شده در دفتر</span></div>'+
+ '<div><strong>'+(ready("enrollments")&&ready("installments")?fa(missingSchedules.length):"—")+'</strong><span>ثبت‌نام بدون برنامه اقساط</span></div></div>'+
+ (ready("enrollments")&&ready("installments")&&missingSchedules.length?
+  '<div class="rfops-warn" role="status">'+fa(missingSchedules.length)+' ثبت‌نام برنامه اقساط ندارد؛ این موضوع لزوماً بدهی یا نقص پرونده نیست (ممکن است نقدی باشد). برای تعیین مانده واقعی، دفتر پرداخت و قرارداد بررسی شود.</div>':"")+
  '<h4>سررسید و وضعیت اقساط</h4>'+
  (schedule.length?'<div class="rfops-table-wrap"><table><thead><tr><th>هنرجو / دوره</th><th>قسط</th><th>سررسید</th><th>مبلغ</th><th>پرداخت‌شده</th><th>مانده</th><th>وضعیت</th></tr></thead><tbody>'+schedule.map(i=>{
-  const e=byEnrollment.get(String(i.enrollment_id));
+  const e=enrollmentMap.get(String(i.enrollment_id));
   const left=Math.max(0,Number(i.amount||0)-Number(i.paid_amount||0));
   return '<tr><td>'+esc(e?name("students",e.student_id):"—")+'<small>'+esc(e?name("courses",e.course_id):"—")+'</small></td><td>'+fa(i.installment_no)+'</td><td>'+when(i.due_date)+'</td><td>'+money(i.amount)+'</td><td>'+money(i.paid_amount)+'</td><td>'+money(left)+'</td><td>'+esc(i.status||"—")+'</td></tr>';
  }).join("")+'</tbody></table></div>':empty("installments","قسطی در سطح دسترسی فعلی ثبت نشده است."))+
- '<h4>بررسی فیش‌های واریزی</h4>'+
- (items.length?'<div class="rfops-cards">'+items.map(x=>'<article class="rfops-card"><strong>درخواست پرداخت '+money(x.amount)+'</strong><p>روش: '+esc(x.method||"—")+' · وضعیت: '+esc(x.status)+'</p><small>ثبت: '+when(x.submitted_at)+'</small>'+(x.status==="pending"?'<div class="rfops-actions"><button data-rfops="payment-approve" data-id="'+esc(x.id)+'">تأیید بررسی‌شده</button><button data-rfops="payment-reject" data-id="'+esc(x.id)+'">رد فیش</button></div>':"")+'</article>').join("")+'</div>':empty("payments","فیش پرداختی در این نما ثبت نشده است.")));
+ '<h4>دفتر پرداخت‌های ثبت‌شده</h4>'+ledgerTable+
+ '<h4>فیش‌های ارسالی برای بررسی</h4>'+
+ (items.length?'<div class="rfops-cards">'+items.map(x=>'<article class="rfops-card"><strong>فیش '+money(x.amount)+'</strong><p>روش: '+esc(x.method||"—")+' · وضعیت: '+esc(x.status)+'</p><small>ثبت: '+when(x.submitted_at)+'</small>'+(x.status==="pending"?'<div class="rfops-actions"><button data-rfops="payment-approve" data-id="'+esc(x.id)+'">تأیید بررسی‌شده</button><button data-rfops="payment-reject" data-id="'+esc(x.id)+'">رد فیش</button></div>':"")+'</article>').join("")+'</div>':empty("payments","فیش جدیدی در این نما ثبت نشده است؛ این به معنی نبود پرداخت در دفتر مالی نیست.")));
 }
 function tasks(){
  const items=row("assignments"),classes=row("classes"),courses=row("courses"),students=row("students"),submissions=row("submissions");

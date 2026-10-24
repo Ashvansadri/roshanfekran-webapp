@@ -77,6 +77,7 @@ assert(ops.includes('row("students").filter(s=>s.status!=="archived"&&s.archived
 assert(portal.includes('const eligibleStudents=students.filter(x=>x.status!=="archived"&&x.archived_at==null)'),"Portal invites must exclude archived students");
 assert(!/emergency_name|emergency_mobile/.test(ops),"Staff frontend must not fetch unused emergency contact details");
 assert(ops.includes('viewer:["courses"]'),"Read-only viewer must not preload student or financial records");
+assert(ops.includes('ledgerPayments:["academy_payments","id,enrollment_id,installment_id,amount,paid_at,status"]'),"Finance ledger projection missing or overly broad");
 assert(ops.includes('enrollmentManager()||meRole()==="viewer"'),"Viewer must retain read-only courses and registrar must have course tab");
 const isolation=spawnSync(process.execPath,[join(root,"scripts/ops-isolation.test.mjs")],{encoding:"utf8"});
 assert.equal(isolation.status,0,"Staff session isolation regression failed: "+isolation.stderr+" "+isolation.stdout);

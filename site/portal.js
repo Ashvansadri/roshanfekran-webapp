@@ -186,6 +186,8 @@ function financePanel(){
  const ids=new Set(enrolled.map(x=>x.id));
  const installments=finance.installments.filter(x=>ids.has(x.enrollment_id));
  const payments=finance.payments.filter(x=>ids.has(x.enrollment_id));
+ const withSchedule=new Set(installments.map(x=>x.enrollment_id));
+ const withoutSchedule=enrolled.filter(x=>!withSchedule.has(x.id)).length;
  const money=v=>num(Number.isFinite(Number(v))?Number(v):0)+' تومان';
  const fees=enrolled.reduce((sum,x)=>sum+(Number(x.final_fee)||0),0);
  const remainder=installments.reduce((sum,x)=>sum+Math.max(0,(Number(x.amount)||0)-(Number(x.paid_amount)||0)),0);
@@ -195,6 +197,7 @@ function financePanel(){
   '<div class="rf-req-row"><span><b>'+money(x.amount)+'</b><small>'+esc(date(x.paid_at))+'</small></span>'+badge(x.status||"در حال بررسی")+'</div>').join("");
  return '<section class="rf-panel rf-finance-readonly" aria-label="وضعیت مالی و اقساط">'+head+
   '<div class="rf-stats rf-inline-stats"><div>'+badge("شهریه نهایی ثبت‌نام‌ها")+'<strong>'+money(fees)+'</strong></div><div>'+badge("مانده اقساط ثبت‌شده")+'<strong>'+money(remainder)+'</strong></div></div>'+
+  (withoutSchedule?'<div class="portal-alert" role="status">برای '+num(withoutSchedule)+' ثبت‌نام، برنامه اقساط ثبت نشده است؛ مانده اقساط نمایش‌داده‌شده به معنی تسویه کامل شهریه نیست. برای مانده قطعی به دفتر مالی آموزشگاه مراجعه کنید.</div>':'')+
   '<h4>برنامه اقساط</h4><div class="rf-admin-list">'+(rows||'<div class="rf-empty">قسطی برای این حساب ثبت نشده است.</div>')+'</div>'+
   '<h4>سوابق پرداخت قابل مشاهده</h4><div class="rf-admin-list">'+(receipts||'<div class="rf-empty">رسید پرداخت قابل مشاهده‌ای ثبت نشده است.</div>')+'</div>'+disclaimer+'</section>';
 }
