@@ -72,7 +72,9 @@ assert(html.includes("homepage.css") && html.includes("homepage.js"),"New editor
 assert(html.includes("portal-premium.css"),"Premium internal portal CSS not linked");
 assert(js.includes("RFHOMEPAGE"),"Conversion-focused homepage missing");
 const ops=readFileSync(join(site,"academy-ops.js"),"utf8");
-assert(ops.includes('students:["academy_students","id,full_name,user_id,status"]'),"Staff student query must use minimal display fields");
+assert(ops.includes('students:["academy_students","id,full_name,user_id,status,archived_at"]'),"Staff student query must include archive status and minimal display fields");
+assert(ops.includes('row("students").filter(s=>s.status!=="archived"&&s.archived_at==null)'),"Family linking must hide archived students");
+assert(portal.includes('const eligibleStudents=students.filter(x=>x.status!=="archived"&&x.archived_at==null)'),"Portal invites must exclude archived students");
 assert(!/emergency_name|emergency_mobile/.test(ops),"Staff frontend must not fetch unused emergency contact details");
 assert(ops.includes('viewer:["courses"]'),"Read-only viewer must not preload student or financial records");
 assert(ops.includes('manage()||meRole()==="viewer"'),"Viewer must retain the read-only courses tab");
