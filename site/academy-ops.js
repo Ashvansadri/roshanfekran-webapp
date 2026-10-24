@@ -251,9 +251,16 @@ async function act(action,element){
    const enable=element.dataset.enabled==="true";
    if(!confirm(enable?"نظارت این سرپرست بر پرونده هنرجو فعال شود؟":"نظارت و اعلان‌های این سرپرست برای این هنرجو قطع شود؟"))return;
    working=true;
-   await proxy("/rest/v1/academy_guardian_students?id=eq."+encodeURIComponent(link),"PATCH",{
+   const updated=await proxy("/rest/v1/academy_guardian_students?id=eq."+encodeURIComponent(link),"PATCH",{
     can_view_academic:enable,can_view_attendance:enable,can_receive_notifications:enable,can_view_finance:false
    });
+   // PostgREST may return HTTP 200 with [] when RLS filters out the target row.
+   // A successful HTTP response is not proof that a guardian's access changed.
+   if(!Array.isArray(updated)||updated.length!==1||
+      String(updated[0].id)!==link||
+      updated[0].can_view_academic!==enable||
+      updated[0].can_view_finance!==false)
+     throw Error("تغییر دسترسی سرپرست در پایگاه داده تأیید نشد؛ وضعیت قبلی حفظ شده است.");
    info=enable?"نظارت و اعلان داخلی فعال شد.":"نظارت این سرپرست از سمت سرور قطع شد.";
   }else if(action.startsWith("registration-")){
    if(!enrollmentManager())throw Error("دسترسی پذیرش فعال نیست.");
@@ -310,7 +317,10 @@ async function formSubmit(form){
    if(!uuid(course_id)||title.length<4||instructions.length<8||!due)throw Error("دوره، عنوان، توضیح و مهلت معتبر لازم است.");
    if(!confirm("این تکلیف منتشر و به هنرجویان مربوطه اعلان داده شود؟"))return;
    working=true;
-   await proxy("/rest/v1/academy_assignments","POST",{course_id,title,instructions,due_at:new Date(due).toISOString(),published:true,notify_guardians:data.has("notify_guardians")}, "return=representation");
+   const created=await proxy("/rest/v1/academy_assignments","POST",{course_id,title,instructions,due_at:new Date(due).toISOString(),published:true,notify_guardians:data.has("notify_guardians")}, "return=representation");
+   if(!Array.isArray(created)||created.length!==1||!uuid(created[0].id)||
+      String(created[0].course_id)!==course_id||created[0].published!==true)
+     throw Error("انتشار تکلیف در پایگاه داده تأیید نشد؛ لطفاً وضعیت دوره را دوباره بررسی کنید.");
    info="تکلیف منتشر شد و اعلان مربوطه در صورت مجاز بودن ثبت خواهد شد.";
   }
   if(working)await load(role,request);

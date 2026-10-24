@@ -69,4 +69,8 @@ console.log(teacherQA.stdout.trim());
 const contractsQA=spawnSync(process.execPath,[join(root,"scripts/ops-contracts.test.mjs")],{encoding:"utf8"});
 assert.equal(contractsQA.status,0,"Contract role/privacy regression failed: "+contractsQA.stderr+" "+contractsQA.stdout);
 console.log(contractsQA.stdout.trim());
+const writesQA=spawnSync(process.execPath,[join(root,"scripts/ops-write-confirmation.test.mjs")],{encoding:"utf8"});
+assert.equal(writesQA.status,0,"Guardian/assignment write confirmation regression failed: "+writesQA.stderr+" "+writesQA.stdout);
+console.log(writesQA.stdout.trim());
+assert(portal.includes('placeholder="رمز حساب فعال شما"'),"Existing-account login must not claim an 8-character minimum");
 console.log("PASS: 6 scripts, 6 CSS assets, referenced files, Persian typography, secure role-aware calls and PWA metadata.");
