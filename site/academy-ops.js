@@ -6,6 +6,7 @@ const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&
 const money=v=>new Intl.NumberFormat("fa-IR").format(Number(v||0))+" تومان";
 const fa=v=>new Intl.NumberFormat("fa-IR").format(Number(v||0));
 const when=v=>{if(!v)return "بدون تاریخ";try{return new Intl.DateTimeFormat("fa-IR-u-ca-persian",{dateStyle:"medium"}).format(new Date(v))}catch{return "—"}};
+const dateTime=v=>{if(!v)return "بدون زمان";try{return new Intl.DateTimeFormat("fa-IR-u-ca-persian",{dateStyle:"medium",timeStyle:"short"}).format(new Date(v))}catch{return "—"}};
 const uuid=v=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(v||""));
 const configs={
  courses:["academy_courses","id,title,code,status,teacher_name,start_date,capacity,session_count"],
@@ -15,7 +16,7 @@ const configs={
  applications:["academy_registration_requests","id,full_name,course_id,status,deposit_amount,installment_count,submitted_at,payment_plan"],
  payments:["academy_payment_submissions","id,student_id,enrollment_id,status,amount,submitted_at,method"],
  installments:["academy_installments","id,enrollment_id,installment_no,amount,paid_amount,due_date,status"],
- classes:["academy_classes","id,course_id,title,session_no,starts_at,status,published"],
+ classes:["academy_classes","id,course_id,title,session_no,starts_at,ends_at,room,mode,status,published"],
  assignments:["academy_assignments","id,course_id,title,instructions,due_at,published,notify_guardians,created_at"],
  submissions:["academy_assignment_submissions","id,assignment_id,student_id,status,score,submitted_at,feedback"],
  guardians:["academy_guardians","id,full_name,email,user_id,active"],
@@ -223,8 +224,10 @@ function finance(){
 function tasks(){
  const items=row("assignments"),classes=row("classes"),courses=row("courses"),students=row("students"),submissions=row("submissions");
  const assigned=courses.filter(c=>c.status==="active"||c.status==="planned");
+ const classEditor=assigned.length?'<details class="rfops-course-editor rfops-session-editor"><summary>برنامه‌ریزی جلسه جدید</summary><form id="rfops-class" class="rfops-form"><label>دوره<select name="course_id" required>'+assigned.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.title)+'</option>').join("")+'</select></label><label>عنوان جلسه<input name="title" minlength="3" maxlength="120" required placeholder="مثلاً کارگاه پروژه عملی"/></label><label>شماره جلسه<input name="session_no" type="number" min="1" max="200" step="1" required/></label><label>شروع جلسه<input name="starts_at" type="datetime-local" required/></label><label>پایان جلسه<input name="ends_at" type="datetime-local" required/></label><label>شیوه برگزاری<select name="mode"><option value="in_person">حضوری</option><option value="online">آنلاین</option><option value="hybrid">ترکیبی</option></select></label><label>اتاق یا محل برگزاری<input name="room" maxlength="100" placeholder="اختیاری"/></label><label class="rfops-consent"><input type="checkbox" name="published"/> جلسه همین حالا منتشر شود و برای هنرجویان ثبت‌نام‌شده اعلان داخلی ایجاد شود.</label><button class="btn btn-primary" type="submit" '+(working?"disabled":"")+'>ثبت جلسه در تقویم</button><small>به‌صورت پیش‌فرض پیش‌نویس است و اعلانی ارسال نمی‌شود. زمان‌ها براساس ساعت دستگاه شما وارد می‌شوند.</small></form></details>':'<p class="rf-caption">برای برنامه‌ریزی جلسه، ابتدا یک دوره فعال یا برنامه‌ریزی‌شده لازم است.</p>';
+ const classTimeline=classes.length?'<div class="rfops-table-wrap"><table><thead><tr><th>دوره و جلسه</th><th>زمان شروع و پایان</th><th>نوع و مکان</th><th>وضعیت</th></tr></thead><tbody>'+classes.slice().sort((a,b)=>String(a.starts_at||"").localeCompare(String(b.starts_at||""))).map(c=>'<tr><td><strong>'+esc(c.title||"جلسه "+fa(c.session_no||0))+'</strong><small>'+esc(name("courses",c.course_id))+' · جلسه '+fa(c.session_no||0)+'</small></td><td>'+dateTime(c.starts_at)+'<small>تا '+dateTime(c.ends_at)+'</small></td><td>'+esc(({"in_person":"حضوری","online":"آنلاین","hybrid":"ترکیبی"})[c.mode]||"—")+'<small>'+esc(c.room||"—")+'</small></td><td>'+esc(c.status||"—")+'<small>'+(c.published?"منتشرشده":"پیش‌نویس")+'</small></td></tr>').join("")+'</tbody></table></div>':empty("classes","هنوز جلسه‌ای برای دوره‌های مجاز ثبت نشده است.");
  return section("کلاس‌ها، تکالیف و ارزیابی",'<p>می‌توانید تکلیف منتشر کنید و وضعیت تحویل آن را از همین سامانه بررسی کنید. اگر گزینه اعلان سرپرست فعال باشد، تکالیف جدید و تکالیف عقب‌افتاده برای سرپرست دارای مجوز در مرکز اعلان ثبت می‌شوند.</p>'+
- '<form id="rfops-assignment" class="rfops-form"><label>دوره<select name="course_id" required>'+assigned.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.title)+'</option>').join("")+'</select></label><label>عنوان تکلیف<input name="title" minlength="4" maxlength="150" required/></label><label>مهلت تکلیف<input name="due_at" type="datetime-local" required/></label><label class="rfops-wide">شرح تمرین<textarea name="instructions" rows="3" required minlength="8"></textarea></label><label class="rfops-consent"><input type="checkbox" name="notify_guardians" checked/> در صورت فعال بودن نظارت، خانواده هم تکلیف و تأخیر را ببیند.</label><button class="btn btn-primary" '+(!assigned.length||working?"disabled":"")+' type="submit">انتشار تکلیف و آگاه‌سازی</button></form>'+
+ classEditor+'<h4>تقویم جلسات ثبت‌شده</h4>'+classTimeline+'<h4>تعریف تکلیف</h4>'+'<form id="rfops-assignment" class="rfops-form"><label>دوره<select name="course_id" required>'+assigned.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.title)+'</option>').join("")+'</select></label><label>عنوان تکلیف<input name="title" minlength="4" maxlength="150" required/></label><label>مهلت تکلیف<input name="due_at" type="datetime-local" required/></label><label class="rfops-wide">شرح تمرین<textarea name="instructions" rows="3" required minlength="8"></textarea></label><label class="rfops-consent"><input type="checkbox" name="notify_guardians" checked/> در صورت فعال بودن نظارت، خانواده هم تکلیف و تأخیر را ببیند.</label><button class="btn btn-primary" '+(!assigned.length||working?"disabled":"")+' type="submit">انتشار تکلیف و آگاه‌سازی</button></form>'+
  '<div class="rfops-summary"><div><strong>'+fa(classes.length)+'</strong><span>جلسه ثبت‌شده</span></div><div><strong>'+fa(items.length)+'</strong><span>تکلیف</span></div><div><strong>'+fa(submissions.length)+'</strong><span>تحویل انجام‌شده</span></div></div>'+
  (items.length?'<div class="rfops-cards">'+items.map(x=>{
  const subs=submissions.filter(s=>s.assignment_id===x.id);
@@ -333,7 +336,33 @@ async function formSubmit(form){
     const result=await rpc("academy_update_course_ops",{p_course_id:course_id,p_course_type:course_type,p_session_count:session_count,p_schedule_note:schedule_note});
     if(!result||String(result.id)!==course_id||result.course_type!==course_type||Number(result.session_count)!==session_count||String(result.schedule_note||"")!==schedule_note)throw Error("ذخیره برنامه در سرور تأیید نشد؛ پیش از تلاش دوباره وضعیت دوره را بررسی کنید.");
     info="برنامه دوره با تأیید سرور به‌روزرسانی شد.";
-   }else if(form.id==="rfops-assignment"){
+  }else if(form.id==="rfops-class"){
+   if(!teacher())throw Error("فقط مدرس یا مدیر می‌تواند جلسه آموزشی بسازد.");
+   const course_id=String(data.get("course_id")||"");
+   const title=String(data.get("title")||"").trim(),room=String(data.get("room")||"").trim();
+   const session_no=Number(data.get("session_no")),mode=String(data.get("mode")||"");
+   const startMs=Date.parse(String(data.get("starts_at")||"")),endMs=Date.parse(String(data.get("ends_at")||""));
+   const published=data.has("published");
+   if(!uuid(course_id)||!row("courses").some(c=>c.id===course_id&&["active","planned"].includes(c.status)))
+    throw Error("دوره مجاز و فعال برای برنامه‌ریزی جلسه انتخاب نشده است.");
+   if(title.length<3||title.length>120||room.length>100||!Number.isInteger(session_no)||session_no<1||session_no>200||
+      !["in_person","online","hybrid"].includes(mode)||!Number.isFinite(startMs)||!Number.isFinite(endMs)||
+      startMs<Date.now()-300000||endMs<=startMs||endMs-startMs>12*3600000)
+    throw Error("عنوان، شماره جلسه، ساعت شروع و پایان یا شیوه برگزاری معتبر نیست (حداکثر ۱۲ ساعت).");
+   if(row("classes").some(c=>c.course_id===course_id&&Number(c.session_no)===session_no&&c.status!=="cancelled"))
+    throw Error("برای این دوره، شماره جلسه قبلاً ثبت شده است؛ قبل از ثبت دوباره فهرست را بررسی کنید.");
+   if(!confirm(published?"جلسه منتشر شود؟ برای هنرجویان ثبت‌نام‌شده اعلان داخلی ایجاد خواهد شد.":"جلسه به‌صورت پیش‌نویس و بدون اعلان ثبت شود؟"))return;
+   working=true;
+   const created=await proxy("/rest/v1/academy_classes","POST",{
+    course_id,title,session_no,starts_at:new Date(startMs).toISOString(),ends_at:new Date(endMs).toISOString(),
+    mode,room:room||null,status:"scheduled",published
+   },"return=representation");
+   if(!Array.isArray(created)||created.length!==1||!uuid(created[0].id)||
+      created[0].course_id!==course_id||Number(created[0].session_no)!==session_no||
+      created[0].published!==published||created[0].status!=="scheduled")
+    throw Error("ثبت جلسه در سرور تأیید نشد؛ پیش از تلاش دوباره فهرست جلسات را تازه‌سازی کنید.");
+   info=published?"جلسه منتشر شد؛ اعلان داخلی برای هنرجویان واجد شرایط ایجاد می‌شود.":"جلسه به‌صورت پیش‌نویس و بدون اعلان ثبت شد.";
+  }else if(form.id==="rfops-assignment"){
    if(!teacher())throw Error("فقط مدرس یا مدیر می‌تواند تکلیف بسازد.");
    const course_id=String(data.get("course_id")||""),title=String(data.get("title")||"").trim(),instructions=String(data.get("instructions")||"").trim(),due=String(data.get("due_at")||"");
    if(!uuid(course_id)||title.length<4||instructions.length<8||!due)throw Error("دوره، عنوان، توضیح و مهلت معتبر لازم است.");
@@ -356,7 +385,7 @@ root?.addEventListener("click",event=>{
 });
 root?.addEventListener("submit",event=>{
  const form=event.target;
- if(form?.id!=="rfops-invite-guardian"&&form?.id!=="rfops-assignment"&&form?.id!=="rfops-course-ops")return;
+ if(form?.id!=="rfops-invite-guardian"&&form?.id!=="rfops-assignment"&&form?.id!=="rfops-course-ops"&&form?.id!=="rfops-class")return;
  event.preventDefault();formSubmit(form);
 });
 window.RFOPS={load,render,reset};
