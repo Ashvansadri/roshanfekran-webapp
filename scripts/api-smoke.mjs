@@ -38,6 +38,11 @@ assert(Array.isArray(catalog.courses),"courses must be an array");
 assert(catalog.courses.every(c=>typeof c.title==="string"),"catalog titles must be text");
 const news=await read("public_news");
 assert(Array.isArray(news.ai),"news ai category");
+const pushConfig=await read("push_config");
+assert.equal(typeof pushConfig.available,"boolean","Push availability must be explicit");
+if(pushConfig.available)assert(/^[A-Za-z0-9_-]{80,100}$/.test(pushConfig.public_key),"VAPID public key format");
+else assert.equal(pushConfig.public_key,null,"Unavailable Push must not invent a key");
+assert.equal(pushConfig.private_key,undefined,"Never expose a VAPID signing key");
 const daily=await read("daily_public");
 assert(daily.archive===undefined||Array.isArray(daily.archive),"daily archive shape");
 const link=catalog.courses.find(c=>typeof c.slug==="string" && /^[a-z0-9-]{3,60}$/i.test(c.slug));
@@ -49,8 +54,11 @@ if(link){
 // Real negative tests against the deployed gateway; these never authenticate or mutate data.
 // A failed authorization must not be mistaken for a passing public endpoint test.
 await deny("anonymous portal resolution","resolve_portal",{},401);
+await deny("anonymous Push status","push_status",{},401);
+await deny("anonymous Push registration","push_save",{subscription:{endpoint:"https://example.test/push",keys:{p256dh:"testtesttest",auth:"testtest"}}},401);
+await deny("anonymous Push removal","push_delete",{identity:"https://example.test/push"},401);
 await deny("anonymous private student snapshot","proxy",{path:"/rest/v1/rpc/academy_student_journey_snapshot",method:"POST",body:{}},401);
 await deny("anonymous private financial table","proxy",{path:"/rest/v1/academy_payments?select=id,amount&limit=1",method:"GET"},401);
 await deny("forbidden proxy route","proxy",{path:"/auth/v1/admin/users",method:"GET"},403,{"authorization":"Bearer synthetic-test-only-not-a-session"});
 await deny("invalid public resume token","public_showcase",{token:"00000000-0000-4000-8000-000000000000"},404);
-console.log("PASS: live public catalog ("+catalog.courses.length+" course(s)), news, daily content and registration info; five real anonymous/invalid-access denial checks; no writes.");
+console.log("PASS: live public catalog ("+catalog.courses.length+" course(s)), news, daily content and registration info; eight real anonymous/invalid-access denial checks; no writes.");
