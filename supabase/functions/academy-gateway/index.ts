@@ -352,6 +352,8 @@ Deno.serve(async(req:Request)=>{
   if(b.action==='invite_guardian'){
    const token=bt(req),u=await currentUser(token),role=await currentRole(token,u.id);
    if(!['owner','manager','registrar'].includes(String(role||'')))throw new Error('Not authorized');
+   // Registrars may link academic guardians, but cannot grant family access to financial records.
+   if(b.can_view_finance===true&&!['owner','manager'].includes(String(role||'')))throw gatewayHttpError(403,'مجوز نمایش مالی فقط با تأیید مدیریت صادر می‌شود.');
    const student_id=String(b.student_id||''),email=String(b.email||'').trim().toLowerCase(),full_name=String(b.full_name||'').trim(),rawMobile=String(b.mobile||'').trim(),mobile=rawMobile?guardianPhone(rawMobile):'',relationship=String(b.relationship||'guardian').trim()||'guardian',can_view_finance=!!b.can_view_finance;
    if(!student_id||!email.includes('@')||full_name.length<3)throw new Error('نام، ایمیل و هنرجوی معتبر لازم است');
    const students=await jo(await svc('/rest/v1/academy_students?select=id,full_name,status,archived_at&id=eq.'+encodeURIComponent(student_id)+'&limit=1','GET',null));
