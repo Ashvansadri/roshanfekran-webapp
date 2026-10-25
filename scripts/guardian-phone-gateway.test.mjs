@@ -24,6 +24,7 @@ need(ops,"academy_guardian_phone_invite");
 need(edge,"rawMobile?guardianPhone(rawMobile)");
 need(edge,"guardianPhone(guardians[0].mobile)!==mobile");
 need(edge,"byPhone[0].id!==guardians[0].id");
+need(edge,"...(mobile?{mobile}:{})");
 assert(!portal.includes('id="rf-invite-guardian"'),"Remove duplicate email-only guardian invitation UI");
 need(portal,'data-rfops-tab="family"');
 assert(!/name="email"\s+required/.test(ops.slice(ops.indexOf("function family(){"),ops.indexOf("function applications(){"))),"Guardian onboarding must not require email");

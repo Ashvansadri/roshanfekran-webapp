@@ -368,7 +368,7 @@ Deno.serve(async(req:Request)=>{
      throw gatewayHttpError(403,'تغییر شماره سرپرست موجود نیازمند بررسی مجدد هویت است.');
    }
    let g:any;
-   if(guardians?.length){const rows=await jo(await svc('/rest/v1/academy_guardians?id=eq.'+encodeURIComponent(guardians[0].id),'PATCH',{full_name,mobile:mobile||null,active:true},'return=representation'));g=rows?.[0]||guardians[0]}
+   if(guardians?.length){const rows=await jo(await svc('/rest/v1/academy_guardians?id=eq.'+encodeURIComponent(guardians[0].id),'PATCH',{full_name,active:true,...(mobile?{mobile}:{})},'return=representation'));g=rows?.[0]||guardians[0]}
    else{const rows=await jo(await svc('/rest/v1/academy_guardians','POST',{full_name,email,mobile:mobile||null,active:true},'return=representation'));g=rows?.[0]}
    if(!g?.id)throw new Error('ساخت حساب ولی ناموفق بود');
    await jo(await svc('/rest/v1/academy_guardian_students?on_conflict=guardian_id,student_id','POST',{guardian_id:g.id,student_id,relationship,can_view_academic:true,can_view_attendance:true,can_view_finance,can_receive_notifications:true},'resolution=merge-duplicates,return=representation'));
