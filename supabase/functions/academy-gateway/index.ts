@@ -49,6 +49,27 @@ async function invitedAccount(email:string,password:string,name:string){
  return {user,session};
 }
 function gatewayHttpError(status:number,message:string){return Object.assign(new Error(message),{status})}
+// Accept only recognized browser push gateways; otherwise a future sender could
+// be tricked into making authenticated requests to attacker-chosen/internal hosts.
+function validWebPushEndpoint(identity:string){
+ try{
+  const u=new URL(identity),host=u.hostname.toLowerCase();
+  const allowed=host==='fcm.googleapis.com'||host==='web.push.apple.com'||
+   host==='updates.push.services.mozilla.com'||host==='push.services.mozilla.com'||
+   host.endsWith('.push.services.mozilla.com')||host.endsWith('.notify.windows.com');
+  return identity.length<=2000&&u.protocol==='https:'&&!u.username&&!u.password&&!u.port&&!u.hash&&allowed;
+ }catch{return false}
+}
+function validWebPushKeys(keys:any){
+ if(!keys||typeof keys!=='object'||Array.isArray(keys))return false;
+ try{
+  const size=(value:any)=>{
+   if(typeof value!=='string'||!/^[A-Za-z0-9_-]{8,200}$/.test(value))return -1;
+   return atob(value.replace(/-/g,'+').replace(/_/g,'/')+'='.repeat((4-value.length%4)%4)).length;
+  };
+  return size(keys.p256dh)===65&&size(keys.auth)===16;
+ }catch{return false}
+}
 async function currentUser(token:string){
  if(!token)throw gatewayHttpError(401,'AUTH_REQUIRED');
  const response=await supa('/auth/v1/user','GET',null,token);
@@ -917,13 +938,13 @@ Deno.serve(async(req:Request)=>{
    const platform=typeof sub.endpoint==='string'?'web':String(sub.platform||'native').slice(0,20);
    if(platform==='web'){
     let endpoint:URL;try{endpoint=new URL(identity)}catch{throw new Error('آدرس Push معتبر نیست')}
-    if(endpoint.protocol!=='https:'||endpoint.username||endpoint.password||!endpoint.hostname)throw new Error('آدرس Push باید HTTPS باشد');
+    if(!validWebPushEndpoint(identity))throw new Error('آدرس Push باید متعلق به سرویس معتبر مرورگر و HTTPS باشد');
     const keys=sub.keys;
-    if(!keys||typeof keys!=='object'||!['p256dh','auth'].every(k=>typeof keys[k]==='string'&&/^[A-Za-z0-9_-]{8,200}$/.test(keys[k])))throw new Error('کلیدهای اشتراک Push معتبر نیستند');
+    if(!validWebPushKeys(keys))throw new Error('کلیدهای اشتراک Push معتبر نیستند');
    }
    const scope='/rest/v1/academy_push_subscriptions?user_id=eq.'+encodeURIComponent(u.id)+'&identity=eq.'+encodeURIComponent(identity);
    const existing=await jo(await svc(scope+'&select=id','GET',null));
-   const data={subscription:sub,student_id:st.id,platform,active:true,updated_at:new Date().toISOString()};
+   const data={subscription:platform==='web'?{endpoint:identity,keys:{p256dh:sub.keys.p256dh,auth:sub.keys.auth}}:sub,student_id:st.id,platform,active:true,updated_at:new Date().toISOString()};
    if(Array.isArray(existing)&&existing.length){
     const updated=await jo(await svc(scope,'PATCH',data,'return=representation'));
     if(!Array.isArray(updated)||updated.length!==1)throw gatewayHttpError(403,'ثبت اشتراک امکان‌پذیر نیست');
