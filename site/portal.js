@@ -327,7 +327,7 @@ function staffPage(){
   const inviteBlock=canManage?'<section class="rf-panel rf-invites"><span class="rf-overline">SECURE INVITATIONS</span><h2>دعوت و فعال‌سازی حساب‌ها</h2><p>دعوت هر حساب با لینک اختصاصی امضاشده و مهلت‌دار صادر می‌شود. مدیریت نباید این لینک‌ها را عمومی منتشر کند.</p>'+
  '<div class="rf-invite-grid"><form id="rf-invite-staff" class="rf-form"><h3>همکار و مدرس</h3><label class="portal-field"><span>نام همکار</span><input name="full_name" minlength="3" required/></label><label class="portal-field"><span>ایمیل</span><input name="email" type="email" required dir="ltr"/></label><label class="portal-field"><span>نقش</span><select name="staff_role"><option value="teacher">مدرس</option><option value="viewer">مشاهده‌گر</option><option value="registrar">مسئول ثبت‌نام</option><option value="finance">امور مالی</option><option value="manager">مدیر</option></select></label><button class="btn btn-primary">صدور دعوت امن</button></form>'+
  '<form id="rf-invite-student" class="rf-form"><h3>فعال‌سازی هنرجو</h3><label class="portal-field"><span>پرونده بدون حساب</span><select name="student_id" required>'+studentsOpt+'</select></label><label class="portal-field"><span>ایمیل هنرجو</span><input type="email" name="email" dir="ltr" required/></label><button class="btn btn-outline" '+(studentsOpt?"":"disabled")+' type="submit">ایجاد لینک ورود</button></form>'+
- '<form id="rf-invite-guardian" class="rf-form"><h3>دعوت خانواده</h3><label class="portal-field"><span>هنرجو</span><select name="student_id" required>'+eligibleStudents.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.full_name)+'</option>').join("")+'</select></label><label class="portal-field"><span>نام سرپرست</span><input name="full_name" required minlength="3"/></label><label class="portal-field"><span>ایمیل سرپرست</span><input name="email" type="email" dir="ltr" required/></label><label class="portal-field"><span>شماره همراه (اختیاری)</span><input name="mobile" inputmode="numeric" dir="ltr"/></label><button class="btn btn-outline">ساخت لینک با مجوز والد</button></form></div><p class="rf-caption">با ارسال دعوت، لینک به حافظه کلیپ‌بورد منتقل می‌شود؛ آن را فقط برای شخص مشخص‌شده ارسال کنید. هیچ رمز عبوری به‌جای او تنظیم نمی‌شود.</p></section>':"";
+ '<div class="rf-guardian-onboarding"><span class="rf-overline">FAMILY ACCESS · MOBILE OTP</span><h3>اتصال امن خانواده</h3><p>سرپرست با شماره موبایل تأییدشده و بدون نیاز به ایمیل وارد می‌شود. ثبت ارتباط فقط پس از بررسی هویت و نسبت قانونی توسط مدیریت انجام می‌شود.</p><button class="btn btn-outline" type="button" data-rfops-tab="family">ثبت سرپرست با موبایل ←</button><small>مجوز نظارت و انتشار عمومی رزومه مستقل از یکدیگرند.</small></div></div><p class="rf-caption">با ارسال دعوت، لینک به حافظه کلیپ‌بورد منتقل می‌شود؛ آن را فقط برای شخص مشخص‌شده ارسال کنید. هیچ رمز عبوری به‌جای او تنظیم نمی‌شود.</p></section>':"";
  return '<main class="shell rf-dashboard rf-premium-workspace">'+heading("ACADEMY OPERATIONS",role?.kind==="teacher"?"فضای کاری مدرس":"مرکز مدیریت روشنفکران","اطلاعات دوره، پذیرش، مالی، خانواده و کلاس‌ها در همین سایت بررسی می‌شوند.")+
  actions()+toast()+(window.RFOPS?.render?.(role)||'<div class="rf-panel">در حال بارگذاری عملیات…</div>')+inviteBlock+'</main>';
 }
@@ -367,7 +367,7 @@ async function inviteLink(path,kind,email){
  catch{return "لینک اختصاصی ساخته شد؛ آن را کپی کنید: "+link}
 }
 async function submit(e){
- const f=e.target;if(!["rf-login","rf-activate","rf-profile-save","rf-work-save","rf-avatar-upload","rf-quiz","rf-campaign-launch","rf-invite-staff","rf-invite-student","rf-invite-guardian","rf-student-task","rf-phone-request","rf-phone-verify"].includes(f.id)&&!f.classList.contains("rf-mission-submit"))return;e.preventDefault();if(busy)return;const generation=authEpoch;busy=true;error="";notice="";
+ const f=e.target;if(!["rf-login","rf-activate","rf-profile-save","rf-work-save","rf-avatar-upload","rf-quiz","rf-campaign-launch","rf-invite-staff","rf-invite-student","rf-student-task","rf-phone-request","rf-phone-verify"].includes(f.id)&&!f.classList.contains("rf-mission-submit"))return;e.preventDefault();if(busy)return;const generation=authEpoch;busy=true;error="";notice="";
  try{
  const d=new FormData(f);
  if(f.id==="rf-phone-request"){
@@ -425,13 +425,6 @@ async function submit(e){
   if(!target||target.user_id||target.status==="archived"||target.archived_at)throw Error("این پرونده فعال نیست یا از قبل حساب متصل دارد.");
   const created=await api("invite_student",{student_id:student,email},true);
   showNotice(await inviteLink(created.activation_path,"student",email));
- }else if(f.id==="rf-invite-guardian"){
-  if(!["owner","manager"].includes(String(role?.role||"")))throw Error("صدور دعوت نیازمند مجوز مدیریت است.");
-  const email=String(d.get("email")||"").toLowerCase().trim();
-  const selectedStudent=staffData?.academy_students?.find(x=>x.id===String(d.get("student_id")||""));
-  if(!selectedStudent||selectedStudent.status==="archived"||selectedStudent.archived_at)throw Error("هنرجوی آرشیوشده قابل اتصال به خانواده نیست.");
-  const created=await api("invite_guardian",{student_id:d.get("student_id"),email,full_name:d.get("full_name"),mobile:d.get("mobile"),relationship:"guardian",can_view_finance:false},true);
-  showNotice(await inviteLink(created.activation_path,"guardian",email));
  }else if(f.id==="rf-campaign-launch"){
   if(!["owner","manager"].includes(String(role?.role||"")))throw Error("برای این عملیات دسترسی مدیریت لازم است.");
   const course_id=String(d.get("course_id")||""),start_date=String(d.get("start_date")||"");

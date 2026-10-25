@@ -52,6 +52,8 @@ test('staff sees phone-only legal-guardian invite, without email dependency',asy
  await page.addInitScript(()=>sessionStorage.setItem('rf_safe_session_v1',JSON.stringify({access_token:'admin-test',refresh_token:'ref',expires_at:Date.now()+3600000})));
  await page.goto('/#/workspace',{waitUntil:'domcontentloaded'});
  await expect(page.locator('#rfops-main')).toBeVisible();
+ await expect(page.locator('#rf-invite-guardian')).toHaveCount(0);
+ await expect(page.locator('.rf-guardian-onboarding')).toContainText('بدون نیاز به ایمیل');
  await page.locator('[data-rfops-tab="family"]').click();
  const form=page.locator('#rfops-invite-guardian');
  await expect(form.locator('[name="mobile"]')).toHaveAttribute('required','');

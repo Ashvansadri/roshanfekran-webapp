@@ -21,6 +21,11 @@ need(db,"REVOKE ALL ON FUNCTION public.academy_guardian_phone_claim() FROM PUBLI
 need(db,"GRANT EXECUTE ON FUNCTION public.academy_guardian_phone_claim() TO authenticated");
 need(db,"REVOKE ALL ON FUNCTION public.academy_guardian_otp_consume(text) FROM PUBLIC,anon,authenticated");
 need(ops,"academy_guardian_phone_invite");
+need(edge,"rawMobile?guardianPhone(rawMobile)");
+need(edge,"guardianPhone(guardians[0].mobile)!==mobile");
+need(edge,"byPhone[0].id!==guardians[0].id");
+assert(!portal.includes('id="rf-invite-guardian"'),"Remove duplicate email-only guardian invitation UI");
+need(portal,'data-rfops-tab="family"');
 assert(!/name="email"\s+required/.test(ops.slice(ops.indexOf("function family(){"),ops.indexOf("function applications(){"))),"Guardian onboarding must not require email");
 need(portal,"id=\"rf-phone-request\"");
 need(portal,"id=\"rf-phone-verify\"");

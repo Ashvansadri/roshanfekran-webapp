@@ -352,12 +352,21 @@ Deno.serve(async(req:Request)=>{
   if(b.action==='invite_guardian'){
    const token=bt(req),u=await currentUser(token),role=await currentRole(token,u.id);
    if(!['owner','manager','registrar'].includes(String(role||'')))throw new Error('Not authorized');
-   const student_id=String(b.student_id||''),email=String(b.email||'').trim().toLowerCase(),full_name=String(b.full_name||'').trim(),mobile=String(b.mobile||'').replace(/\D/g,''),relationship=String(b.relationship||'guardian').trim()||'guardian',can_view_finance=!!b.can_view_finance;
+   const student_id=String(b.student_id||''),email=String(b.email||'').trim().toLowerCase(),full_name=String(b.full_name||'').trim(),rawMobile=String(b.mobile||'').trim(),mobile=rawMobile?guardianPhone(rawMobile):'',relationship=String(b.relationship||'guardian').trim()||'guardian',can_view_finance=!!b.can_view_finance;
    if(!student_id||!email.includes('@')||full_name.length<3)throw new Error('نام، ایمیل و هنرجوی معتبر لازم است');
    const students=await jo(await svc('/rest/v1/academy_students?select=id,full_name,status,archived_at&id=eq.'+encodeURIComponent(student_id)+'&limit=1','GET',null));
    if(!students?.length)throw new Error('هنرجو پیدا نشد');
    if(students[0].status==='archived'||students[0].archived_at)throw new Error('هنرجوی آرشیوشده قابل اتصال به سرپرست نیست');
-   let guardians=await jo(await svc('/rest/v1/academy_guardians?select=id,email,full_name,user_id&email=eq.'+encodeURIComponent(email)+'&limit=1','GET',null));
+   let guardians=await jo(await svc('/rest/v1/academy_guardians?select=id,email,full_name,user_id,mobile&email=eq.'+encodeURIComponent(email)+'&limit=1','GET',null));
+   // An email invitation must never silently transfer an existing guardian's verified phone.
+   // SMS OTP lookup and academy_guardian_phone_claim both require canonical E.164.
+   if(mobile){
+    const byPhone=await jo(await svc('/rest/v1/academy_guardians?select=id&mobile=eq.'+encodeURIComponent(mobile)+'&limit=2','GET',null));
+    if(byPhone.length&&(!guardians.length||byPhone[0].id!==guardians[0].id))
+     throw gatewayHttpError(403,'این شماره قبلاً برای سرپرست دیگری ثبت شده است؛ ابتدا هویت را بررسی کنید.');
+    if(guardians.length&&guardians[0].mobile&&guardianPhone(guardians[0].mobile)!==mobile)
+     throw gatewayHttpError(403,'تغییر شماره سرپرست موجود نیازمند بررسی مجدد هویت است.');
+   }
    let g:any;
    if(guardians?.length){const rows=await jo(await svc('/rest/v1/academy_guardians?id=eq.'+encodeURIComponent(guardians[0].id),'PATCH',{full_name,mobile:mobile||null,active:true},'return=representation'));g=rows?.[0]||guardians[0]}
    else{const rows=await jo(await svc('/rest/v1/academy_guardians','POST',{full_name,email,mobile:mobile||null,active:true},'return=representation'));g=rows?.[0]}
