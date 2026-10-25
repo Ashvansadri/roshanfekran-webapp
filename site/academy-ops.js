@@ -40,14 +40,14 @@ const grants={
  registrar:["courses","courseOps","students","enrollments","applications","guardians","links","studentContracts"],
  viewer:["courses"],
 };
-let role=null, request=null, datasets={},failures={},inflight=null,selected="overview",working=false,info="",warning="",generated="";
+let role=null, request=null, datasets={},failures={},inflight=null,selected="students",working=false,info="",warning="",generated="";
 let sessionEpoch=0;
 let attendanceClassId="",attendanceSnapshot=null;
 let riskRows=[],riskFailure="";
 // Clear every private projection and invitation link on logout or account switch.
 function reset(){
  sessionEpoch++;role=null;request=null;datasets={};failures={};inflight=null;
- selected="overview";working=false;info="";warning="";generated="";attendanceClassId="";attendanceSnapshot=null;
+ selected="students";working=false;info="";warning="";generated="";attendanceClassId="";attendanceSnapshot=null;
  riskRows=[];riskFailure="";window.RFDAILY?.reset?.();
 }
 const meRole=()=>String(role?.role||"");
@@ -180,7 +180,7 @@ function allowedTabs(){
 }
 function tabs(){
  const allowed=allowedTabs();
- if(!allowed.some(x=>x[0]===selected))selected="overview";
+ if(!allowed.some(x=>x[0]===selected))selected=allowed.find(x=>x[0]!=="overview")?.[0]||"overview";
  return '<nav class="rfops-tabs" aria-label="بخش‌های مدیریت">'+allowed.map(x=>'<button type="button" data-rfops-tab="'+x[0]+'" aria-pressed="'+String(x[0]===selected)+'">'+x[1]+'</button>').join("")+'</nav>';
 }
 const ovIcons={
@@ -623,5 +623,5 @@ root?.addEventListener("submit",event=>{
  if(form?.dataset?.rfopsForm!=="attendance"&&form?.id!=="rfops-invite-guardian"&&form?.id!=="rfops-assignment"&&form?.id!=="rfops-course-ops"&&form?.id!=="rfops-class")return;
  event.preventDefault();formSubmit(form);
 });
-window.RFOPS={load,render,reset};
+window.RFOPS={load,render,reset,showOverview(){selected="overview"}};
 })();
