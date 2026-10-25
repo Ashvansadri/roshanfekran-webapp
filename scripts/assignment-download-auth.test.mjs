@@ -6,7 +6,7 @@ const start=source.indexOf(marker),end=source.indexOf("  if(b.action==='payment_
 assert(start>=0&&end>start,"Missing unified assignment file action");
 assert.equal(source.indexOf(marker,start+marker.length),-1,"Duplicate unreachable action is forbidden");
 const block=source.slice(start,end);
-const portalGuard=source.match(/function requireStudentPortal\\(st:any\\)\\{[\\s\\S]*?\\n\\}/)?.[0];
+const portalGuard=source.match(/function requireStudentPortal\(st:any\)\{[\s\S]*?\n\}/)?.[0];
 assert(portalGuard,"Student portal access guard missing");
 const requireStudentPortal=new Function("gatewayHttpError",portalGuard.replace("(st:any)","(st)")+";return requireStudentPortal;")((status,message)=>Object.assign(new Error(message),{status}));
 const ids={submission:"11111111-1111-4111-8111-111111111111",student:"22222222-2222-4222-8222-222222222222",assignment:"33333333-3333-4333-8333-333333333333",course:"44444444-4444-4444-8444-444444444444",file:"55555555-5555-4555-8555-555555555555",teacher:"66666666-6666-4666-8666-666666666666",other:"77777777-7777-4777-8777-777777777777"};
