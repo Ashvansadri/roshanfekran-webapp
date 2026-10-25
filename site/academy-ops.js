@@ -40,14 +40,14 @@ const grants={
  registrar:["courses","courseOps","students","enrollments","applications","guardians","links","studentContracts"],
  viewer:["courses"],
 };
-let role=null, request=null, datasets={},failures={},inflight=null,selected="students",working=false,info="",warning="",generated="";
+let role=null, request=null, datasets={},failures={},inflight=null,selected="overview",working=false,info="",warning="",generated="";
 let sessionEpoch=0;
 let attendanceClassId="",attendanceSnapshot=null;
 let riskRows=[],riskFailure="";
 // Clear every private projection and invitation link on logout or account switch.
 function reset(){
  sessionEpoch++;role=null;request=null;datasets={};failures={};inflight=null;
- selected="students";working=false;info="";warning="";generated="";attendanceClassId="";attendanceSnapshot=null;
+ selected="overview";working=false;info="";warning="";generated="";attendanceClassId="";attendanceSnapshot=null;
  riskRows=[];riskFailure="";window.RFDAILY?.reset?.();
 }
 const meRole=()=>String(role?.role||"");
@@ -163,21 +163,90 @@ async function load(nextRole,apiFn){
 const name=(table,id)=>{let x=row(table).find(r=>String(r.id)===String(id));return x?.title||x?.full_name||"—"};
 function section(label,content){return '<section class="rf-panel rfops-section"><div class="rf-panel-title"><span>◈</span><h3>'+esc(label)+'</h3></div>'+content+'</section>'}
 function empty(k,label){return failures[k]?'<div class="rfops-warn">این بخش فعلاً قابل خواندن نیست: '+esc(failures[k])+'</div>':'<div class="rf-empty">'+esc(label||"رکوردی در سطح دسترسی شما موجود نیست.")+'</div>'}
-function tabs(){
- const allowed=[
+
+function allowedTabs(){
+ return [
+ ["overview","نمای کلی",true],
  ["students","پرونده هنرجویان",enrollmentManager()],
- ["family","نظارت خانواده",familyManager()],
  ["applications","درخواست‌های ثبت‌نام",enrollmentManager()],
- ["courses","دوره‌ها و لینک‌ها",enrollmentManager()||meRole()==="viewer"],
  ["finance","مالی و اقساط",financial()],
- ["risk","پایش هنرجویان",["owner","manager","registrar","finance"].includes(meRole())],
  ["contracts","قراردادها",enrollmentManager()],
+ ["courses","دوره‌ها و کلاس‌ها",enrollmentManager()||meRole()==="viewer"],
  ["tasks","تکالیف و کلاس‌ها",teacher()],
+ ["family","نظارت خانواده",familyManager()],
+ ["risk","پایش هنرجویان",["owner","manager","registrar","finance"].includes(meRole())],
  ["daily","انتشار نکته روز",manage()]
  ].filter(x=>x[2]);
- if(!allowed.some(x=>x[0]===selected))selected=allowed[0]?.[0]||"tasks";
+}
+function tabs(){
+ const allowed=allowedTabs();
+ if(!allowed.some(x=>x[0]===selected))selected="overview";
  return '<nav class="rfops-tabs" aria-label="بخش‌های مدیریت">'+allowed.map(x=>'<button type="button" data-rfops-tab="'+x[0]+'" aria-pressed="'+String(x[0]===selected)+'">'+x[1]+'</button>').join("")+'</nav>';
 }
+const ovIcons={
+ overview:'<circle cx="5" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/>',
+ students:'<circle cx="9" cy="8" r="3"/><path d="M2 20v-2a7 7 0 0 1 14 0v2M17 6a3 3 0 0 1 0 6M18 15a5 5 0 0 1 4 5"/>',
+ applications:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',
+ finance:'<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5H10a2.5 2.5 0 0 0 0 5h4a2.5 2.5 0 0 1 0 5H8M12 5v14"/>',
+ contracts:'<path d="M7 3h8l5 5v13H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM15 3v5h5M9 13h7M9 17h5"/>',
+ courses:'<path d="m2 9 10-5 10 5-10 5L2 9zm4 3v5c4 3 8 3 12 0v-5M22 10v7"/>',
+ tasks:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v5M16 3v5M8 15h3m-3 3h7"/>',
+ family:'<circle cx="8" cy="8" r="3"/><circle cx="17" cy="9" r="2"/><path d="M2 21v-3a6 6 0 0 1 12 0v3M15 15a5 5 0 0 1 7 5v1"/>',
+ risk:'<path d="M12 3 2 21h20L12 3zM12 9v5M12 18h.01"/>',
+ daily:'<path d="M9 18h6M10 22h4M8 14c-3-3-2-8 1-10 2-2 6-2 8 0 3 2 4 7 1 10-1 1-2 2-2 4H9c0-2-1-3-1-4z"/>'
+};
+function ovIcon(name){
+ return '<svg viewBox="0 0 24 24" width="32" height="32" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round">'+(ovIcons[name]||ovIcons.overview)+'</svg>';
+}
+function overviewDashboard(){
+ const keys=allowedTabs().filter(x=>x[0]!=="overview");
+ const read=k=>Array.isArray(datasets[k])&&!failures[k];
+ const quantity=(k,fn)=>read(k)?fa(fn?row(k).filter(fn).length:row(k).length):"—";
+ const cards=[
+  ["students","پرونده‌های قابل مشاهده",quantity("students")],
+  ["applications","درخواست‌های ثبت‌نام",quantity("applications")],
+  ["courses","دوره‌های قابل مشاهده",quantity("courses")],
+  ["tasks","جلسات ثبت‌شده",quantity("classes")],
+  ["finance","فیش‌های در انتظار بررسی",quantity("payments",p=>p.status==="pending")]
+ ].filter(x=>keys.some(t=>t[0]===x[0])||(x[0]==="tasks"&&keys.some(t=>t[0]==="tasks")));
+ const descriptions={
+  students:"پرونده، وضعیت حساب و دسترسی هنرجویان",
+  applications:"بررسی درخواست‌های تازه و وضعیت پذیرش",
+  finance:"کنترل اقساط، پرداخت‌ها و گزارش‌های مالی",
+  contracts:"قراردادهای هنرجویان و کارکنان مجاز",
+  courses:"دوره‌ها، برنامه آموزشی و لینک‌های ثبت‌نام",
+  tasks:"تکالیف، جلسات و ارزیابی مدرس",
+  family:"ارتباط مجاز با خانواده و رضایت‌ها",
+  risk:"پیگیری وضعیت آموزشی و اقساط",
+  daily:"تولید، زمان‌بندی و انتشار محتوای آموزشی"
+ };
+ const dateNow=new Intl.DateTimeFormat("fa-IR-u-ca-persian",{timeZone:"Asia/Tehran",weekday:"long",month:"long",day:"numeric",year:"numeric"}).format(new Date());
+ const cardsHTML=keys.map(([k,title])=>
+ '<button type="button" data-rfops-tab="'+k+'" class="rfov-module rfov-module-'+k+'">'+
+ '<span class="rfov-module-art">'+ovIcon(k)+'</span><span class="rfov-module-copy"><strong>'+esc(title)+'</strong><small>'+esc(descriptions[k]||"مدیریت بخش آموزشگاه")+'</small></span>'+
+ '<span class="rfov-module-arrow" aria-hidden="true">↖</span></button>').join("");
+ const metricHTML=cards.map(([k,label,count])=>'<div class="rfov-metric"><span class="rfov-metric-icon">'+ovIcon(k)+'</span><div class="rfov-metric-copy"><span>'+esc(label)+'</span><strong>'+count+'</strong></div></div>').join("");
+ const activities=[];
+ if(read("applications"))row("applications").forEach(x=>activities.push({kind:"applications",title:"درخواست ثبت‌نام",description:"وضعیت: "+String(x.status||"نامشخص"),at:x.submitted_at||"",sortable:Date.parse(x.submitted_at||"")||0}));
+ if(read("payments"))row("payments").forEach(x=>activities.push({kind:"finance",title:"فیش پرداخت ارسالی",description:"وضعیت: "+String(x.status||"نامشخص"),at:x.submitted_at||"",sortable:Date.parse(x.submitted_at||"")||0}));
+ activities.sort((x,y)=>y.sortable-x.sortable);
+ const activityHTML=activities.slice(0,4).map(x=>'<button type="button" class="rfov-activity-row" data-rfops-tab="'+x.kind+'"><span class="rfov-activity-icon">'+ovIcon(x.kind)+'</span><span class="rfov-activity-copy"><strong>'+esc(x.title)+'</strong><small>'+esc(x.description)+'</small></span><time>'+esc(when(x.at))+'</time></button>').join("")||'<p class="rfov-empty">فعالیت ثبت‌شده‌ای در محدوده دسترسی این حساب برای نمایش وجود ندارد.</p>';
+ const quick=keys.filter(x=>["applications","finance","courses","tasks","family","students"].includes(x[0])).slice(0,4);
+ const quickHTML=quick.map(x=>'<button type="button" data-rfops-tab="'+x[0]+'">'+ovIcon(x[0])+'<span>'+esc(x[1])+'</span><b aria-hidden="true">←</b></button>').join("");
+ return '<section class="rfov-overview" aria-label="نمای کلی مدیریت">'+
+ '<div class="rfov-metrics"><div class="rfov-today"><span class="rfov-today-icon">'+ovIcon("tasks")+'</span><div><small>امروز به وقت ایران</small><strong>'+esc(dateNow)+'</strong><span>خوش آمدید به فضای مدیریت</span></div></div>'+metricHTML+'</div>'+
+ '<div class="rfov-overline"><div><span>ACADEMY CONTROL CENTER</span><h2>بخش‌های مدیریت</h2><p>برای ورود به هر بخش، کارت آن را انتخاب کنید.</p></div><span class="rfov-overline-accent">✦</span></div>'+
+ '<div class="rfov-module-grid">'+cardsHTML+'</div>'+
+ '<div class="rfov-bottom-grid">'+
+ '<section class="rfov-bottom-panel rfov-recent"><header><span class="rfov-panel-symbol">'+ovIcon("applications")+'</span><h3>آخرین درخواست‌ها و پرداخت‌ها</h3></header><div class="rfov-activity-list">'+activityHTML+'</div><p class="rfov-caption">اطلاعات از رکوردهای مجاز همین حساب دریافت می‌شوند.</p></section>'+
+ '<section class="rfov-bottom-panel rfov-notices"><header><span class="rfov-panel-symbol">'+ovIcon("daily")+'</span><h3>راهنمای مدیریت امن</h3></header>'+
+ '<div class="rfov-note"><span class="rfov-dot"></span><div><strong>آمار این صفحه واقعی و محدود به مجوز شماست</strong><small>علامت «—» یعنی اطلاعات آن بخش دریافت نشده است.</small></div></div>'+
+ '<div class="rfov-note"><span class="rfov-dot rfov-dot-gold"></span><div><strong>امور مالی نیازمند تأیید مسئول مربوط است</strong><small>پیش از اصلاح مبالغ، قرارداد و دفتر پرداخت را مطابقت دهید.</small></div></div>'+
+ '<div class="rfov-note"><span class="rfov-dot rfov-dot-blue"></span><div><strong>نظارت خانواده با مجوز انجام می‌شود</strong><small>اطلاعات خصوصی فقط برای حساب‌های دارای دسترسی معتبر نمایش داده می‌شود.</small></div></div></section>'+
+ '<section class="rfov-bottom-panel rfov-shortcuts"><header><span class="rfov-panel-symbol">'+ovIcon("overview")+'</span><h3>دسترسی سریع</h3></header><div class="rfov-quick-grid">'+quickHTML+'</div></section>'+
+ '</div></section>';
+}
+
 function students(){
  const rows=row("students");
  return section("پرونده و وضعیت دسترسی هنرجویان",'<div class="rfops-tools"><span>هنرجویان ثبت‌شده: '+fa(rows.length)+'</span><button type="button" data-rfops="reload">تازه‌سازی ↻</button></div>'+
@@ -360,12 +429,13 @@ function tasks(){
 function render(nextRole){
  if(!nextRole||!["staff","teacher"].includes(nextRole.kind))return "";
  role=nextRole;
- // Resolve permitted tab before choosing the content; never render a stale tab from a previous role.
  const nav=tabs();
  let content="";
- switch(selected){case"family":content=family();break;case"risk":content=riskDashboard();break;case"applications":content=applications();break;case"courses":content=courses();break;case"finance":content=finance();break;case"contracts":content=contracts();break;case"tasks":content=tasks();break;case"daily":content=window.RFDAILY?.render?.(nextRole)||"";break;default:content=students();}
- return '<div class="rfops" id="rfops-main"><header class="rfops-top"><div><span>ACADEMY OPERATIONS / LIVE DATA</span><h2>مدیریت یکپارچه آموزشگاه</h2><p>دوره‌ها، ثبت‌نام‌ها، هنرجویان، خانواده، تکالیف و مالی در همین سامانه؛ بدون انتقال به Floot.</p></div><button data-rfops="reload" type="button">تازه‌سازی ↻</button></header>'+alert()+nav+(inflight?'<div class="rfops-loading">در حال دریافت اطلاعات مجاز…</div>':"")+content+'</div>';
+ switch(selected){case"overview":content=overviewDashboard();break;case"family":content=family();break;case"risk":content=riskDashboard();break;case"applications":content=applications();break;case"courses":content=courses();break;case"finance":content=finance();break;case"contracts":content=contracts();break;case"tasks":content=tasks();break;case"daily":content=window.RFDAILY?.render?.(nextRole)||"";break;default:content=students();}
+ const header=selected==="overview"?"":'<header class="rfops-top"><div><span>ACADEMY OPERATIONS / SECURE WORKSPACE</span><h2>'+esc(allowedTabs().find(x=>x[0]===selected)?.[1]||"مدیریت آموزشگاه")+'</h2><p>این بخش از داده‌ها و مجوزهای فعلی حساب شما استفاده می‌کند.</p></div><button data-rfops="reload" type="button">تازه‌سازی ↻</button></header>';
+ return '<div class="rfops rfops-view-'+selected+'" id="rfops-main">'+alert()+(selected==="overview"?content:header+nav+content)+(inflight?'<div class="rfops-loading">در حال دریافت اطلاعات مجاز…</div>':"")+'</div>';
 }
+
 async function act(action,element){
  if(working)return;const generation=sessionEpoch;warning="";info="";
  const id=String(element.dataset.id||""),link=String(element.dataset.link||"");
