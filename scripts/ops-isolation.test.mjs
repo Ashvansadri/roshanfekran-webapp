@@ -26,6 +26,7 @@ assert.equal(fresh,true);
 pending.forEach(({path,resolve})=>resolve(path.includes("/academy_students?")?[{id:"old",full_name:"OLD_ACCOUNT_PRIVATE"}]:[]));
 assert.equal(await oldLoad,false,"Late request must be discarded");
 // Default overview intentionally avoids listing personally identifying names.
+ops.showOverview();
 const summary=ops.render({kind:"staff",role:"owner"});
 assert(summary.includes("rfov-overview"),"Owner should see the new overview");
 assert(!summary.includes("NEW_ACCOUNT_ONLY"),"Overview must not display student identity rows");
