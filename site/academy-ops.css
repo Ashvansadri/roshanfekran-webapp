@@ -104,3 +104,17 @@
 .rfops-export:focus-visible{outline:3px solid #fff;outline-offset:3px}
 @media(max-width:700px){.rfops-attendance-summary{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:420px){.rfops-attendance-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.rfops-export{width:100%}}
+
+/* Student service reply — compact glass editor, keyboard and mobile friendly. */
+.rfops-service-editor{border:1px solid #a8edcb52;border-radius:12px;background:linear-gradient(145deg,#102e32,#09242b);overflow:hidden;margin-top:10px}
+.rfops-service-editor>summary{cursor:pointer;padding:14px 16px;font-size:12px;font-weight:800;color:#c8ffe1;list-style:none}
+.rfops-service-editor>summary::-webkit-details-marker{display:none}
+.rfops-service-editor>summary::after{content:"＋";float:left;font-size:17px}
+.rfops-service-editor[open]>summary::after{content:"−"}
+.rfops-service-editor>summary:focus-visible{outline:2px solid #a8f5d4;outline-offset:-3px}
+.rfops-service-form{grid-template-columns:repeat(2,minmax(0,1fr));margin:0;padding:15px;border:0;border-top:1px solid #9de8c438;background:transparent}
+.rfops-service-form textarea{min-height:94px;resize:vertical}
+.rfops-service-form button{cursor:pointer;font:800 12px Estedad,Vazirmatn,Tahoma,sans-serif;color:#082e26;background:linear-gradient(120deg,#c3ffe1,#85dcbf);border:1px solid #c8ffe5;border-radius:9px;padding:12px 16px;min-height:46px}
+.rfops-service-form button:disabled{opacity:.5;cursor:wait}
+.rfops-service-form small{color:#a5caba;font-size:10px;line-height:2}
+@media(max-width:660px){.rfops-service-form{grid-template-columns:1fr;padding:12px}}
