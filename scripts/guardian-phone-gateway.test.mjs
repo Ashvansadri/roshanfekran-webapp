@@ -26,6 +26,7 @@ need(edge,"guardianPhone(guardians[0].mobile)!==mobile");
 need(edge,"byPhone[0].id!==guardians[0].id");
 need(edge,"...(mobile?{mobile}:{})");
 need(edge,"Registrars may link academic guardians, but cannot grant family access to financial records.");
+need(edge,"if(Boolean(b.can_view_finance)&&");
 assert(!portal.includes('id="rf-invite-guardian"'),"Remove duplicate email-only guardian invitation UI");
 need(portal,'data-rfops-tab="family"');
 assert(!/name="email"\s+required/.test(ops.slice(ops.indexOf("function family(){"),ops.indexOf("function applications(){"))),"Guardian onboarding must not require email");
