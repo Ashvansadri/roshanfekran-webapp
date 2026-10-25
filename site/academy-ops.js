@@ -256,6 +256,18 @@ function finance(){
  const remaining=open.reduce((total,i)=>total+Math.max(0,Number(i.amount||0)-Number(i.paid_amount||0)),0);
  const posted=ledger.filter(p=>p.status==="posted");
  const postedTotal=posted.reduce((sum,p)=>sum+(Number(p.amount)||0),0);
+ // Compare posted ledger with contracted final fees; do not infer debt from missing schedules.
+ // A capped/RLS-scoped projection may be incomplete, so only report positive discrepancies.
+ const postedByEnrollment=new Map();
+ for(const p of posted){
+  const key=String(p.enrollment_id);
+  postedByEnrollment.set(key,(postedByEnrollment.get(key)||0)+Number(p.amount||0));
+ }
+ const overpaid=enrollments.filter(e=>e.final_fee!==null&&e.final_fee!==undefined&&
+  Number.isFinite(Number(e.final_fee))&&
+  (postedByEnrollment.get(String(e.id))||0)>Number(e.final_fee));
+ const overpaidExcess=overpaid.reduce((sum,e)=>sum+
+  (postedByEnrollment.get(String(e.id))||0)-Number(e.final_fee),0);
  const schedule=inst.slice().sort((a,b)=>String(a.due_date||"").localeCompare(String(b.due_date||"")));
  const ready=key=>Array.isArray(datasets[key]);
  const figure=(key,value)=>ready(key)?fa(value):"—";
@@ -277,6 +289,8 @@ function finance(){
  '<div><strong>'+(ready("enrollments")&&ready("installments")?fa(missingSchedules.length):"—")+'</strong><span>ثبت‌نام بدون برنامه اقساط</span></div></div>'+
  (ready("enrollments")&&ready("installments")&&missingSchedules.length?
   '<div class="rfops-warn" role="status">'+fa(missingSchedules.length)+' ثبت‌نام برنامه اقساط ندارد؛ این موضوع لزوماً بدهی یا نقص پرونده نیست (ممکن است نقدی باشد). برای تعیین مانده واقعی، دفتر پرداخت و قرارداد بررسی شود.</div>':"")+
+ (ready("enrollments")&&ready("ledgerPayments")&&overpaid.length?
+  '<div class="rfops-warn" role="alert">'+fa(overpaid.length)+' پرونده با پرداخت ثبت‌شده بیش از شهریه نهایی شناسایی شد (اختلاف مجموع: '+money(overpaidExcess)+'). پیش از اصلاح، قرارداد و دفتر مالی را تطبیق دهید. هشدار بر اساس رکوردهای بارگذاری‌شده است.</div>':"")+
  '<h4>سررسید و وضعیت اقساط</h4>'+
  (schedule.length?'<div class="rfops-table-wrap"><table><thead><tr><th>هنرجو / دوره</th><th>قسط</th><th>سررسید</th><th>مبلغ</th><th>پرداخت‌شده</th><th>مانده</th><th>وضعیت</th></tr></thead><tbody>'+schedule.map(i=>{
   const e=enrollmentMap.get(String(i.enrollment_id));

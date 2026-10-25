@@ -15,7 +15,7 @@ const requests=[];
 const data={
  academy_courses:[{id:"c1",title:"دوره آزمون",status:"active"}],
  academy_students:[{id:"s1",full_name:"هنرجوی آزمایشی",user_id:"u1",status:"active"}],
- academy_enrollments:[{id:"e1",student_id:"s1",course_id:"c1",status:"active"},{id:"e2",student_id:"s1",course_id:"c1",status:"active"}],
+ academy_enrollments:[{id:"e1",student_id:"s1",course_id:"c1",status:"active",final_fee:200},{id:"e2",student_id:"s1",course_id:"c1",status:"active",final_fee:1000}],
  academy_installments:[{id:"i1",enrollment_id:"e1",installment_no:1,amount:1000,paid_amount:300,due_date:"2026-11-01",status:"partial"}],
  academy_payment_submissions:[{id:"p1",amount:300,method:"bank",status:"pending",submitted_at:"2026-10-23"}],
  academy_payments:[{id:"pay1",enrollment_id:"e1",amount:300,paid_at:"2026-10-23",status:"posted"},{id:"pay2",enrollment_id:"e1",amount:500,paid_at:"2026-10-24",status:"void"}]
@@ -33,6 +33,8 @@ assert(finance.includes("۷۰۰ تومان"),"Outstanding balance must be amount
 assert(finance.includes("۳۰۰ تومان"),"Paid installment amount must be shown");
 assert(finance.includes("سررسید و وضعیت اقساط"),"Installment schedule missing");
 assert(finance.includes("دفتر پرداخت‌های ثبت‌شده"),"Posted payment ledger must be separate from receipt submissions");
+assert(finance.includes("۱ پرونده با پرداخت ثبت‌شده بیش از شهریه نهایی"),"Overpaid enrollment should trigger a reconciliation warning");
+assert(finance.includes("۱۰۰ تومان"),"Overpayment discrepancy must use posted payments minus final fee");
 assert(finance.includes("جمع پرداخت‌های ثبت‌شده در دفتر"),"Posted payment summary missing");
 assert(finance.includes("ثبت‌نام بدون برنامه اقساط"),"Unscheduled enrollment warning missing");
 assert(finance.includes("۱ ثبت‌نام برنامه اقساط ندارد"),"Do not infer settlement from missing schedule");
