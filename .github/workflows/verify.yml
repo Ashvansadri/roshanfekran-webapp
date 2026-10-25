@@ -20,6 +20,8 @@ jobs:
         run: node scripts/submission-write-grants.test.mjs
       - name: Verify archived-teacher and staff authorization guards
         run: node scripts/archived-teacher-guards.test.mjs
+      - name: Check API DDL privilege hardening migration
+        run: node scripts/api-ddl-privileges.test.mjs
       - name: Read-only smoke test against live Supabase public gateway
         run: node scripts/api-smoke.mjs
   browser-smoke:
