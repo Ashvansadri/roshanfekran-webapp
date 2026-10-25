@@ -37,7 +37,7 @@ for(const [name,role,userId,assignedId,status,archivedAt,filePath,allowed,expect
  const run=new Function("bt","currentUser","currentRole","svc","jo","studentByUser","signedObject","jr","requireStudentPortal","return async function run(b,req){"+block+"throw Error('no action');}")(req=>"synthetic-token",async()=>({id:userId}),async()=>role,svc,jo,async()=>userId===ids.student?{id:ids.student,portal_enabled:true,status:"active",archived_at:null}:null,async(bucket,path)=>{signed++;bucketUsed=bucket;return "https://example.invalid/"+bucket+"/"+path},x=>x,requireStudentPortal);
  const invoke=()=>run({action:"assignment_file_url",submission_id:ids.submission},{});
  if(allowed){const res=await invoke();assert.equal(res.ok,true,name);assert.equal(signed,1,name);assert.equal(bucketUsed,expectedBucket,name)}
- else{await assert.rejects(invoke(),/Not authorized|مسیر فایل معتبر نیست/,name);assert.equal(signed,0,name)}
+ else{await assert.rejects(invoke(),/Not authorized|Student portal access required|مسیر فایل معتبر نیست/,name);assert.equal(signed,0,name)}
  if(role==="teacher")assert(queries.some(p=>p.includes("teacher_user_id=eq."+userId)&&p.includes("archived_at=is.null")),name+" must verify exact active course");
 }
 console.log("PASS: 11 private assignment download scenarios, teacher isolation, owner/student permissions and both storage buckets.");
