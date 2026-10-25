@@ -30,6 +30,7 @@ const configs={
  links:["academy_guardian_students","id,guardian_id,student_id,can_view_academic,can_view_attendance,can_view_finance,can_receive_notifications"],
  studentContracts:["academy_student_contracts","id,student_id,course_id,contract_no,start_date,end_date,status,delivered_copy"],
  staffContracts:["academy_staff_contracts","id,staff_user_id,contract_no,contract_type,start_date,end_date,status"],
+ serviceRequests:["academy_student_requests","id,student_id,category,subject,body,status,priority,staff_note,created_at,updated_at"],
  publicLinks:["academy_course_public_links","id,course_id,slug,active,show_in_public_catalog,deposit_amount,installment_enabled,installment_markup_percent,installment_max_count"]
 };
 const grants={
@@ -37,7 +38,7 @@ const grants={
  manager:Object.keys(configs),
  finance:["courses","enrollments","payments","ledgerPayments","installments","students"],
  teacher:["courses","classes","assignments","submissions"],
- registrar:["courses","courseOps","students","enrollments","applications","guardians","links","studentContracts"],
+ registrar:["courses","courseOps","students","enrollments","applications","guardians","links","studentContracts","serviceRequests"],
  viewer:["courses"],
 };
 let role=null, request=null, datasets={},failures={},inflight=null,selected="students",working=false,info="",warning="",generated="";
@@ -133,7 +134,7 @@ async function load(nextRole,apiFn){
   const riskPath="/rest/v1/rpc/academy_list_student_risk?select=student_id,full_name,status,risk_score,risk_reasons,overdue_count,overdue_amount,absent_count,required_docs,approved_docs";
   const jobs=keys.map(async key=>{
    const [table,cols]=configs[key];
-   return proxy("/rest/v1/"+table+"?select="+cols+"&limit=150&order="+(key==="applications"?"submitted_at":key==="payments"?"submitted_at":key==="assignments"?"created_at":"id")+".desc");
+   return proxy("/rest/v1/"+table+"?select="+cols+"&limit=150&order="+(key==="applications"?"submitted_at":key==="payments"?"submitted_at":["assignments","serviceRequests"].includes(key)?"created_at":"id")+".desc");
   });
   if(canSeeRisk)jobs.push(proxy(riskPath,"POST",{}));
   if(["owner","manager"].includes(String(nextRole?.role||"")))jobs.push(window.RFDAILY?.load?.(nextRole,request));
@@ -169,6 +170,7 @@ function allowedTabs(){
  ["overview","نمای کلی",true],
  ["students","پرونده هنرجویان",enrollmentManager()],
  ["applications","درخواست‌های ثبت‌نام",enrollmentManager()],
+ ["serviceDesk","خدمات هنرجویی",enrollmentManager()],
  ["finance","مالی و اقساط",financial()],
  ["contracts","قراردادها",enrollmentManager()],
  ["courses","دوره‌ها و کلاس‌ها",enrollmentManager()||meRole()==="viewer"],
@@ -186,6 +188,7 @@ function tabs(){
 const ovIcons={
  overview:'<circle cx="5" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/>',
  students:'<circle cx="9" cy="8" r="3"/><path d="M2 20v-2a7 7 0 0 1 14 0v2M17 6a3 3 0 0 1 0 6M18 15a5 5 0 0 1 4 5"/>',
+ serviceDesk:'<path d="M4 5h16v14H4zM8 10h8M8 14h5"/>',
  applications:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',
  finance:'<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5H10a2.5 2.5 0 0 0 0 5h4a2.5 2.5 0 0 1 0 5H8M12 5v14"/>',
  contracts:'<path d="M7 3h8l5 5v13H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM15 3v5h5M9 13h7M9 17h5"/>',
@@ -212,6 +215,7 @@ function overviewDashboard(){
  const descriptions={
   students:"پرونده، وضعیت حساب و دسترسی هنرجویان",
   applications:"بررسی درخواست‌های تازه و وضعیت پذیرش",
+  serviceDesk:"صندوق امن درخواست‌های خدمات هنرجویی",
   finance:"کنترل اقساط، پرداخت‌ها و گزارش‌های مالی",
   contracts:"قراردادهای هنرجویان و کارکنان مجاز",
   courses:"دوره‌ها، برنامه آموزشی و لینک‌های ثبت‌نام",
@@ -282,6 +286,28 @@ function family(){
   return '<tr><td>'+esc(name("students",l.student_id))+'</td><td>'+esc(g?.full_name||"—")+'<small>'+esc(g?.mobile?g.mobile.replace(/(\+989\d{2})\d{5}(\d{2})/,"$1•••••$2"):g?.email||"")+'</small></td><td>'+(g?.user_id?"فعال":"منتظر فعال‌سازی")+'</td><td><button class="rfops-switch" type="button" data-rfops="family-switch" data-link="'+esc(l.id)+'" data-enabled="'+String(!l.can_view_academic)+'" aria-pressed="'+String(!!l.can_view_academic)+'">'+(l.can_view_academic?"✓ روشن":"○ خاموش")+'</button></td><td>'+(l.can_receive_notifications&&l.can_view_academic?"فعال":"خاموش")+'</td></tr>';
  }).join("")+'</tbody></table></div>':empty("links","هنوز سرپرستی به هنرجو متصل نشده است."))+
  '<p class="rf-caption">خاموش‌کردن نظارت، دیدن پرونده، تکالیف و اعلان‌های مربوط به این هنرجو را در سرور قطع می‌کند. ارسال اعلان گوشی نیازمند اجازه Push سرپرست است؛ اعلان‌های داخل سامانه به‌صورت خودکار ایجاد می‌شوند.</p>');
+}
+function serviceDesk(){
+ // Staff inbox is deliberately read-only until a narrow, audited server-side
+ // transition RPC exists. Never patch student-owned fields from this screen.
+ if(!enrollmentManager())return "";
+ if(!Array.isArray(datasets.students)||failures.students)
+  return section("درخواست‌های خدمات هنرجویی",'<div class="rfops-warn" role="alert">فهرست هنرجویان فعال دریافت نشد؛ برای جلوگیری از نمایش اطلاعات نامرتبط، درخواست‌ها پنهان شدند.</div>');
+ if(!Array.isArray(datasets.serviceRequests)||failures.serviceRequests)
+  return section("درخواست‌های خدمات هنرجویی",'<div class="rfops-warn" role="alert">صندوق درخواست‌ها از سرور قابل دریافت نیست. هیچ داده‌ای به‌عنوان صفر درخواست نمایش داده نمی‌شود.</div>');
+ const active=new Set(row("students").filter(s=>s.status!=="archived"&&s.archived_at==null).map(s=>String(s.id)));
+ const items=row("serviceRequests").filter(x=>active.has(String(x.student_id)));
+ const labels={financial:"مالی و اقساط",certificate:"گواهی",schedule:"برنامه کلاس",absence:"حضور و غیاب",documents:"مدارک",other:"سایر"};
+ const status={open:"جدید",in_progress:"در حال بررسی",resolved:"پاسخ داده‌شده",closed:"بسته"};
+ const pending=items.filter(x=>!["resolved","closed"].includes(x.status)).length;
+ const cards=items.map(x=>'<article class="rfops-card"><div><strong>'+esc(x.subject||"درخواست بدون عنوان")+'</strong><span>'+esc(name("students",x.student_id))+'</span></div>'+
+  '<p>'+esc(labels[x.category]||"سایر")+' · '+esc(status[x.status]||x.status||"نامشخص")+' · '+when(x.created_at)+'</p>'+
+  '<p class="rfops-service-body">'+esc(x.body||"")+'</p>'+
+  (x.staff_note?'<div class="rfops-help"><strong>پاسخ ثبت‌شده</strong><span>'+esc(x.staff_note)+'</span></div>':"")+'</article>').join("");
+ return section("صندوق خدمات هنرجویی",'<p>درخواست‌های مالی، گواهی، برنامه کلاس، غیبت و مدارک از پورتال مستقل هنرجو دریافت می‌شوند. این نما فقط خواندنی است؛ تغییر وضعیت پس از تکمیل مجوز و ثبت رویداد سمت سرور فعال خواهد شد.</p>'+
+  '<div class="rfops-summary"><div><strong>'+fa(items.length)+'</strong><span>درخواست قابل مشاهده</span></div><div><strong>'+fa(pending)+'</strong><span>در انتظار رسیدگی</span></div></div>'+
+  (items.length?'<div class="rfops-cards">'+cards+'</div>':empty("serviceRequests","درخواستی از هنرجویان فعال ثبت نشده است."))+
+  '<p class="rf-caption">فقط پرونده‌های فعال در این فهرست نمایش داده می‌شوند. حداکثر ۱۵۰ درخواست اخیر خوانده می‌شود و هیچ اطلاعاتی از این بخش به مرورگر عمومی ارسال نمی‌شود.</p>');
 }
 function applications(){
  const items=row("applications");
@@ -431,7 +457,7 @@ function render(nextRole){
  role=nextRole;
  const nav=tabs();
  let content="";
- switch(selected){case"overview":content=overviewDashboard();break;case"family":content=family();break;case"risk":content=riskDashboard();break;case"applications":content=applications();break;case"courses":content=courses();break;case"finance":content=finance();break;case"contracts":content=contracts();break;case"tasks":content=tasks();break;case"daily":content=window.RFDAILY?.render?.(nextRole)||"";break;default:content=students();}
+ switch(selected){case"overview":content=overviewDashboard();break;case"family":content=family();break;case"risk":content=riskDashboard();break;case"applications":content=applications();break;case"serviceDesk":content=serviceDesk();break;case"courses":content=courses();break;case"finance":content=finance();break;case"contracts":content=contracts();break;case"tasks":content=tasks();break;case"daily":content=window.RFDAILY?.render?.(nextRole)||"";break;default:content=students();}
  const header=selected==="overview"?"":'<header class="rfops-top"><div><span>ACADEMY OPERATIONS / SECURE WORKSPACE</span><h2>'+esc(allowedTabs().find(x=>x[0]===selected)?.[1]||"مدیریت آموزشگاه")+'</h2><p>این بخش از داده‌ها و مجوزهای فعلی حساب شما استفاده می‌کند.</p></div><button data-rfops="reload" type="button">تازه‌سازی ↻</button></header>';
  return '<div class="rfops rfops-view-'+selected+'" id="rfops-main">'+alert()+(selected==="overview"?content+(meRole()==="viewer"?'<div class="rfov-all-sections"><span>همه بخش‌های مجاز</span>'+nav+'</div>':""):header+nav+content)+(inflight?'<div class="rfops-loading">در حال دریافت اطلاعات مجاز…</div>':"")+'</div>';
 }
