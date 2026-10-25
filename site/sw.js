@@ -1,5 +1,5 @@
 /* Public offline shell only. Private data and authentication responses are never cached. */
-const CACHE="rf-academy-public-v15";
+const CACHE="rf-academy-public-v16";
 const SHELL=[
  "/",
  "/index.html",
@@ -71,4 +71,59 @@ self.addEventListener("fetch",event=>{
   }
   return response;
  }).catch(()=>caches.match(request)));
+});
+
+
+/*
+ * Push delivery is opt-in and requires a separately configured VAPID
+ * subscription + authorized sender. The public offline cache never stores
+ * push payloads, user tokens, or private API responses.
+ */
+function safePushRoute(value){
+ const fallback="/#/updates";
+ if(typeof value!=="string"||value.length>400)return fallback;
+ try{
+  const url=new URL(value,self.location.origin);
+  if(url.origin!==self.location.origin)return fallback;
+  if(url.pathname!=="/"&&url.pathname!=="/index.html")return fallback;
+  if(url.search)return fallback;
+  if(!/^#\\/(?:updates|portal|courses|missions)(?:[/?].*)?$/.test(url.hash))return fallback;
+  return "/"+url.hash;
+ }catch{return fallback}
+}
+self.addEventListener("push",event=>{
+ let payload={};
+ if(event.data){
+  try{payload=event.data.json()}catch{
+   try{payload={body:event.data.text()}}catch{payload={}}
+  }
+ }
+ if(!payload||typeof payload!=="object"||Array.isArray(payload))payload={};
+ const title=typeof payload.title==="string"&&payload.title.trim()
+  ?payload.title.trim().slice(0,100):"روشنفکران | نکته روز";
+ const body=typeof payload.body==="string"&&payload.body.trim()
+  ?payload.body.trim().slice(0,220):"محتوای آموزشی تازه منتشر شد.";
+ const route=safePushRoute(payload.url||"/#/updates");
+ event.waitUntil(self.registration.showNotification(title,{
+  body,icon:"/assets/rf-icon-192.png",badge:"/assets/rf-icon-192.png",
+  tag:typeof payload.tag==="string"?payload.tag.slice(0,60):"rf-daily-learning",
+  data:{url:route}
+ }));
+});
+self.addEventListener("notificationclick",event=>{
+ event.notification.close();
+ event.waitUntil((async()=>{
+  const route=safePushRoute(event.notification?.data?.url);
+  const destination=new URL(route,self.location.origin).href;
+  const windows=await self.clients.matchAll({type:"window",includeUncontrolled:true});
+  for(const client of windows){
+   try{
+    if(new URL(client.url).origin!==self.location.origin)continue;
+    await client.navigate(destination);
+    await client.focus();
+    return;
+   }catch{/* Try the next window or open a new one. */}
+  }
+  await self.clients.openWindow(destination);
+ })());
 });
