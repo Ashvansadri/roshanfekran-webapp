@@ -111,6 +111,57 @@ async function guardianPushEligible(userId:string){
  return Array.isArray(students)&&students.length>0;
 }
 
+
+// Dispatch-time consent and account-status recheck. A stored subscription is
+// not proof of continuing access: accounts, enrollments and guardian grants
+// may have been archived or revoked after opt-in.
+function filterPushRecipients(subs:any[],students:any[],guardians:any[],links:any[],courseStudents:Set<string>|null){
+ const studentMap=new Map((Array.isArray(students)?students:[])
+  .filter((s:any)=>s?.status==='active'&&!s.archived_at)
+  .map((s:any)=>[String(s.id),s]));
+ const guardianMap=new Map((Array.isArray(guardians)?guardians:[])
+  .filter((g:any)=>g?.active===true&&g.user_id)
+  .map((g:any)=>[String(g.user_id),String(g.id)]));
+ const guardianStudents=new Map<string,Set<string>>();
+ for(const link of (Array.isArray(links)?links:[])){
+  if(link?.can_view_academic!==true||link?.can_receive_notifications!==true)continue;
+  const studentId=String(link.student_id||''),guardianId=String(link.guardian_id||'');
+  if(!studentMap.has(studentId))continue;
+  if(!guardianStudents.has(guardianId))guardianStudents.set(guardianId,new Set());
+  guardianStudents.get(guardianId)!.add(studentId);
+ }
+ const seen=new Set<string>();
+ return (Array.isArray(subs)?subs:[]).filter((sub:any)=>{
+  const identity=String(sub?.identity||''),userId=String(sub?.user_id||'');
+  if(!identity||!userId||seen.has(identity)||sub?.active===false)return false;
+  let allowed=false;
+  if(sub.student_id){
+   const id=String(sub.student_id),student:any=studentMap.get(id);
+   allowed=!!student?.portal_enabled&&String(student.user_id||'')===userId&&
+    (!courseStudents||courseStudents.has(id));
+  }else{
+   const guardianId=guardianMap.get(userId);
+   const childIds=guardianId?guardianStudents.get(guardianId):null;
+   allowed=!!childIds&&Array.from(childIds).some(id=>!courseStudents||courseStudents.has(id));
+  }
+  if(allowed)seen.add(identity);
+  return allowed;
+ });
+}
+async function eligiblePushSubscriptions(subs:any[],courseId:string|null){
+ if(!Array.isArray(subs)||!subs.length)return [];
+ const guardianNeeded=subs.some((s:any)=>!s.student_id);
+ const tasks=[
+  svc('/rest/v1/academy_students?select=id,user_id,portal_enabled,status,archived_at&status=eq.active&archived_at=is.null','GET',null).then(jo),
+  guardianNeeded?svc('/rest/v1/academy_guardians?select=id,user_id,active&active=eq.true&user_id=not.is.null','GET',null).then(jo):Promise.resolve([]),
+  guardianNeeded?svc('/rest/v1/academy_guardian_students?select=guardian_id,student_id,can_view_academic,can_receive_notifications&can_view_academic=eq.true&can_receive_notifications=eq.true','GET',null).then(jo):Promise.resolve([]),
+  courseId?svc('/rest/v1/academy_enrollments?select=student_id&course_id=eq.'+encodeURIComponent(courseId)+'&status=eq.active','GET',null).then(jo):Promise.resolve([])
+ ];
+ const [students,guardians,links,enrollments]=await Promise.all(tasks);
+ const courseStudents=courseId?new Set((Array.isArray(enrollments)?enrollments:[]).map((e:any)=>String(e.student_id))):null;
+ return filterPushRecipients(subs,students,guardians,links,courseStudents);
+}
+
 async function sha256(v:string){const d=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v));return Array.from(new Uint8Array(d)).map(x=>x.toString(16).padStart(2,'0')).join('')}
 
 function mimeExt(mime:string){return mime==='image/jpeg'?'jpg':mime==='image/png'?'png':mime==='image/webp'?'webp':mime==='application/pdf'?'pdf':''}
@@ -1085,13 +1136,8 @@ Deno.serve(async(req:Request)=>{
     :'/rest/v1/academy_daily_content?select=*&publish_date=eq.'+encodeURIComponent(today)+'&status=eq.published&push_enabled=eq.true&push_sent_at=is.null&order=audience.asc&limit=1';
    const tips=await jo(await svc(q,'GET',null));if(!tips?.length)throw new Error('محتوای منتشرشده و قابل اعلان پیدا نشد');
    const tip=tips[0];
-   let subs=await jo(await svc('/rest/v1/academy_push_subscriptions?select=identity,student_id,subscription&active=eq.true','GET',null));
-   subs=Array.isArray(subs)?subs:[];
-   if(tip.audience==='course'){
-    const ens=await jo(await svc('/rest/v1/academy_enrollments?select=student_id&course_id=eq.'+encodeURIComponent(tip.course_id)+'&status=eq.active','GET',null));
-    const allowed=new Set((Array.isArray(ens)?ens:[]).map((x:any)=>String(x.student_id)));
-    subs=subs.filter((x:any)=>allowed.has(String(x.student_id)));
-   }
+   const stored=await jo(await svc('/rest/v1/academy_push_subscriptions?select=identity,user_id,student_id,subscription,active&active=eq.true','GET',null));
+   const subs=await eligiblePushSubscriptions(stored,tip.audience==='course'?String(tip.course_id||''):null);
    return jr({ok:true,tip,subscriptions:subs.map((x:any)=>({identity:x.identity,subscription:x.subscription}))});
   }
   if(b.action==='daily_admin_push_cleanup'){
@@ -1120,16 +1166,11 @@ Deno.serve(async(req:Request)=>{
    const tips=await jo(await svc('/rest/v1/academy_daily_content?select=id,publish_date,title,body,category,audience,course_id,push_title,push_body,push_enabled,push_sent_at&status=eq.published&push_enabled=eq.true&push_sent_at=is.null&publish_date=eq.'+encodeURIComponent(today)+'&order=audience.asc','GET',null));
    const allTips=Array.isArray(tips)?tips:[];
    if(!allTips.length)return jr({ok:true,date:today,batches:[]});
-   const subs=await jo(await svc('/rest/v1/academy_push_subscriptions?select=id,identity,student_id,subscription,platform&active=eq.true','GET',null));
-   const activeSubs=Array.isArray(subs)?subs:[];
+   const stored=await jo(await svc('/rest/v1/academy_push_subscriptions?select=id,identity,user_id,student_id,subscription,platform,active&active=eq.true','GET',null));
+   const activeSubs=Array.isArray(stored)?stored:[];
    const batches:any[]=[];
    for(const tip of allTips){
-    let selected=activeSubs;
-    if(tip.audience==='course'){
-     const ens=await jo(await svc('/rest/v1/academy_enrollments?select=student_id&course_id=eq.'+encodeURIComponent(String(tip.course_id||''))+'&status=eq.active','GET',null));
-     const allowed=new Set((Array.isArray(ens)?ens:[]).map((x:any)=>String(x.student_id)));
-     selected=activeSubs.filter((x:any)=>allowed.has(String(x.student_id)));
-    }
+    const selected=await eligiblePushSubscriptions(activeSubs,tip.audience==='course'?String(tip.course_id||''):null);
     batches.push({tip,subscriptions:selected.map((x:any)=>({id:x.id,identity:x.identity,subscription:x.subscription,platform:x.platform}))});
    }
    return jr({ok:true,date:today,batches});
