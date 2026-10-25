@@ -31,6 +31,7 @@ const configs={
  studentContracts:["academy_student_contracts","id,student_id,course_id,contract_no,start_date,end_date,status,delivered_copy"],
  staffContracts:["academy_staff_contracts","id,staff_user_id,contract_no,contract_type,start_date,end_date,status"],
  serviceRequests:["academy_student_requests","id,student_id,category,subject,body,status,priority,staff_note,created_at,updated_at"],
+ documents:["academy_student_documents","id,student_id,title,file_name,mime_type,status,review_note,created_at"],
  publicLinks:["academy_course_public_links","id,course_id,slug,active,show_in_public_catalog,deposit_amount,installment_enabled,installment_markup_percent,installment_max_count"]
 };
 const grants={
@@ -38,18 +39,19 @@ const grants={
  manager:Object.keys(configs),
  finance:["courses","enrollments","payments","ledgerPayments","installments","students"],
  teacher:["courses","classes","assignments","submissions"],
- registrar:["courses","courseOps","students","enrollments","applications","guardians","links","studentContracts","serviceRequests"],
+ registrar:["courses","courseOps","students","enrollments","applications","guardians","links","studentContracts","serviceRequests","documents"],
  viewer:["courses"],
 };
 let role=null, request=null, datasets={},failures={},inflight=null,selected="students",working=false,info="",warning="",generated="";
 let sessionEpoch=0;
 let attendanceClassId="",attendanceSnapshot=null;
 let riskRows=[],riskFailure="";
+let documentLink=null;
 // Clear every private projection and invitation link on logout or account switch.
 function reset(){
  sessionEpoch++;role=null;request=null;datasets={};failures={};inflight=null;
  selected="students";working=false;info="";warning="";generated="";attendanceClassId="";attendanceSnapshot=null;
- riskRows=[];riskFailure="";window.RFDAILY?.reset?.();
+ riskRows=[];riskFailure="";documentLink=null;window.RFDAILY?.reset?.();
 }
 const meRole=()=>String(role?.role||"");
 const manage=()=>["owner","manager"].includes(meRole());
@@ -124,6 +126,7 @@ async function loadTeacher(generation){
 }
 async function load(nextRole,apiFn){
  role=nextRole;request=apiFn;if(inflight)return inflight;
+ documentLink=null;
  const generation=sessionEpoch;
  let job;
  job=(async()=>{
@@ -134,7 +137,7 @@ async function load(nextRole,apiFn){
   const riskPath="/rest/v1/rpc/academy_list_student_risk?select=student_id,full_name,status,risk_score,risk_reasons,overdue_count,overdue_amount,absent_count,required_docs,approved_docs";
   const jobs=keys.map(async key=>{
    const [table,cols]=configs[key];
-   return proxy("/rest/v1/"+table+"?select="+cols+"&limit=150&order="+(key==="applications"?"submitted_at":key==="payments"?"submitted_at":["assignments","serviceRequests"].includes(key)?"created_at":"id")+".desc");
+   return proxy("/rest/v1/"+table+"?select="+cols+"&limit=150&order="+(key==="applications"?"submitted_at":key==="payments"?"submitted_at":["assignments","serviceRequests","documents"].includes(key)?"created_at":"id")+".desc");
   });
   if(canSeeRisk)jobs.push(proxy(riskPath,"POST",{}));
   if(["owner","manager"].includes(String(nextRole?.role||"")))jobs.push(window.RFDAILY?.load?.(nextRole,request));
@@ -171,6 +174,7 @@ function allowedTabs(){
  ["students","پرونده هنرجویان",enrollmentManager()],
  ["applications","درخواست‌های ثبت‌نام",enrollmentManager()],
  ["serviceDesk","خدمات هنرجویی",enrollmentManager()],
+ ["documents","مدارک هنرجویان",enrollmentManager()],
  ["finance","مالی و اقساط",financial()],
  ["contracts","قراردادها",enrollmentManager()],
  ["courses","دوره‌ها و کلاس‌ها",enrollmentManager()||meRole()==="viewer"],
@@ -189,6 +193,7 @@ const ovIcons={
  overview:'<circle cx="5" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/>',
  students:'<circle cx="9" cy="8" r="3"/><path d="M2 20v-2a7 7 0 0 1 14 0v2M17 6a3 3 0 0 1 0 6M18 15a5 5 0 0 1 4 5"/>',
  serviceDesk:'<path d="M4 5h16v14H4zM8 10h8M8 14h5"/>',
+ documents:'<path d="M7 3h8l5 5v13H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM15 3v5h5M9 13h7M9 17h5"/>',
  applications:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',
  finance:'<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5H10a2.5 2.5 0 0 0 0 5h4a2.5 2.5 0 0 1 0 5H8M12 5v14"/>',
  contracts:'<path d="M7 3h8l5 5v13H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM15 3v5h5M9 13h7M9 17h5"/>',
@@ -216,6 +221,7 @@ function overviewDashboard(){
   students:"پرونده، وضعیت حساب و دسترسی هنرجویان",
   applications:"بررسی درخواست‌های تازه و وضعیت پذیرش",
   serviceDesk:"صندوق امن درخواست‌های خدمات هنرجویی",
+  documents:"بررسی و تأیید مدارک با لینک خصوصی موقت",
   finance:"کنترل اقساط، پرداخت‌ها و گزارش‌های مالی",
   contracts:"قراردادهای هنرجویان و کارکنان مجاز",
   courses:"دوره‌ها، برنامه آموزشی و لینک‌های ثبت‌نام",
@@ -321,6 +327,35 @@ function serviceDesk(){
   '<div class="rfops-summary"><div><strong>'+fa(items.length)+'</strong><span>درخواست قابل مشاهده</span></div><div><strong>'+fa(pending)+'</strong><span>در انتظار رسیدگی</span></div></div>'+
   (items.length?'<div class="rfops-cards">'+cards+'</div>':empty("serviceRequests","درخواستی از هنرجویان فعال ثبت نشده است."))+
   '<p class="rf-caption">فقط پرونده‌های فعال در این فهرست نمایش داده می‌شوند. حداکثر ۱۵۰ درخواست اخیر خوانده می‌شود و هیچ اطلاعاتی از این بخش به مرورگر عمومی ارسال نمی‌شود.</p>');
+}
+function documentsDesk(){
+ if(!enrollmentManager())return "";
+ if(!Array.isArray(datasets.students)||failures.students)
+  return section("مدارک هنرجویان",'<div class="rfops-warn" role="alert">فهرست هنرجویان فعال در دسترس نیست؛ مدارک خصوصی نمایش داده نمی‌شوند.</div>');
+ if(!Array.isArray(datasets.documents)||failures.documents)
+  return section("مدارک هنرجویان",'<div class="rfops-warn" role="alert">دریافت مدارک ناموفق بود؛ این پیام به معنی نبود مدرک نیست.</div>');
+ const active=new Set(row("students").filter(x=>x.status!=="archived"&&x.archived_at==null).map(x=>String(x.id)));
+ const docs=row("documents").filter(x=>active.has(String(x.student_id))&&uuid(x.id));
+ const labels={pending:"در انتظار بررسی",approved:"تأییدشده",rejected:"نیازمند اصلاح"};
+ const cards=docs.map(x=>{
+  const options=[["pending","در انتظار بررسی"],["approved","تأیید"],["rejected","رد با دلیل"]].map(([v,label])=>
+   '<option value="'+v+'"'+(x.status===v?' selected':'')+'>'+label+'</option>').join("");
+  const link=documentLink?.id===x.id&&documentLink.expires>Date.now()?
+   '<a class="btn btn-outline" href="'+esc(documentLink.url)+'" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">بازکردن فایل خصوصی ↗</a>':"";
+  return '<article class="rfops-card"><div><strong>'+esc(x.title||"مدرک")+'</strong><span>'+esc(name("students",x.student_id))+'</span></div>'+
+   '<p>'+esc(labels[x.status]||"وضعیت نامشخص")+' · '+esc(x.file_name||"فایل پیوست")+' · '+when(x.created_at)+'</p>'+
+   (x.review_note?'<p class="rfops-service-body">'+esc(x.review_note)+'</p>':"")+
+   '<div class="rfops-actions"><button type="button" data-rfops="document-link" data-id="'+esc(x.id)+'">دریافت لینک امن فایل</button>'+link+'</div>'+
+   '<details class="rfops-service-editor"><summary>بررسی و تأیید مدرک</summary>'+
+   '<form class="rfops-form rfops-service-form" data-rfops-form="document-review" data-id="'+esc(x.id)+'">'+
+   '<label>نتیجه<select name="status" required>'+options+'</select></label>'+
+   '<label class="rfops-wide">توضیح بررسی<textarea name="review_note" maxlength="1000" rows="3">'+esc(x.review_note||"")+'</textarea></label>'+
+   '<button type="submit" '+(working?'disabled':'')+'>ثبت نتیجه با حسابرسی ←</button></form></details></article>';
+ }).join("");
+ return section("مرکز بررسی مدارک هنرجویان",'<p>مدارک خصوصی فقط برای مدیریت و پذیرش مجاز نمایش داده می‌شوند. لینک فایل امضاشده و موقت است و بررسی مدرک در سرور حسابرسی می‌شود.</p>'+
+  '<div class="rfops-summary"><div><strong>'+fa(docs.length)+'</strong><span>مدرک قابل بررسی</span></div><div><strong>'+fa(docs.filter(x=>x.status==="pending").length)+'</strong><span>در انتظار بررسی</span></div></div>'+
+  (docs.length?'<div class="rfops-cards">'+cards+'</div>':empty("documents","مدرکی برای هنرجویان فعال ثبت نشده است."))+
+  '<p class="rf-caption">فقط ۱۵۰ مدرک اخیر خوانده می‌شود؛ پرونده‌های آرشیوشده نمایش داده نمی‌شوند.</p>');
 }
 function applications(){
  const items=row("applications");
@@ -470,7 +505,7 @@ function render(nextRole){
  role=nextRole;
  const nav=tabs();
  let content="";
- switch(selected){case"overview":content=overviewDashboard();break;case"family":content=family();break;case"risk":content=riskDashboard();break;case"applications":content=applications();break;case"serviceDesk":content=serviceDesk();break;case"courses":content=courses();break;case"finance":content=finance();break;case"contracts":content=contracts();break;case"tasks":content=tasks();break;case"daily":content=window.RFDAILY?.render?.(nextRole)||"";break;default:content=students();}
+ switch(selected){case"overview":content=overviewDashboard();break;case"family":content=family();break;case"risk":content=riskDashboard();break;case"applications":content=applications();break;case"serviceDesk":content=serviceDesk();break;case"documents":content=documentsDesk();break;case"courses":content=courses();break;case"finance":content=finance();break;case"contracts":content=contracts();break;case"tasks":content=tasks();break;case"daily":content=window.RFDAILY?.render?.(nextRole)||"";break;default:content=students();}
  const header=selected==="overview"?"":'<header class="rfops-top"><div><span>ACADEMY OPERATIONS / SECURE WORKSPACE</span><h2>'+esc(allowedTabs().find(x=>x[0]===selected)?.[1]||"مدیریت آموزشگاه")+'</h2><p>این بخش از داده‌ها و مجوزهای فعلی حساب شما استفاده می‌کند.</p></div><button data-rfops="reload" type="button">تازه‌سازی ↻</button></header>';
  return '<div class="rfops rfops-view-'+selected+'" id="rfops-main">'+alert()+(selected==="overview"?content+(meRole()==="viewer"?'<div class="rfov-all-sections"><span>همه بخش‌های مجاز</span>'+nav+'</div>':""):header+nav+content)+(inflight?'<div class="rfops-loading">در حال دریافت اطلاعات مجاز…</div>':"")+'</div>';
 }
@@ -511,6 +546,18 @@ async function act(action,element){
    if(generation!==sessionEpoch)return;
    if(!snapshot||snapshot.class_id!==id||!Array.isArray(snapshot.roster))throw Error("فهرست امن حضور و غیاب معتبر دریافت نشد.");
    attendanceSnapshot=snapshot;info="فهرست هنرجویان مجاز جلسه دریافت شد.";
+  }else if(action==="document-link"){
+    if(!enrollmentManager()||!uuid(id)||!Array.isArray(datasets.students)||!Array.isArray(datasets.documents))throw Error("مجوز مشاهده مدرک معتبر نیست.");
+    const doc=row("documents").find(x=>x.id===id);
+    if(!doc||!row("students").some(x=>x.id===doc.student_id&&x.status!=="archived"&&x.archived_at==null))throw Error("مدرک یا پرونده فعال یافت نشد.");
+    const result=await request("student_document_url",{document_id:id},true);
+    if(generation!==sessionEpoch)return;
+    let url;try{url=new URL(String(result?.url||""))}catch{throw Error("لینک فایل معتبر نیست.");}
+    if(!result?.ok||url.origin!=="https://sdsdzktsqpahpdrgmzuo.supabase.co"||
+       !url.pathname.startsWith("/storage/v1/object/sign/academy-student-documents/")||url.username||url.password||url.hash)
+     throw Error("لینک فایل از دامنه امن آموزشگاه دریافت نشد.");
+    documentLink={id,url:url.href,expires:Date.now()+9*60*1000};
+    info="لینک موقت آماده است؛ روی «بازکردن فایل خصوصی» بزنید.";
   }else if(action==="family-switch"){
    if(!familyManager())throw Error("فقط مدیر مجاز به تغییر دسترسی سرپرست است.");
    const rowValue=row("links").find(x=>x.id===link);if(!rowValue)throw Error("پیوند سرپرست یافت نشد.");
@@ -563,7 +610,20 @@ async function formSubmit(form){
  if(working)return;const generation=sessionEpoch;warning="";info="";generated="";
  const data=new FormData(form);
  try{
-  if(form.dataset?.rfopsForm==="service-reply"){
+  if(form.dataset?.rfopsForm==="document-review"){
+    if(!enrollmentManager()||!Array.isArray(datasets.students)||!Array.isArray(datasets.documents))throw Error("مجوز بررسی مدارک فعال نیست.");
+    const docId=String(form.dataset.id||""),doc=row("documents").find(x=>x.id===docId);
+    if(!uuid(docId)||!doc||!row("students").some(x=>x.id===doc.student_id&&x.status!=="archived"&&x.archived_at==null))
+     throw Error("مدرک یا پرونده فعال معتبر نیست.");
+    const status=String(data.get("status")||""),note=String(data.get("review_note")||"").trim();
+    if(!["pending","approved","rejected"].includes(status)||note.length>1000||(status==="rejected"&&note.length<3))
+     throw Error("وضعیت یا دلیل رد مدرک معتبر نیست.");
+    if(!confirm("نتیجه بررسی مدرک ثبت شود؟ این اقدام در سرور حسابرسی خواهد شد."))return;
+    working=true;
+    const result=await rpc("academy_review_student_document",{p_document_id:docId,p_status:status,p_review_note:note||null});
+    if(!result?.ok||result.id!==docId||result.status!==status)throw Error("سرور ثبت بررسی را تأیید نکرد.");
+    documentLink=null;info="نتیجه بررسی با تأیید سرور و حسابرسی ذخیره شد.";
+   }else if(form.dataset?.rfopsForm==="service-reply"){
    if(!enrollmentManager())throw Error("مجوز رسیدگی به درخواست‌های هنرجویی فعال نیست.");
    const requestId=String(form.dataset.id||"");
    const record=row("serviceRequests").find(x=>x.id===requestId);
@@ -679,7 +739,7 @@ root?.addEventListener("click",event=>{
 });
 root?.addEventListener("submit",event=>{
  const form=event.target;
- if(!["attendance","service-reply"].includes(form?.dataset?.rfopsForm)&&form?.id!=="rfops-invite-guardian"&&form?.id!=="rfops-assignment"&&form?.id!=="rfops-course-ops"&&form?.id!=="rfops-class")return;
+ if(!["attendance","service-reply","document-review"].includes(form?.dataset?.rfopsForm)&&form?.id!=="rfops-invite-guardian"&&form?.id!=="rfops-assignment"&&form?.id!=="rfops-course-ops"&&form?.id!=="rfops-class")return;
  event.preventDefault();formSubmit(form);
 });
 window.RFOPS={load,render,reset,showOverview(){selected="overview"}};
