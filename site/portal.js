@@ -5,7 +5,7 @@ const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&
 const safeURL=v=>{try{let u=new URL(String(v));return u.protocol==="https:"?u.href:"#"}catch{return "#"}};
 const date=v=>{try{return new Intl.DateTimeFormat("fa-IR-u-ca-persian",{dateStyle:"medium"}).format(new Date(v))}catch{return "—"}};
 const num=v=>new Intl.NumberFormat("fa-IR").format(Number(v||0));
-let session=null,role=null,journey=null,parent=null,parentDetails=null,familyTip=null,resume=null,works=[],missions=[],campaigns=[],studentAssignments=[],studentSubmissions=[],studentNotifications=[],staffData=null,finance=null,profileFormOpen=false,workFormOpen=false,stage=0,busy=false,error="",notice="",loading=false,quizQuestions=null,quizLoading=false;
+let session=null,role=null,journey=null,parent=null,parentDetails=null,familyTip=null,resume=null,works=[],missions=[],campaigns=[],studentAssignments=[],studentSubmissions=[],studentNotifications=[],staffData=null,finance=null,dailyFeed=null,dailyFeedError="",profileFormOpen=false,workFormOpen=false,stage=0,busy=false,error="",notice="",loading=false,quizQuestions=null,quizLoading=false;
 try{const saved=sessionStorage.getItem("rf_safe_session_v1");if(saved)session=JSON.parse(saved)}catch{sessionStorage.removeItem("rf_safe_session_v1")}
 const token=()=>session?.access_token||"";
 const setSession=x=>{if(!x?.access_token||!x?.refresh_token)throw Error("پاسخ ورود ناقص است");session={access_token:x.access_token,refresh_token:x.refresh_token,expires_at:Date.now()+Math.max(1,Number(x.expires_in||3600))*1000};sessionStorage.setItem("rf_safe_session_v1",JSON.stringify(session))};
@@ -51,7 +51,7 @@ const clear=()=>{
  for(const ctl of activeRequests)ctl.abort();
  activeRequests.clear();renewing=null;
  session=null;role=null;journey=null;parent=null;parentDetails=null;familyTip=null;resume=null;
- works=[];missions=[];campaigns=[];studentAssignments=[];studentSubmissions=[];studentNotifications=[];staffData=null;finance=null;quizQuestions=null;
+ works=[];missions=[];campaigns=[];studentAssignments=[];studentSubmissions=[];studentNotifications=[];staffData=null;finance=null;dailyFeed=null;dailyFeedError="";quizQuestions=null;
  profileFormOpen=false;workFormOpen=false;loading=false;busy=false;
  sessionStorage.removeItem("rf_safe_session_v1");
  const print=document.getElementById("rf-print-content");if(print)print.replaceChildren();
@@ -97,7 +97,7 @@ const loadingHTML=()=>'<section class="shell rf-panel-container"><div class="rf-
 async function loadWorkspace(){
  if(!session||loading)return;
  const generation=authEpoch;
- loading=true;finance=null;try{
+ loading=true;finance=null;dailyFeed=null;dailyFeedError="";try{
   role=await api("resolve_portal",{},true);
   if(role.kind==="student"){journey=await rpc("academy_student_journey_snapshot");await loadStudentExtras()}
   else if(role.kind==="guardian"){const a=await Promise.allSettled([rpc("academy_parent_journey_snapshot"),rpc("academy_family_tip_today"),rpc("academy_parent_portal_snapshot")]);requireCurrent(generation);parent=a[0].status==="fulfilled"?a[0].value:null;familyTip=a[1].status==="fulfilled"?a[1].value:null;parentDetails=a[2].status==="fulfilled"?a[2].value:null}
@@ -119,6 +119,7 @@ async function loadStudentExtras(){
   proxy("/rest/v1/academy_assignments?select=id,course_id,title,instructions,due_at,published&published=eq.true&limit=100"),
   proxy("/rest/v1/academy_assignment_submissions?select=id,assignment_id,status,submitted_at,score&limit=100"),
   proxy("/rest/v1/academy_notifications?select=id,student_id,kind,title,body,due_at,read_at&order=created_at.desc&limit=50"),
+  api("daily_for_me",{},true),
  ]);
  requireCurrent(generation);
  works=items[0].status==="fulfilled"&&Array.isArray(items[0].value)?items[0].value:[];
@@ -127,6 +128,9 @@ async function loadStudentExtras(){
  studentAssignments=items[6].status==="fulfilled"&&Array.isArray(items[6].value)?items[6].value:[];
  studentSubmissions=items[7].status==="fulfilled"&&Array.isArray(items[7].value)?items[7].value:[];
  studentNotifications=items[8].status==="fulfilled"&&Array.isArray(items[8].value)?items[8].value:[];
+ const dailyResult=items[9];
+ dailyFeed=dailyResult.status==="fulfilled"&&dailyResult.value?.ok&&Array.isArray(dailyResult.value.archive)?dailyResult.value:null;
+ dailyFeedError=dailyFeed?"":dailyResult.status==="rejected"?String(dailyResult.reason?.message||"دریافت نکته‌های روز ممکن نیست."):"داده نکته‌های روز معتبر نیست.";
  const f=items.slice(3,6);
  finance=f.every(x=>x.status==="fulfilled"&&Array.isArray(x.value))
   ?{ready:true,enrollments:f[0].value,installments:f[1].value,payments:f[2].value}
@@ -201,6 +205,19 @@ function financePanel(){
   '<h4>برنامه اقساط</h4><div class="rf-admin-list">'+(rows||'<div class="rf-empty">قسطی برای این حساب ثبت نشده است.</div>')+'</div>'+
   '<h4>سوابق پرداخت قابل مشاهده</h4><div class="rf-admin-list">'+(receipts||'<div class="rf-empty">رسید پرداخت قابل مشاهده‌ای ثبت نشده است.</div>')+'</div>'+disclaimer+'</section>';
 }
+function dailyPanel(){
+ if(role?.kind!=="student")return "";
+ const feed=dailyFeed;
+ const latest=Array.isArray(feed?.today)&&feed.today.length?feed.today[0]:feed?.latest;
+ const archive=Array.isArray(feed?.archive)?feed.archive:[];
+ const metrics=feed?'<div class="rf-daily-stats"><span>روزهای تکمیل‌شده <b>'+num(feed.completed_count||0)+'</b></span><span>تداوم یادگیری <b>'+num(feed.streak||0)+' روز</b></span></div>':"";
+ const content=latest?'<article class="rf-daily-feature"><span class="rf-overline">'+(Array.isArray(feed.today)&&feed.today.some(x=>x.id===latest.id)?"تمرین امروز":"آخرین نکته منتشرشده")+' · '+esc(date(latest.publish_date))+'</span><h3>'+esc(latest.title||"نکته آموزشی")+'</h3><p>'+esc(latest.body||"")+'</p>'+(latest.action_prompt?'<div class="rf-daily-task"><strong>'+esc(latest.action_title||"تمرین کاربردی")+'</strong><p>'+esc(latest.action_prompt)+'</p></div>':"")+(latest.read?.completed_at?'<span class="rf-daily-done">✓ این تمرین را تکمیل کرده‌اید</span>':'<button type="button" class="btn btn-primary" data-rf="daily-complete" data-id="'+esc(latest.id)+'" '+(busy?"disabled":"")+'>✓ مطالعه و تمرین را انجام دادم</button>')+'</article>':'<div class="rf-empty">هنوز نکته روز منتشر نشده است. پس از انتشار محتوای تأییدشده، تمرین اینجا نمایش داده می‌شود.</div>';
+ const previous=archive.filter(x=>x.id!==latest?.id).slice(0,4);
+ return '<section class="rf-panel rf-daily-panel" aria-label="نکته روز هنرجو"><div class="rf-daily-head"><div><span class="rf-overline">DAILY LEARNING · ROSHANFEKRAN</span><h2>آزمایشگاه نکته روز</h2><p>محتوای تأییدشده مخصوص شما و دوره‌های فعال‌تان؛ ثبت تکمیل فقط با انتخاب خودتان.</p></div><span class="rf-daily-mark" aria-hidden="true">✦</span></div>'+
+ (dailyFeedError?'<div class="portal-alert" role="alert">نکته‌های روز در دسترس نیستند: '+esc(dailyFeedError)+'</div>':metrics+content+
+ (previous.length?'<details class="rf-daily-archive"><summary>تمرین‌های پیشین ('+num(previous.length)+')</summary>'+previous.map(x=>'<div class="rf-daily-archive-row"><div><strong>'+esc(x.title||"تمرین")+'</strong><small>'+esc(date(x.publish_date))+'</small></div>'+(x.read?.completed_at?'<span class="rf-daily-done">✓ تکمیل‌شده</span>':'<button type="button" data-rf="daily-complete" data-id="'+esc(x.id)+'" '+(busy?"disabled":"")+'>ثبت تکمیل</button>')+'</div>').join("")+'</details>':""))+
+ '<p class="rf-caption">فقط محتوای منتشرشده و دوره‌های مجاز شما نمایش داده می‌شود. ثبت پیشرفت از طریق سرور انجام می‌شود.</p></section>';
+}
 function studentPage(){
  const steps=Array.isArray(journey?.stages)?journey.stages:[],progress=Number(journey?.percentage||0);
  const headingText=journey?.student_name||"هنرجوی روشنفکران";
@@ -230,7 +247,7 @@ function studentPage(){
  actions()+toast()+'<div class="rf-progress-wrap"><div><span class="rf-overline">YOUR PROGRESS</span><h2>'+num(progress)+'٪ <small>تکمیل پرونده</small></h2></div><div class="rf-track"><span style="width:'+Math.max(0,Math.min(100,progress))+'%"></span></div><p>'+esc(journey.message||"مسیر رشد شما آغاز شده است.")+'</p></div>'+
  '<div class="rf-stages">'+steps.map((s,i)=>'<button class="rf-stage '+(i===stageIndex?"is-selected":"")+'" data-rf="stage" data-step="'+i+'"><span>'+(s.done?"✓":num(i+1))+'</span><b>'+esc(s.title)+'</b><small>'+(s.done?"تکمیل‌شده":i===stageIndex?"مرحله جاری":"آماده تکمیل")+'</small></button>').join("")+'</div>'+
  '<section class="rf-grid-two">'+right+
- '<div class="rf-panel"><div class="rf-panel-title"><span>✧</span><h3>مأموریت‌های ۹۰روزه</h3></div><p>۲۴ پروژه در سه مرحله، با تحویل و تأیید واقعی مدرس یا مدیر.</p><div class="rf-meters"><span>مأموریت‌های پذیرفته‌شده</span><strong>'+num(journey.missions_approved||0)+' / ۲۴</strong></div><div class="rf-mini-missions">'+missions.slice(0,6).map(m=>'<div><span>'+num(m.mission_no)+'</span><b>'+esc(m.title)+'</b></div>').join("")+'</div><a class="btn btn-outline" href="#/missions">مشاهده مسیر پروژه‌ها ↗</a></div></section>'+financePanel()+(window.RFFAMILY?.student?.(studentAssignments,studentSubmissions,studentNotifications)||'')+'</main>';
+ '<div class="rf-panel"><div class="rf-panel-title"><span>✧</span><h3>مأموریت‌های ۹۰روزه</h3></div><p>۲۴ پروژه در سه مرحله، با تحویل و تأیید واقعی مدرس یا مدیر.</p><div class="rf-meters"><span>مأموریت‌های پذیرفته‌شده</span><strong>'+num(journey.missions_approved||0)+' / ۲۴</strong></div><div class="rf-mini-missions">'+missions.slice(0,6).map(m=>'<div><span>'+num(m.mission_no)+'</span><b>'+esc(m.title)+'</b></div>').join("")+'</div><a class="btn btn-outline" href="#/missions">مشاهده مسیر پروژه‌ها ↗</a></div></section>'+dailyPanel()+financePanel()+(window.RFFAMILY?.student?.(studentAssignments,studentSubmissions,studentNotifications)||'')+'</main>';
 }
 function missionsPage(){
  if(role?.kind!=="student")return '<main class="shell rf-panel-container"><div class="rf-empty">مشاهده مأموریت‌ها ویژه هنرجو است. <a href="#/access">ورود</a></div></main>';
@@ -369,7 +386,7 @@ async function submit(e){
 async function click(e){
  const control=e.target.closest("[data-rf]");if(!control)return;
  const action=control.dataset.rf;
- if(!["logout","refresh","stage","consent","resume","share-on","share-off","notification-read"].includes(action))return;
+ if(!["logout","refresh","stage","consent","resume","share-on","share-off","notification-read","daily-complete"].includes(action))return;
  e.preventDefault();
  if(action==="logout"){clear();error="";notice="";location.hash="#/access";refresh();return}
  if(busy)return;
@@ -382,6 +399,19 @@ async function click(e){
   const approve=control.dataset.allow==="true";
   if(!confirm(approve?"با آگاهی از شرایط، اجازه نمایش عمومی رزومه این هنرجو را می‌دهید؟":"رضایت انتشار عمومی را لغو می‌کنید؟"))return;
   await rpc("academy_consent_showcase",{p_student_id:control.dataset.student,p_allow:approve});parent=await rpc("academy_parent_journey_snapshot");showNotice(approve?"رضایت ثبت شد؛ انتشار همچنان نیازمند اقدام خود هنرجوست.":"رضایت لغو و انتشار عمومی غیرفعال شد.");
+ }
+ if(action==="daily-complete"){
+  if(role?.kind!=="student"||!dailyFeed)throw Error("فقط هنرجوی واردشده می‌تواند تمرین را تکمیل کند.");
+  const id=String(control.dataset.id||"");
+  if(!/^[0-9a-f-]{36}$/i.test(id)||!dailyFeed.archive.some(x=>x.id===id))throw Error("این تمرین در فهرست مجاز شما نیست.");
+  const entry=dailyFeed.archive.find(x=>x.id===id);
+  if(entry?.read?.completed_at)return;
+  await api("daily_mark",{content_id:id,completed:true},true);
+  const updated=await api("daily_for_me",{},true);
+  requireCurrent(generation);
+  if(!updated?.ok||!Array.isArray(updated.archive))throw Error("تکمیل ثبت شد؛ دریافت وضعیت تازه ممکن نیست. صفحه را به‌روزرسانی کنید.");
+  dailyFeed=updated;dailyFeedError="";
+  showNotice("تمرین امروز در پرونده آموزشی شما ثبت شد.");return;
  }
  if(action==="notification-read"){
   const id=String(control.dataset.id||"");if(!/^[0-9a-f-]{36}$/i.test(id))throw Error("اعلان معتبر نیست.");
