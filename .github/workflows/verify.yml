@@ -30,6 +30,8 @@ jobs:
         run: node scripts/archived-teacher-guards.test.mjs
       - name: Check API DDL privilege hardening migration
         run: node scripts/api-ddl-privileges.test.mjs
+      - name: Verify canonical gateway routes and traversal denial
+        run: node scripts/proxy-path-guard.test.mjs
       - name: Verify private receipt paths and legacy assignment RPC enforcement
         run: node scripts/gateway-private-files.test.mjs
       - name: Check verified guardian SMS OTP security gates
