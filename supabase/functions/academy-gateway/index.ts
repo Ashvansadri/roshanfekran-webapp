@@ -100,6 +100,17 @@ async function studentByUser(userId:string){
  return student;
 }
 async function guardianByUser(userId:string){const rows=await jo(await svc('/rest/v1/academy_guardians?select=id,user_id,full_name,email,mobile,active&user_id=eq.'+encodeURIComponent(userId)+'&active=eq.true&limit=1','GET',null));return Array.isArray(rows)&&rows.length?rows[0]:null}
+
+async function guardianPushEligible(userId:string){
+ const g=await guardianByUser(userId);
+ if(!g?.active)return false;
+ const links=await jo(await svc('/rest/v1/academy_guardian_students?select=student_id&guardian_id=eq.'+encodeURIComponent(g.id)+'&can_view_academic=eq.true&can_receive_notifications=eq.true&limit=25','GET',null));
+ const ids=(Array.isArray(links)?links:[]).map((x:any)=>String(x.student_id||'')).filter(x=>/^[0-9a-f-]{36}$/.test(x));
+ if(!ids.length)return false;
+ const students=await jo(await svc('/rest/v1/academy_students?select=id&id=in.('+ids.map(encodeURIComponent).join(',')+')&archived_at=is.null&status=neq.archived&limit=25','GET',null));
+ return Array.isArray(students)&&students.length>0;
+}
+
 async function sha256(v:string){const d=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v));return Array.from(new Uint8Array(d)).map(x=>x.toString(16).padStart(2,'0')).join('')}
 
 function mimeExt(mime:string){return mime==='image/jpeg'?'jpg':mime==='image/png'?'png':mime==='image/webp'?'webp':mime==='application/pdf'?'pdf':''}
@@ -974,13 +985,17 @@ Deno.serve(async(req:Request)=>{
   }
   if(b.action==='push_status'){
    const token=bt(req),u=await currentUser(token),st=await studentByUser(u.id);
-   if(!st||!st.portal_enabled)throw gatewayHttpError(403,'Student portal access required');
+   const guardianAllowed=!st&&await guardianPushEligible(u.id);
+   if((!st||!st.portal_enabled)&&!guardianAllowed)
+    throw gatewayHttpError(403,'Approved student or guardian access required');
    const rows=await jo(await svc('/rest/v1/academy_push_subscriptions?select=identity&user_id=eq.'+encodeURIComponent(u.id)+'&active=eq.true&limit=50','GET',null));
    return jr({ok:true,identities:(Array.isArray(rows)?rows:[]).map((x:any)=>String(x.identity||''))});
   }
   if(b.action==='push_save'){
    const token=bt(req),u=await currentUser(token),st=await studentByUser(u.id);
-   if(!st||!st.portal_enabled)throw gatewayHttpError(403,'Student portal access required');
+   const guardianAllowed=!st&&await guardianPushEligible(u.id);
+   if((!st||!st.portal_enabled)&&!guardianAllowed)
+    throw gatewayHttpError(403,'Approved student or guardian access required');
    const sub=b.subscription&&typeof b.subscription==='object'&&!Array.isArray(b.subscription)?b.subscription:null;
    if(!sub)throw new Error('اشتراک اعلان معتبر نیست');
    const identity=String(sub.endpoint||sub.fcmToken||sub.apnsToken||'').trim();
@@ -994,7 +1009,7 @@ Deno.serve(async(req:Request)=>{
    }
    const scope='/rest/v1/academy_push_subscriptions?user_id=eq.'+encodeURIComponent(u.id)+'&identity=eq.'+encodeURIComponent(identity);
    const existing=await jo(await svc(scope+'&select=id','GET',null));
-   const data={subscription:platform==='web'?{endpoint:identity,keys:{p256dh:sub.keys.p256dh,auth:sub.keys.auth}}:sub,student_id:st.id,platform,active:true,updated_at:new Date().toISOString()};
+   const data={subscription:platform==='web'?{endpoint:identity,keys:{p256dh:sub.keys.p256dh,auth:sub.keys.auth}}:sub,student_id:st?.id||null,platform,active:true,updated_at:new Date().toISOString()};
    if(Array.isArray(existing)&&existing.length){
     const updated=await jo(await svc(scope,'PATCH',data,'return=representation'));
     if(!Array.isArray(updated)||updated.length!==1)throw gatewayHttpError(403,'ثبت اشتراک امکان‌پذیر نیست');
