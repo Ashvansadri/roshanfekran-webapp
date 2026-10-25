@@ -236,7 +236,7 @@ test('premium unified sign-in remains accessible on narrow mobile',async({browse
  await expect(login).toBeVisible();
  await expect(page.getByPlaceholder('name@example.com')).toBeVisible();
  const design=await page.locator('.rf-auth-card').evaluate(el=>({radius:getComputedStyle(el).borderRadius,border:getComputedStyle(el).borderColor}));
- expect(design.radius).toBe('5px');
+ expect(parseFloat(design.radius)).toBeGreaterThanOrEqual(16);
  expect(design.border).not.toBe('rgba(0, 0, 0, 0)');
  const overflow=await page.evaluate(()=>({viewport:innerWidth,scroll:document.documentElement.scrollWidth}));
  expect(overflow.scroll,JSON.stringify(overflow)).toBeLessThanOrEqual(overflow.viewport+2);
@@ -252,7 +252,7 @@ test('student dashboard keeps premium panel styling without private data leaks',
  await expect(page.locator('.rf-dashboard')).toBeVisible();
  const panel=page.locator('.rf-panel').first();
  await expect(panel).toBeVisible();
- expect(await panel.evaluate(el=>getComputedStyle(el).borderRadius)).toBe('5px');
+ expect(parseFloat(await panel.evaluate(el=>getComputedStyle(el).borderRadius))).toBeGreaterThanOrEqual(14);
  const overflow=await page.evaluate(()=>({viewport:innerWidth,scroll:document.documentElement.scrollWidth}));
  expect(overflow.scroll).toBeLessThanOrEqual(overflow.viewport+2);
  await page.close();
@@ -268,9 +268,9 @@ test('photorealistic assets are used in live home and all course worlds',async({
  const root=document.querySelector('.rf26-home');
  const hero=getComputedStyle(document.querySelector('.rf26-stage'),'::before').backgroundImage;
  const worlds=[...document.querySelectorAll('.rf26-track-visual')].map(el=>getComputedStyle(el).backgroundImage);
- return {hero,worlds,allHaveRealAssets:worlds.every(x=>x.includes('real3d.webp'))};
+ return {hero,worlds,allHaveRealAssets:worlds.every(x=>x.includes('images.unsplash.com')&&!x.includes('floot.app'))};
  });
- expect(photos.hero).toContain('rf_hero_real3d.webp');
+ expect(photos.hero).toContain('images.unsplash.com');
  expect(photos.allHaveRealAssets).toBe(true);
  expect(errors).toEqual([]);
  await page.close();
