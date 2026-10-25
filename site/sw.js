@@ -27,6 +27,7 @@ const SHELL=[
  "/academy-ops.css",
   "/daily-admin.css",
  "/family-monitor.css",
+ "/atelier27.css",
  "/app.js",
  "/portal.js",
  "/enroll.js",
