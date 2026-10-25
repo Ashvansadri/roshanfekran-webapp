@@ -113,3 +113,46 @@ test('Expired synthetic session is removed on definitive refresh rejection',asyn
   await expect(page.locator('.rf-dashboard')).toHaveCount(0);
  }finally{await page.close()}
 });
+
+
+test('Student service requests render and submit only to a mocked authorized RPC',async({browser})=>{
+ test.setTimeout(90000);
+ const page=await browser.newPage({viewport:{width:1280,height:850}});
+ let submitted=0,lastPayload=null;
+ const rows=[{id:'00000000-0000-4000-8000-000000000001',category:'schedule',subject:'درخواست پیشین',body:'پیگیری برنامه کلاس',status:'resolved',staff_note:'بررسی شد',created_at:'2026-10-20T10:00:00Z'}];
+ await page.addInitScript(()=>{
+  sessionStorage.setItem('rf_safe_session_v1',JSON.stringify({
+   access_token:'synthetic-student-token',refresh_token:'synthetic-student-refresh',
+   expires_at:Date.now()+3600000
+  }));
+ });
+ await page.route('**/functions/v1/academy-gateway',async route=>{
+  const b=route.request().postDataJSON()||{};
+  let data=[];
+  if(b.action==='resolve_portal')data={ok:true,kind:'student',role:'student'};
+  else if(b.action==='proxy'){
+   if(b.path==='/rest/v1/rpc/academy_student_journey_snapshot')
+    data={student_name:'هنرجوی آزمایشی',stages:[],percentage:0,message:'مسیر یادگیری'};
+   else if(b.path?.startsWith('/rest/v1/academy_student_requests?'))data=rows;
+   else if(b.path==='/rest/v1/rpc/academy_submit_service_request'){
+    submitted++;lastPayload=b.body;
+    rows.unshift({id:'00000000-0000-4000-8000-000000000002',category:b.body.p_category,subject:b.body.p_subject,body:b.body.p_body,status:'open',staff_note:null,created_at:'2026-10-26T00:00:00Z'});
+    data={ok:true,id:rows[0].id};
+   }
+  }else if(b.action==='push_config'||b.action==='push_status'||b.action==='daily_for_me')data={ok:false};
+  await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(data)});
+ });
+ try{
+  await page.goto(LIVE+'/#/workspace',{waitUntil:'domcontentloaded',timeout:45000});
+  await expect(page.locator('#rf-service-request')).toBeVisible({timeout:25000});
+  await expect(page.getByText('درخواست پیشین')).toBeVisible();
+  await page.locator('#rf-service-request select[name="category"]').selectOption('certificate');
+  await page.locator('#rf-service-request input[name="subject"]').fill('درخواست گواهی آزمایشی');
+  await page.locator('#rf-service-request textarea[name="body"]').fill('درخواست ثبت و پیگیری گواهی دوره');
+  await page.locator('#rf-service-request button[type="submit"]').click();
+  await expect(page.getByText('درخواست گواهی آزمایشی')).toBeVisible();
+  expect(submitted,'Only one authorized RPC invocation').toBe(1);
+  expect(lastPayload?.p_category).toBe('certificate');
+  expect(lastPayload?.p_enrollment_id).toBeNull();
+ }finally{await page.close()}
+});
