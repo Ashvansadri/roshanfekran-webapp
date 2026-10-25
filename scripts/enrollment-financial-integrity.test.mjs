@@ -1,0 +1,22 @@
+// Read-only regression for fee reductions/reassignment after payments; no real account or data writes.
+import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+const dir=new URL("../migrations/",import.meta.url);
+const sql=readFileSync(new URL("20261025_enrollment_financial_integrity.sql",dir),"utf8");
+const rollback=readFileSync(new URL("20261025_enrollment_financial_integrity.rollback.sql",dir),"utf8");
+const verify=readFileSync(new URL("20261025_enrollment_financial_integrity.verify.sql",dir),"utf8");
+assert.match(sql,/SECURITY DEFINER/);
+assert.match(sql,/SET search_path TO pg_catalog, public, pg_temp/);
+assert.match(sql,/FROM public\.academy_payments[\s\S]*?p\.status='posted'/);
+assert.match(sql,/NEW\.student_id IS DISTINCT FROM OLD\.student_id/);
+assert.match(sql,/NEW\.course_id IS DISTINCT FROM OLD\.course_id/);
+assert.match(sql,/NEW\.final_fee IS NULL/);
+assert.match(sql,/NEW\.final_fee < v_posted[\s\S]*?NEW\.final_fee < OLD\.final_fee/);
+assert.match(sql,/BEFORE UPDATE OF final_fee, student_id, course_id/);
+assert.match(sql,/REVOKE ALL ON FUNCTION[\s\S]*?FROM PUBLIC, anon, authenticated/);
+assert.match(rollback,/DROP TRIGGER IF EXISTS academy_enrollment_financial_integrity/);
+assert.match(rollback,/DROP FUNCTION IF EXISTS public\.academy_guard_enrollment_financial_integrity/);
+assert.match(verify,/direct_execution_blocked/);
+assert.match(verify,/enrollments_preserved/);
+assert.doesNotMatch(sql,/\b(?:DELETE\s+FROM|TRUNCATE\s+TABLE|UPDATE\s+public\.academy_(?:payments|enrollments))\b/i);
+console.log("PASS: paid enrollment cannot be reassigned or have its fee reduced below posted ledger");

@@ -122,4 +122,7 @@ console.log(assignmentAuthQA.stdout.trim());
 const paymentAmountQA=spawnSync(process.execPath,[join(root,"scripts/payment-amount-integrity.test.mjs")],{encoding:"utf8"});
 assert.equal(paymentAmountQA.status,0,"Payment amount integrity migration regression failed: "+paymentAmountQA.stderr+" "+paymentAmountQA.stdout);
 console.log(paymentAmountQA.stdout.trim());
+const enrollmentIntegrityQA=spawnSync(process.execPath,[join(root,"scripts/enrollment-financial-integrity.test.mjs")],{encoding:"utf8"});
+assert.equal(enrollmentIntegrityQA.status,0,"Enrollment financial integrity regression failed: "+enrollmentIntegrityQA.stderr+" "+enrollmentIntegrityQA.stdout);
+console.log(enrollmentIntegrityQA.stdout.trim());
 console.log("PASS: frontend, private projections, archive role guards and PWA metadata.");
