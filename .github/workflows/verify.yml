@@ -54,6 +54,8 @@ jobs:
             scripts/ops-risk.test.mjs \
             scripts/ops-student-services.test.mjs \
             scripts/ops-service-reply.test.mjs \
+            scripts/ops-documents.test.mjs \
+            scripts/document-review-migration.test.mjs \
             scripts/service-request-audit-migration.test.mjs \
             scripts/enrollment-financial-integrity.test.mjs \
             scripts/payment-amount-integrity.test.mjs \
