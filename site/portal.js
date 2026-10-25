@@ -198,7 +198,7 @@ function loginPage(){
  '<form id="rf-login" class="rf-form"><label class="portal-field"><span>ایمیل</span><input name="email" type="email" required autocomplete="username" placeholder="name@example.com" dir="ltr"/></label>'+
  '<label class="portal-field"><span>رمز عبور</span><input name="password" type="password" required autocomplete="current-password" placeholder="رمز حساب فعال شما" dir="ltr"/></label>'+
  '<button class="btn btn-primary" type="submit" '+(busy?'disabled':'')+'>'+(busy?'در حال بررسی…':'ورود امن ←')+'</button></form></details>'+
- '<div class="rf-access-support"><a href="#/courses">ثبت‌نام در دوره‌ها ↗</a><a href="tel:09164880996">راهنمایی ورود ↗</a></div></div></main>';
+ '<div class="rf-access-support"><button type="button" class="portal-secondary" data-rf="auth-preflight">بررسی اتصال ورود ↗</button><a href="#/courses">ثبت‌نام در دوره‌ها ↗</a><a href="tel:09164880996">راهنمایی ورود ↗</a></div></div></main>';
 }
 function activate(){
  const frag=location.hash.split("?")[1]||"",q=new URLSearchParams(frag);
@@ -453,7 +453,7 @@ async function submit(e){
 async function click(e){
  const control=e.target.closest("[data-rf]");if(!control)return;
  const action=control.dataset.rf;
- if(!["logout","refresh","stage","consent","resume","share-on","share-off","notification-read","daily-complete","push-enable","push-disable","phone-reset"].includes(action))return;
+ if(!["logout","refresh","stage","consent","resume","share-on","share-off","notification-read","daily-complete","push-enable","push-disable","phone-reset","auth-preflight"].includes(action))return;
  e.preventDefault();
  if(action==="logout"){clear();error="";notice="";location.hash="#/access";refresh();return}
  if(busy)return;
@@ -462,6 +462,12 @@ async function click(e){
  if(action==="phone-reset"){rfFamilyPhone="";error="";notice="";refresh();return}
  if(action==="stage"){stage=Number(control.dataset.step)||0;error="";refresh();return}
  busy=true;
+ if(action==="auth-preflight"){
+  const result=await api("auth_preflight");
+  if(!result?.ok||result.auth!=="reachable")throw Error("سرویس ورود پاسخ معتبر نداد.");
+  showNotice("درگاه ورود و سرویس احراز هویت در دسترس‌اند. این بررسی صحت ایمیل، رمز عبور یا مجوز حساب را تأیید نمی‌کند.");
+  return;
+ }
  if(action==="refresh"){role=null;await loadWorkspace();return}
  if(action==="consent"){
   const approve=control.dataset.allow==="true";
