@@ -60,5 +60,13 @@ await deny("anonymous Push removal","push_delete",{identity:"https://example.tes
 await deny("anonymous private student snapshot","proxy",{path:"/rest/v1/rpc/academy_student_journey_snapshot",method:"POST",body:{}},401);
 await deny("anonymous private financial table","proxy",{path:"/rest/v1/academy_payments?select=id,amount&limit=1",method:"GET"},401);
 await deny("forbidden proxy route","proxy",{path:"/auth/v1/admin/users",method:"GET"},403,{"authorization":"Bearer synthetic-test-only-not-a-session"});
+// Credentialless live auth regression: synthetic strings must never grant access.
+// No real account, password, SMS, or user data is used.
+await deny("synthetic bearer portal resolution","resolve_portal",{},401,{"authorization":"Bearer synthetic-test-only-not-a-session"});
+await deny("synthetic bearer private finance","proxy",{path:"/rest/v1/academy_payments?select=id,amount&limit=1",method:"GET"},401,{"authorization":"Bearer synthetic-test-only-not-a-session"});
+const expired=await request("proxy",{path:"/auth/v1/token?grant_type=refresh_token",method:"POST",body:{refresh_token:"synthetic-invalid-refresh-token"}});
+assert([400,401].includes(expired.r.status),"Synthetic refresh must be rejected as invalid credentials");
+assert.equal(expired.d?.access_token,undefined,"Invalid refresh must never return an access token");
+assert.equal(expired.d?.refresh_token,undefined,"Invalid refresh must never return a refresh token");
 await deny("invalid public resume token","public_showcase",{token:"00000000-0000-4000-8000-000000000000"},404);
-console.log("PASS: live public catalog ("+catalog.courses.length+" course(s)), news, daily content and registration info; eight real anonymous/invalid-access denial checks; no writes.");
+console.log("PASS: live public catalog ("+catalog.courses.length+" course(s)), news, daily content and registration info; eleven real anonymous/invalid-access denial checks; no writes.");
