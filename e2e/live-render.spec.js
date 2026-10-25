@@ -86,6 +86,7 @@ test('Gateway rejects anonymous, forged and path-confused access without disclos
  expect(anonymousRole.error).toBe('AUTH_REQUIRED');
  await check({action:'proxy',path:'/rest/v1/academy_students?select=id&limit=1',method:'GET'},null,[401]);
  await check({action:'resolve_portal'},'invalid-test-jwt',[401]);
+ await check({action:'proxy',path:'/rest/v1/rpc/academy_reply_service_request',method:'POST',body:{p_request_id:'11111111-1111-4111-8111-111111111111',p_status:'resolved',p_staff_note:'synthetic',p_priority:'normal'}},'invalid-test-jwt',[401,403]);
  await check({action:'proxy',path:'/rest/v1/academy_students/../../auth/v1/admin/users',method:'GET'},'invalid-test-jwt',[403]);
  await check({action:'proxy',path:'/auth/v1/token?grant_type=refresh_token',method:'POST',body:{refresh_token:'invalid-test-refresh-token'}},null,[400,401,403,429]);
 });
