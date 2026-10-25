@@ -166,10 +166,16 @@ async function loadStaffExtras(){
  if(window.RFOPS?.load){await window.RFOPS.load(role,api);requireCurrent(generation)}
 }
 function heading(k,title,subtitle){return '<div class="rf-page-head"><div><div class="rf-overline">'+esc(k)+'</div><h1>'+title+'</h1><p>'+esc(subtitle)+'</p></div></div>'}
+let rfFamilyPhone="";
 function loginPage(){
  return '<main class="rf-auth shell"><section class="rf-auth-story"><div class="eyebrow">ROSHANFEKRAN · SECURE SPACE</div><h1>یک حساب،<br/><span class="gradient-text">یک مسیر رشد متفاوت.</span></h1><p>سامانه نقش شما را پس از تأیید هویت شناسایی می‌کند؛ هنرجو، خانواده، مدرس و مدیریت هرکدام به محیط اختصاصی خود هدایت می‌شوند.</p><div class="rf-tick">◈ حریم خصوصی و امنیت اطلاعات اولویت ماست.</div></section><div class="rf-auth-card">'+
  '<div class="rf-auth-symbol">✧</div><span class="rf-overline">ACCOUNT ACCESS</span><h2>ورود به پورتال</h2><p>اطلاعات حساب فعال آموزشگاه را وارد کنید.</p>'+toast()+
  '<form id="rf-login" class="rf-form"><label class="portal-field"><span>ایمیل</span><input name="email" type="email" required autocomplete="username" placeholder="name@example.com" dir="ltr"/></label><label class="portal-field"><span>رمز عبور</span><input name="password" type="password" required autocomplete="current-password" placeholder="رمز حساب فعال شما" dir="ltr"/></label><button class="btn btn-primary" type="submit" '+(busy?"disabled":"")+'>'+(busy?"در حال بررسی...":"ورود امن ←")+'</button></form>'+
+ ''+
+ <div class="rf-phone-auth"><div class="rf-phone-heading"><span class="rf-phone-signal">◈</span><div><strong>ورود خانواده با شماره موبایل</strong><small>بدون نیاز به ایمیل و رمز عبور · برای سرپرست تأییدشده</small></div></div>'+
+ (rfFamilyPhone?'<div class="rf-phone-summary"><span>کد پیامک برای شماره انتخاب‌شده</span><b dir="ltr">'+esc(rfFamilyPhone.replace(/(\+989\d{2})\d{5}(\d{2})/,"$1•••••$2"))+'</b></div><form id="rf-phone-verify" class="rf-form rf-phone-form"><label class="portal-field"><span>کد ۶ رقمی پیامک</span><input name="otp" inputmode="numeric" type="text" pattern="[0-9۰-۹]{6}" maxlength="6" autocomplete="one-time-code" required placeholder="۱۲۳۴۵۶" dir="ltr"/></label><button type="submit" class="btn btn-primary">تأیید شماره و ورود ←</button><button type="button" class="portal-secondary rf-phone-reset" data-rf="phone-reset">تغییر شماره</button></form>':
+ '<form id="rf-phone-request" class="rf-form rf-phone-form"><label class="portal-field"><span>شماره موبایل سرپرست</span><input name="phone" type="tel" inputmode="tel" autocomplete="tel" required placeholder="۰۹۱۲۱۲۳۴۵۶۷" dir="ltr"/></label><button type="submit" class="btn btn-primary">دریافت کد ورود ←</button></form>')+
+ '<p class="rf-caption">مدیر آموزشگاه باید ابتدا نظارت خانواده را با شماره شما تأیید کرده باشد. برای ارسال واقعی کد، سرویس پیامک باید در Supabase فعال باشد.</p></div>+
  '<p class="rf-caption">با ایمیل و رمز فعال همین آموزشگاه وارد شوید. لطفاً رمز خود را در گفت‌وگو ارسال نکنید.</p><div class="rf-access-support"><a href="#/courses">ثبت‌نام یا فعال‌سازی هنرجو ↗</a><a href="tel:09164880996">راهنمایی ورود و رمز عبور ↗</a></div></div></main>';
 }
 function activate(){
@@ -339,10 +345,24 @@ async function inviteLink(path,kind,email){
  catch{return "لینک اختصاصی ساخته شد؛ آن را کپی کنید: "+link}
 }
 async function submit(e){
- const f=e.target;if(!["rf-login","rf-activate","rf-profile-save","rf-work-save","rf-avatar-upload","rf-quiz","rf-campaign-launch","rf-invite-staff","rf-invite-student","rf-invite-guardian","rf-student-task"].includes(f.id)&&!f.classList.contains("rf-mission-submit"))return;e.preventDefault();if(busy)return;const generation=authEpoch;busy=true;error="";notice="";
+ const f=e.target;if(!["rf-login","rf-activate","rf-profile-save","rf-work-save","rf-avatar-upload","rf-quiz","rf-campaign-launch","rf-invite-staff","rf-invite-student","rf-invite-guardian","rf-student-task","rf-phone-request","rf-phone-verify"].includes(f.id)&&!f.classList.contains("rf-mission-submit"))return;e.preventDefault();if(busy)return;const generation=authEpoch;busy=true;error="";notice="";
  try{
  const d=new FormData(f);
- if(f.id==="rf-login"){
+ if(f.id==="rf-phone-request"){
+  const phone=String(d.get("phone")||"").trim().replace(/[۰-۹]/g,x=>String("۰۱۲۳۴۵۶۷۸۹".indexOf(x))).replace(/[٠-٩]/g,x=>String("٠١٢٣٤٥٦٧٨٩".indexOf(x)));
+  if(!/^(?:09\d{9}|\+989\d{9}|989\d{9})$/.test(phone))throw Error("شماره موبایل ایران را به‌صورت ۰۹... وارد کنید.");
+  const result=await api("guardian_phone_request",{phone});
+  if(!result?.ok)throw Error("ارسال کد تأیید نشد");
+  rfFamilyPhone=phone;showNotice("اگر این شماره توسط آموزشگاه تأیید شده و پیامک فعال باشد، کد ورود ارسال می‌شود.");
+ }else if(f.id==="rf-phone-verify"){
+  if(!rfFamilyPhone)throw Error("ابتدا شماره موبایل را وارد کنید.");
+  const otp=String(d.get("otp")||"").replace(/[۰-۹]/g,x=>String("۰۱۲۳۴۵۶۷۸۹".indexOf(x))).replace(/[٠-٩]/g,x=>String("٠١٢٣٤٥٦٧٨٩".indexOf(x))).trim();
+  if(!/^\d{6}$/.test(otp))throw Error("کد شش‌رقمی لازم است.");
+  const response=await api("guardian_phone_verify",{phone:rfFamilyPhone,otp});
+  if(!response?.access_token)throw Error("تأیید کد انجام نشد.");
+  window.RFOPS?.reset?.();setSession(response);rfFamilyPhone="";role=null;
+  location.hash="#/workspace";await loadWorkspace();
+ }else if(f.id==="rf-login"){
   const response=await api("proxy",{path:"/auth/v1/token?grant_type=password",method:"POST",body:{email:String(d.get("email")||"").trim().toLowerCase(),password:String(d.get("password")||"")}});
   if(!response.access_token)throw Error("رمز یا ایمیل تأیید نشد");
   window.RFOPS?.reset?.();setSession(response);role=null;journey=null;parent=null;familyTip=null;staffData=null;
@@ -418,12 +438,13 @@ async function submit(e){
 async function click(e){
  const control=e.target.closest("[data-rf]");if(!control)return;
  const action=control.dataset.rf;
- if(!["logout","refresh","stage","consent","resume","share-on","share-off","notification-read","daily-complete","push-enable","push-disable"].includes(action))return;
+ if(!["logout","refresh","stage","consent","resume","share-on","share-off","notification-read","daily-complete","push-enable","push-disable","phone-reset"].includes(action))return;
  e.preventDefault();
  if(action==="logout"){clear();error="";notice="";location.hash="#/access";refresh();return}
  if(busy)return;
  const generation=authEpoch;
  try{
+ if(action==="phone-reset"){rfFamilyPhone="";error="";notice="";refresh();return}
  if(action==="stage"){stage=Number(control.dataset.step)||0;error="";refresh();return}
  busy=true;
  if(action==="refresh"){role=null;await loadWorkspace();return}

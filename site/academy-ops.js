@@ -26,7 +26,7 @@ const configs={
  classes:["academy_classes","id,course_id,title,session_no,starts_at,ends_at,room,mode,status,published"],
  assignments:["academy_assignments","id,course_id,title,instructions,due_at,published,notify_guardians,created_at"],
  submissions:["academy_assignment_submissions","id,assignment_id,student_id,status,score,submitted_at,feedback"],
- guardians:["academy_guardians","id,full_name,email,user_id,active"],
+ guardians:["academy_guardians","id,full_name,email,mobile,user_id,active"],
  links:["academy_guardian_students","id,guardian_id,student_id,can_view_academic,can_view_attendance,can_view_finance,can_receive_notifications"],
  studentContracts:["academy_student_contracts","id,student_id,course_id,contract_no,start_date,end_date,status,delivered_copy"],
  staffContracts:["academy_staff_contracts","id,staff_user_id,contract_no,contract_type,start_date,end_date,status"],
@@ -204,10 +204,10 @@ function riskDashboard(){
 function family(){
  const students=row("students").filter(s=>s.status!=="archived"&&s.archived_at==null),guardians=row("guardians"),links=row("links");
  const options=students.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.full_name)+'</option>').join("");
- return section("فعالسازی نظارت خانواده با یک تیک",'<p>سرپرست برای مشاهده پرونده فرزند، فقط هویت و ایمیل خودش را تأیید می‌کند؛ پس از آن همان صفحه ورود روشنفکران برای همه نقش‌ها استفاده می‌شود. این اتصال برای مشاهده خصوصی است و اجازه انتشار عمومی رزومه نیست.</p>'+
- '<form id="rfops-invite-guardian" class="rfops-form rfops-invite"><label>انتخاب هنرجو<select name="student_id" required>'+options+'</select></label><label>نام قانونی سرپرست<input name="full_name" minlength="3" maxlength="90" required placeholder="نام پدر، مادر یا سرپرست قانونی"/></label><label>ایمیل سرپرست<input type="email" name="email" required dir="ltr" placeholder="guardian@example.com"/></label><label>تلفن اختیاری<input name="mobile" dir="ltr" inputmode="tel" /></label><label class="rfops-consent"><input type="checkbox" name="verified" required/> من به‌عنوان مدیر، هویت و رابطه قانونی سرپرست را بررسی کرده‌ام و اجازه دسترسی آموزشی را تأیید می‌کنم.</label><button class="btn btn-primary" type="submit" '+(working||!students.length?"disabled":"")+'>✓ فعال‌سازی نظارت و دریافت لینک امن</button></form>'+
- (generated?'<div class="rfops-link"><strong>لینک اختصاصی فعال‌سازی</strong><p>این لینک را فقط به ایمیل تأییدشده سرپرست بفرستید.</p><div class="rfops-link-row"><input readonly dir="ltr" value="'+esc(generated)+'" id="rfops-invite-url"/><button type="button" data-rfops="copy-link">کپی لینک</button></div></div>':"")+
- '<h4>سرپرستان متصل</h4>'+
+ return section("نظارت خانواده با موبایل",'<p>بدون ایمیل: از پرونده هنرجو شماره قانونی پدر، مادر یا سرپرست را تأیید کنید. خانواده پس از دریافت OTP، با همان شماره به فضای نظارت اختصاصی دسترسی خواهد داشت. فعال‌سازی به‌تنهایی مجوز انتشار عمومی رزومه نیست.</p>'+
+ '<form id="rfops-invite-guardian" class="rfops-form rfops-invite"><label>هنرجو<select name="student_id" required>'+options+'</select></label><label>نام سرپرست<input name="full_name" minlength="3" maxlength="90" required placeholder="نام قانونی"/></label><label>شماره موبایل سرپرست<input name="mobile" type="tel" inputmode="tel" autocomplete="off" required placeholder="۰۹۱۲..." dir="ltr"/></label><label>نسبت با هنرجو<select name="relationship"><option value="father">پدر</option><option value="mother">مادر</option><option value="guardian">سرپرست قانونی</option></select></label><label class="rfops-consent"><input type="checkbox" name="verified" required/> من هویت سرپرست و نسبت قانونی او را بررسی کرده‌ام و فعال‌شدن نظارت آموزشی را تأیید می‌کنم.</label><button class="btn btn-primary" type="submit" '+(working||!students.length?"disabled":"")+'>✓ ثبت و فعال‌سازی دسترسی سرپرست</button></form>'+
+ '<div class="rfops-help"><strong>مراحل ساده برای خانواده</strong><span>۱. مدیر ارتباط را ثبت می‌کند</span><span>۲. سرپرست از «ورود با موبایل» کد یک‌بارمصرف می‌گیرد</span><span>۳. بعد از تأیید پیامک، پیشرفت و تکالیف را می‌بیند</span></div>'+
+  '<h4>سرپرستان متصل</h4>'+
  (links.length?'<div class="rfops-table-wrap"><table><thead><tr><th>هنرجو</th><th>سرپرست</th><th>هویت</th><th>نظارت تحصیلی</th><th>اعلان داخلی</th></tr></thead><tbody>'+links.map(l=>{
   const g=guardians.find(g=>g.id===l.guardian_id);
   return '<tr><td>'+esc(name("students",l.student_id))+'</td><td>'+esc(g?.full_name||"—")+'<small>'+esc(g?.email||"")+'</small></td><td>'+(g?.user_id?"فعال":"منتظر فعال‌سازی")+'</td><td><button class="rfops-switch" type="button" data-rfops="family-switch" data-link="'+esc(l.id)+'" data-enabled="'+String(!l.can_view_academic)+'" aria-pressed="'+String(!!l.can_view_academic)+'">'+(l.can_view_academic?"✓ روشن":"○ خاموش")+'</button></td><td>'+(l.can_receive_notifications&&l.can_view_academic?"فعال":"خاموش")+'</td></tr>';
@@ -474,20 +474,18 @@ async function formSubmit(form){
     throw Error("ثبت تأیید شد اما تازه‌سازی فهرست انجام نشد؛ دوباره فهرست را باز کنید.");
    attendanceSnapshot=snapshot;info="وضعیت حضور هنرجو با تأیید سرور ثبت شد.";
   }else if(form.id==="rfops-invite-guardian"){
-   if(!familyManager()||!data.get("verified"))throw Error("مجوز مدیر و تأیید رابطه قانونی لازم است.");
-   const student_id=String(data.get("student_id")||""),full_name=String(data.get("full_name")||"").trim(),email=String(data.get("email")||"").trim().toLowerCase();
-   if(!uuid(student_id)||full_name.length<3||!email.includes("@"))throw Error("اطلاعات سرپرست کامل نیست.");
-   if(!row("students").some(s=>s.id===student_id&&s.status!=="archived"&&s.archived_at==null))throw Error("این هنرجو فعال نیست و نمی‌توان نظارت جدید ایجاد کرد.");
-   if(row("links").some(l=>l.student_id===student_id&&row("guardians").some(g=>g.id===l.guardian_id&&g.email?.toLowerCase()===email)))
-    throw Error("برای این سرپرست پیوند موجود است؛ از کلید روشن/خاموش همان ردیف استفاده کنید.");
-   if(!confirm("هویت و رابطه سرپرست را تأیید می‌کنید و لینک فعال‌سازی اختصاصی صادر شود؟"))return;
+   if(!familyManager()||!data.get("verified"))throw Error("مجوز مدیر و تأیید نسبت قانونی سرپرست لازم است.");
+   const student_id=String(data.get("student_id")||"");
+   const full_name=String(data.get("full_name")||"").trim(),mobile=String(data.get("mobile")||"").trim(),relationship=String(data.get("relationship")||"guardian");
+   if(!uuid(student_id)||full_name.length<3||!["father","mother","guardian"].includes(relationship))throw Error("نام، هنرجو و نسبت قانونی باید معتبر باشد.");
+   if(!row("students").some(s=>s.id===student_id&&s.status!=="archived"&&s.archived_at==null))throw Error("پرونده هنرجوی فعال پیدا نشد.");
+   if(!/^(?:09[0-9۰-۹]{9}|\+989[0-9۰-۹]{9}|989[0-9۰-۹]{9})$/.test(mobile))throw Error("شماره موبایل معتبر وارد کنید.");
+   if(!confirm("هویت و نسبت سرپرست را بررسی کرده‌اید؟ نظارت آموزشی برای شماره موبایل او ثبت شود؟"))return;
    working=true;
-   const result=await request("invite_guardian",{student_id,full_name,email,mobile:String(data.get("mobile")||""),relationship:"guardian",can_view_finance:false},true);
-   const part=String(result.activation_path||"").split("?")[1]||"";
-   const code=new URLSearchParams(part).get("code")||"";
-   if(!/^[a-f0-9]{64}$/i.test(code))throw Error("لینک امن صادر نشد.");
-   generated=location.origin+"/#/activate?kind=guardian&email="+encodeURIComponent(email)+"&code="+code;
-   try{await navigator.clipboard.writeText(generated);info="سرپرست ثبت شد. لینک امن کپی شد؛ برای خودش بفرستید."}catch{info="سرپرست ثبت شد. لینک فعال‌سازی را فقط برای خودش ارسال کنید."}
+   const saved=await rpc("academy_guardian_phone_invite",{p_student_id:student_id,p_full_name:full_name,p_phone:mobile,p_relationship:relationship});
+   if(!saved?.ok)throw Error("سرور دعوت موبایلی را تأیید نکرد.");
+   info="سرپرست با شماره "+String(saved.phone_masked||"").replace(/[<>]/g,"")+" ثبت شد. خانواده از همان صفحه ورود، کد پیامکی درخواست می‌کند.";
+   generated="";
   }else if(form.id==="rfops-course-ops"){
     if(!enrollmentManager())throw Error("مجوز ویرایش برنامه دوره وجود ندارد.");
     const course_id=String(data.get("course_id")||"");
