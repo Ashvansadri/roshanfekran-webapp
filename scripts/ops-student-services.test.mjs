@@ -1,4 +1,4 @@
-// Read-only student services inbox QA: role visibility, active-student isolation and fail-closed loading.
+// Student services inbox privacy QA: role visibility, active-student isolation and fail-closed loading.
 import {readFileSync} from "node:fs";
 import {join} from "node:path";
 import assert from "node:assert/strict";
