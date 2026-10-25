@@ -48,6 +48,17 @@ async function invitedAccount(email:string,password:string,name:string){
  const session=await jo(await supa('/auth/v1/token?grant_type=password','POST',{email,password}));
  return {user,session};
 }
+
+// Guardian mobile phones are normalized to E.164 for exact verified identity matching.
+// No unauthenticated endpoint can reveal whether a phone is enrolled.
+function guardianPhone(v:any){
+ const digitMap={'۰':'0','۱':'1','۲':'2','۳':'3','۴':'4','۵':'5','۶':'6','۷':'7','۸':'8','۹':'9','٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9'} as Record<string,string>;
+ const n=String(v||'').replace(/[۰-۹٠-٩]/g,c=>digitMap[c]||c).replace(/[^0-9]/g,'');
+ if(/^09[0-9]{9}$/.test(n))return '+98'+n.slice(1);
+ if(/^989[0-9]{9}$/.test(n))return '+'+n;
+ throw gatewayHttpError(400,'شماره موبایل ایران معتبر نیست');
+}
+
 function gatewayHttpError(status:number,message:string){return Object.assign(new Error(message),{status})}
 // Accept only recognized browser push gateways; otherwise a future sender could
 // be tricked into making authenticated requests to attacker-chosen/internal hosts.
@@ -225,6 +236,41 @@ Deno.serve(async(req:Request)=>{
    await jo(await svc('/rest/v1/academy_student_invites?email=eq.'+encodeURIComponent(email),'PATCH',{used_at:new Date().toISOString()},'return=representation'));
    try{await jo(await supa('/rest/v1/rpc/academy_seed_my_notifications','POST',{},session.access_token))}catch{}
    return jr(session);
+  }
+  if(b.action==='guardian_phone_request'){
+   const phone=guardianPhone(b.phone);
+   const guardians=await jo(await svc('/rest/v1/academy_guardians?select=id,user_id,active&mobile=eq.'+encodeURIComponent(phone)+'&active=eq.true&limit=1','GET',null));
+   const guardian=Array.isArray(guardians)?guardians[0]:null;
+   // Enumeration-safe success for numbers that were not invited by staff.
+   if(!guardian)return jr({ok:true,requested:true});
+   const links=await jo(await svc('/rest/v1/academy_guardian_students?select=id&guardian_id=eq.'+encodeURIComponent(guardian.id)+'&can_view_academic=eq.true&limit=1','GET',null));
+   if(!Array.isArray(links)||!links.length)return jr({ok:true,requested:true});
+   const fingerprint=await sha256('RF_GUARDIAN_OTP_V1|'+SERVICE+'|'+phone);
+   const quota=await jo(await svc('/rest/v1/rpc/academy_guardian_otp_consume','POST',{p_fingerprint:fingerprint}));
+   if(quota!==true)return jr({error:'درخواست کد بیش از حد مجاز است. پس از یک دقیقه دوباره امتحان کنید.',code:'SMS_RATE_LIMIT'},429);
+   const upstream=await supa('/auth/v1/otp','POST',{phone,create_user:true});
+   if(!upstream.ok){
+    // Do not reveal underlying phone existence, JWTs, API keys, SMS provider names or source response.
+    return jr({error:'ارسال پیامک اکنون در دسترس نیست. ارائه‌دهنده پیامک و ورود با تلفن باید در Supabase فعال باشد.',code:'SMS_PROVIDER_UNAVAILABLE'},503);
+   }
+   return jr({ok:true,requested:true});
+  }
+  if(b.action==='guardian_phone_verify'){
+   const phone=guardianPhone(b.phone),otp=String(b.otp||'').trim();
+   if(!/^[0-9]{6}$/.test(otp))throw gatewayHttpError(400,'کد شش‌رقمی معتبر نیست');
+   const response=await supa('/auth/v1/verify','POST',{phone,token:otp,type:'sms'});
+   if(!response.ok)throw gatewayHttpError(401,'کد منقضی یا اشتباه است');
+   const session=await jo(response);
+   if(!session?.access_token||!session?.refresh_token||!session?.user?.id)
+    throw gatewayHttpError(401,'ورود با شماره تأیید نشد');
+   // Only server-verified users whose phone matches a preapproved active guardian
+   // are allowed to see the family workspace.
+   const claim=await supa('/rest/v1/rpc/academy_guardian_phone_claim','POST',{},session.access_token);
+   if(!claim.ok)throw gatewayHttpError(403,'ارتباط قانونی تأییدشده با هنرجو موجود نیست؛ با آموزشگاه تماس بگیرید');
+   const accepted=await jo(claim);
+   if(!accepted?.ok)throw gatewayHttpError(403,'دسترسی خانواده هنوز فعال نیست');
+   return jr({access_token:session.access_token,refresh_token:session.refresh_token,
+    expires_in:session.expires_in||3600,token_type:'bearer'});
   }
   if(b.action==='invite_guardian'){
    const token=bt(req),u=await currentUser(token),role=await currentRole(token,u.id);
