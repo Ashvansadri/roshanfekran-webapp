@@ -66,6 +66,9 @@ await deny("anonymous private student document","student_document_url",{document
 await deny("anonymous private payment receipt","payment_receipt_url",{path:"00000000-0000-4000-8000-000000000000/00000000-0000-4000-8000-000000000000.pdf"},401);
 await deny("anonymous avatar mutation","avatar_upload",{mime:"image/png",data_base64:"AA=="},401);
 await deny("forbidden proxy route","proxy",{path:"/auth/v1/admin/users",method:"GET"},403,{"authorization":"Bearer synthetic-test-only-not-a-session"});
+await deny("normalized traversal to Auth admin","proxy",{path:"/rest/v1/../../auth/v1/admin/users",method:"GET"},403,{"authorization":"Bearer synthetic-test-only-not-a-session"});
+await deny("percent-encoded traversal to Auth admin","proxy",{path:"/rest/v1/%2e%2e/%2e%2e/auth/v1/admin/users",method:"GET"},403,{"authorization":"Bearer synthetic-test-only-not-a-session"});
+await deny("encoded private invitation table","proxy",{path:"/rest/v1/academy_staff%5Finvites?select=id",method:"GET"},403,{"authorization":"Bearer synthetic-test-only-not-a-session"});
 // Credentialless live auth regression: synthetic strings must never grant access.
 // No real account, password, SMS, or user data is used.
 await deny("synthetic bearer portal resolution","resolve_portal",{},401,{"authorization":"Bearer synthetic-test-only-not-a-session"});
@@ -75,4 +78,4 @@ assert([400,401].includes(expired.r.status),"Synthetic refresh must be rejected 
 assert.equal(expired.d?.access_token,undefined,"Invalid refresh must never return an access token");
 assert.equal(expired.d?.refresh_token,undefined,"Invalid refresh must never return a refresh token");
 await deny("invalid public resume token","public_showcase",{token:"00000000-0000-4000-8000-000000000000"},404);
-console.log("PASS: live public catalog ("+catalog.courses.length+" course(s)), news, daily content and registration info; fifteen real anonymous/invalid-access denial checks; no writes.");
+console.log("PASS: live public catalog ("+catalog.courses.length+" course(s)), news, daily content and registration info; eighteen real anonymous/invalid-access denial checks; no writes.");
