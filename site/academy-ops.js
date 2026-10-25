@@ -288,8 +288,7 @@ function family(){
  '<p class="rf-caption">خاموش‌کردن نظارت، دیدن پرونده، تکالیف و اعلان‌های مربوط به این هنرجو را در سرور قطع می‌کند. ارسال اعلان گوشی نیازمند اجازه Push سرپرست است؛ اعلان‌های داخل سامانه به‌صورت خودکار ایجاد می‌شوند.</p>');
 }
 function serviceDesk(){
- // Staff inbox is deliberately read-only until a narrow, audited server-side
- // transition RPC exists. Never patch student-owned fields from this screen.
+ // All replies use the audited, role-scoped RPC; direct PATCH is revoked in the database.
  if(!enrollmentManager())return "";
  if(!Array.isArray(datasets.students)||failures.students)
   return section("درخواست‌های خدمات هنرجویی",'<div class="rfops-warn" role="alert">فهرست هنرجویان فعال دریافت نشد؛ برای جلوگیری از نمایش اطلاعات نامرتبط، درخواست‌ها پنهان شدند.</div>');
@@ -300,11 +299,25 @@ function serviceDesk(){
  const labels={financial:"مالی و اقساط",certificate:"گواهی",schedule:"برنامه کلاس",absence:"حضور و غیاب",documents:"مدارک",other:"سایر"};
  const status={open:"جدید",in_progress:"در حال بررسی",resolved:"پاسخ داده‌شده",closed:"بسته"};
  const pending=items.filter(x=>!["resolved","closed"].includes(x.status)).length;
- const cards=items.map(x=>'<article class="rfops-card"><div><strong>'+esc(x.subject||"درخواست بدون عنوان")+'</strong><span>'+esc(name("students",x.student_id))+'</span></div>'+
-  '<p>'+esc(labels[x.category]||"سایر")+' · '+esc(status[x.status]||x.status||"نامشخص")+' · '+when(x.created_at)+'</p>'+
-  '<p class="rfops-service-body">'+esc(x.body||"")+'</p>'+
-  (x.staff_note?'<div class="rfops-help"><strong>پاسخ ثبت‌شده</strong><span>'+esc(x.staff_note)+'</span></div>':"")+'</article>').join("");
- return section("صندوق خدمات هنرجویی",'<p>درخواست‌های مالی، گواهی، برنامه کلاس، غیبت و مدارک از پورتال مستقل هنرجو دریافت می‌شوند. این نما فقط خواندنی است؛ تغییر وضعیت پس از تکمیل مجوز و ثبت رویداد سمت سرور فعال خواهد شد.</p>'+
+ const cards=items.map(x=>{
+  const editable=uuid(x.id)&&["open","in_progress","resolved","closed"].includes(x.status);
+  const statusOptions=[["open","جدید"],["in_progress","در حال بررسی"],["resolved","پاسخ داده‌شده"],["closed","بسته"]]
+   .map(([value,label])=>'<option value="'+value+'"'+(x.status===value?' selected':'')+'>'+label+'</option>').join("");
+  const priorityOptions=[["low","کم"],["normal","عادی"],["high","بالا"],["urgent","فوری"]]
+   .map(([value,label])=>'<option value="'+value+'"'+(x.priority===value?' selected':'')+'>'+label+'</option>').join("");
+  const editor=editable?'<details class="rfops-service-editor"><summary>رسیدگی و ثبت پاسخ امن</summary>'+
+   '<form class="rfops-form rfops-service-form" data-rfops-form="service-reply" data-id="'+esc(x.id)+'">'+
+   '<label>وضعیت<select name="status" required>'+statusOptions+'</select></label>'+
+   '<label>اولویت<select name="priority" required>'+priorityOptions+'</select></label>'+
+   '<label class="rfops-wide">پاسخ قابل مشاهده برای هنرجو<textarea name="staff_note" maxlength="4000" rows="3" placeholder="نتیجه بررسی و اقدام بعدی">'+esc(x.staff_note||"")+'</textarea></label>'+
+   '<button type="submit" '+(working?'disabled':'')+'>ثبت پاسخ و وضعیت ←</button>'+
+   '<small class="rfops-wide">تغییرات فقط پس از تأیید سرور و ثبت رویداد حسابرسی نمایش داده می‌شوند.</small></form></details>':"";
+  return '<article class="rfops-card"><div><strong>'+esc(x.subject||"درخواست بدون عنوان")+'</strong><span>'+esc(name("students",x.student_id))+'</span></div>'+
+   '<p>'+esc(labels[x.category]||"سایر")+' · '+esc(status[x.status]||x.status||"نامشخص")+' · '+when(x.created_at)+'</p>'+
+   '<p class="rfops-service-body">'+esc(x.body||"")+'</p>'+
+   (x.staff_note?'<div class="rfops-help"><strong>پاسخ ثبت‌شده</strong><span>'+esc(x.staff_note)+'</span></div>':"")+editor+'</article>';
+ }).join("");
+ return section("صندوق خدمات هنرجویی",'<p>درخواست‌های مالی، گواهی، برنامه کلاس، غیبت و مدارک از پورتال مستقل هنرجو دریافت می‌شوند. پاسخ‌ها فقط با کنترل نقش، پرونده فعال و ثبت رویداد سمت سرور ذخیره می‌شوند.</p>'+
   '<div class="rfops-summary"><div><strong>'+fa(items.length)+'</strong><span>درخواست قابل مشاهده</span></div><div><strong>'+fa(pending)+'</strong><span>در انتظار رسیدگی</span></div></div>'+
   (items.length?'<div class="rfops-cards">'+cards+'</div>':empty("serviceRequests","درخواستی از هنرجویان فعال ثبت نشده است."))+
   '<p class="rf-caption">فقط پرونده‌های فعال در این فهرست نمایش داده می‌شوند. حداکثر ۱۵۰ درخواست اخیر خوانده می‌شود و هیچ اطلاعاتی از این بخش به مرورگر عمومی ارسال نمی‌شود.</p>');
@@ -550,7 +563,27 @@ async function formSubmit(form){
  if(working)return;const generation=sessionEpoch;warning="";info="";generated="";
  const data=new FormData(form);
  try{
-  if(form.dataset?.rfopsForm==="attendance"){
+  if(form.dataset?.rfopsForm==="service-reply"){
+   if(!enrollmentManager())throw Error("مجوز رسیدگی به درخواست‌های هنرجویی فعال نیست.");
+   const requestId=String(form.dataset.id||"");
+   const record=row("serviceRequests").find(x=>x.id===requestId);
+   if(!uuid(requestId)||!record||!row("students").some(s=>s.id===record.student_id&&s.archived_at==null&&s.status!=="archived"))
+    throw Error("درخواست یا پرونده هنرجوی فعال یافت نشد.");
+   const status=String(data.get("status")||""),priority=String(data.get("priority")||"");
+   const note=String(data.get("staff_note")||"").trim();
+   if(!["open","in_progress","resolved","closed"].includes(status)||
+      !["low","normal","high","urgent"].includes(priority)||note.length>4000)
+    throw Error("وضعیت، اولویت یا طول پاسخ معتبر نیست.");
+   if(status==="resolved"&&note.length<3)throw Error("برای پاسخ‌داده‌شده، نتیجه رسیدگی را بنویسید.");
+   if(!confirm("پاسخ و وضعیت این درخواست برای هنرجو ثبت شود؟ این اقدام در حسابرسی سرور ثبت می‌شود."))return;
+   working=true;
+   const saved=await rpc("academy_reply_service_request",{
+    p_request_id:requestId,p_status:status,p_priority:priority,p_staff_note:note||null
+   });
+   if(!saved?.ok||String(saved.id)!==requestId||saved.status!==status||saved.priority!==priority)
+    throw Error("ثبت پاسخ در سرور تأیید نشد؛ وضعیت درخواست را تازه‌سازی کنید.");
+   info="پاسخ و وضعیت با تأیید سرور و ثبت حسابرسی ذخیره شد.";
+  }else if(form.dataset?.rfopsForm==="attendance"){
    if(!teacher())throw Error("مجوز ثبت حضور و غیاب ندارید.");
    const class_id=String(data.get("class_id")||""),student_id=String(data.get("student_id")||"");
    const status=String(data.get("status")||""),note=String(data.get("note")||"").trim();
@@ -646,7 +679,7 @@ root?.addEventListener("click",event=>{
 });
 root?.addEventListener("submit",event=>{
  const form=event.target;
- if(form?.dataset?.rfopsForm!=="attendance"&&form?.id!=="rfops-invite-guardian"&&form?.id!=="rfops-assignment"&&form?.id!=="rfops-course-ops"&&form?.id!=="rfops-class")return;
+ if(!["attendance","service-reply"].includes(form?.dataset?.rfopsForm)&&form?.id!=="rfops-invite-guardian"&&form?.id!=="rfops-assignment"&&form?.id!=="rfops-course-ops"&&form?.id!=="rfops-class")return;
  event.preventDefault();formSubmit(form);
 });
 window.RFOPS={load,render,reset,showOverview(){selected="overview"}};
