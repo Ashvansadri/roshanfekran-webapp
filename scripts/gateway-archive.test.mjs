@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 const source=readFileSync(new URL("../supabase/functions/academy-gateway/index.ts",import.meta.url),"utf8");
 const begin=source.indexOf("async function studentByUser(");
-const end=source.indexOf("async function guardianByUser(",begin);
+const end=source.indexOf("function requireStudentPortal(",begin);
 assert(begin>=0&&end>begin,"Missing student lookup");
 const helper=source.slice(begin,end).trim().replace("userId:string","userId");
 assert(helper.includes("status,archived_at"),"Student lookup must load both archive indicators");
