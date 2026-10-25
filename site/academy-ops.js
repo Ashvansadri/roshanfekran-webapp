@@ -48,7 +48,7 @@ let riskRows=[],riskFailure="";
 function reset(){
  sessionEpoch++;role=null;request=null;datasets={};failures={};inflight=null;
  selected="students";working=false;info="";warning="";generated="";attendanceClassId="";attendanceSnapshot=null;
- riskRows=[];riskFailure="";
+ riskRows=[];riskFailure="";window.RFDAILY?.reset?.();
 }
 const meRole=()=>String(role?.role||"");
 const manage=()=>["owner","manager"].includes(meRole());
@@ -126,7 +126,7 @@ async function load(nextRole,apiFn){
  const generation=sessionEpoch;
  let job;
  job=(async()=>{
-  if(nextRole?.kind==="teacher"){riskRows=[];riskFailure="";return loadTeacher(generation);}
+  if(nextRole?.kind==="teacher"){riskRows=[];riskFailure="";window.RFDAILY?.reset?.();return loadTeacher(generation);}
   const keys=available();
   const canSeeRisk=["owner","manager","registrar","finance"].includes(String(nextRole?.role||""));
   // The RPC checks the staff role server-side. Select only the fields shown; never request phone numbers.
@@ -136,6 +136,8 @@ async function load(nextRole,apiFn){
    return proxy("/rest/v1/"+table+"?select="+cols+"&limit=150&order="+(key==="applications"?"submitted_at":key==="payments"?"submitted_at":key==="assignments"?"created_at":"id")+".desc");
   });
   if(canSeeRisk)jobs.push(proxy(riskPath,"POST",{}));
+  if(["owner","manager"].includes(String(nextRole?.role||"")))jobs.push(window.RFDAILY.load(nextRole,request));
+  else window.RFDAILY?.reset?.();
   const results=await Promise.allSettled(jobs);
   if(generation!==sessionEpoch)return false;
   const nextData={},nextFailures={};
@@ -170,7 +172,8 @@ function tabs(){
  ["finance","مالی و اقساط",financial()],
  ["risk","پایش هنرجویان",["owner","manager","registrar","finance"].includes(meRole())],
  ["contracts","قراردادها",enrollmentManager()],
- ["tasks","تکالیف و کلاس‌ها",teacher()]
+ ["tasks","تکالیف و کلاس‌ها",teacher()],
+ ["daily","انتشار نکته روز",manage()]
  ].filter(x=>x[2]);
  if(!allowed.some(x=>x[0]===selected))selected=allowed[0]?.[0]||"tasks";
  return '<nav class="rfops-tabs" aria-label="بخش‌های مدیریت">'+allowed.map(x=>'<button type="button" data-rfops-tab="'+x[0]+'" aria-pressed="'+String(x[0]===selected)+'">'+x[1]+'</button>').join("")+'</nav>';
@@ -360,7 +363,7 @@ function render(nextRole){
  // Resolve permitted tab before choosing the content; never render a stale tab from a previous role.
  const nav=tabs();
  let content="";
- switch(selected){case"family":content=family();break;case"risk":content=riskDashboard();break;case"applications":content=applications();break;case"courses":content=courses();break;case"finance":content=finance();break;case"contracts":content=contracts();break;case"tasks":content=tasks();break;default:content=students();}
+ switch(selected){case"family":content=family();break;case"risk":content=riskDashboard();break;case"applications":content=applications();break;case"courses":content=courses();break;case"finance":content=finance();break;case"contracts":content=contracts();break;case"tasks":content=tasks();break;case"daily":content=window.RFDAILY?.render?.(nextRole)||"";break;default:content=students();}
  return '<div class="rfops" id="rfops-main"><header class="rfops-top"><div><span>ACADEMY OPERATIONS / LIVE DATA</span><h2>مدیریت یکپارچه آموزشگاه</h2><p>دوره‌ها، ثبت‌نام‌ها، هنرجویان، خانواده، تکالیف و مالی در همین سامانه؛ بدون انتقال به Floot.</p></div><button data-rfops="reload" type="button">تازه‌سازی ↻</button></header>'+alert()+nav+(inflight?'<div class="rfops-loading">در حال دریافت اطلاعات مجاز…</div>':"")+content+'</div>';
 }
 async function act(action,element){

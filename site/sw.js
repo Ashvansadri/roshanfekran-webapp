@@ -25,6 +25,7 @@ const SHELL=[
  "/portal-premium.css",
  "/cinematic.css",
  "/academy-ops.css",
+  "/daily-admin.css",
  "/family-monitor.css",
  "/app.js",
  "/portal.js",
@@ -36,6 +37,7 @@ const SHELL=[
  "/homepage.js",
  "/cinematic.js",
  "/academy-ops.js",
+  "/daily-admin.js",
  "/family-monitor.js"
 ];
 const PUBLIC_FILES=new Set(SHELL);

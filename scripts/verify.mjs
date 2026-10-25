@@ -5,8 +5,8 @@ import assert from "node:assert/strict";
 const root=new URL("../",import.meta.url).pathname;
 const site=join(root,"site");
 const html=readFileSync(join(site,"index.html"),"utf8");
-const scripts=["app.js","portal.js","enroll.js","public-resume.js","scene.js","luxury.js","motion.js","homepage.js","cinematic.js","academy-ops.js","family-monitor.js","sw.js"];
-const styles=["styles.css","experience.css","portal.css","enroll.css","scene.css","invites.css","luxury.css","motion.css","homepage.css","portal-premium.css","cinematic.css","academy-ops.css","family-monitor.css"];
+const scripts=["app.js","portal.js","enroll.js","public-resume.js","scene.js","luxury.js","motion.js","homepage.js","cinematic.js","academy-ops.js","daily-admin.js","family-monitor.js","sw.js"];
+const styles=["styles.css","experience.css","portal.css","enroll.css","scene.css","invites.css","luxury.css","motion.css","homepage.css","portal-premium.css","cinematic.css","academy-ops.css","daily-admin.css","family-monitor.css"];
 for(const file of scripts){
  const filepath=join(site,file);assert(existsSync(filepath),file+" missing");
  const check=spawnSync(process.execPath,["--check",filepath],{encoding:"utf8"});
