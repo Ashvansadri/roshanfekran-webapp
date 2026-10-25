@@ -41,4 +41,6 @@ assert(!validKeys({p256dh:encoded(65),auth:encoded(2)}),"Truncated auth secret a
 assert(!validKeys({p256dh:encoded(65),auth:"not!base64"}),"Malformed auth secret accepted");
 assert(save.includes("subscription:platform==='web'?{endpoint:identity,keys:"),"Web Push payload must be reduced to required fields");
 
-console.log("PASS: student-scoped Push ownership, trusted endpoints, key sizes and VAPID readiness");
+assert(source.includes("guardianPushEligible(u.id)") && source.includes("can_receive_notifications=eq.true"),"Guardian push must require explicit family permission");
+assert(save.includes("student_id:st?.id||null"),"Guardian subscription must not impersonate a student");
+console.log("PASS: student/guardian scoped Push ownership, trusted endpoints, key sizes and VAPID readiness");
