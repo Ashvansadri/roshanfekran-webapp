@@ -102,4 +102,10 @@ BEGIN
 END $body$;
 REVOKE ALL ON FUNCTION private.academy_guardian_otp_consume(text) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION private.academy_guardian_otp_consume(text) TO service_role;
+
+CREATE OR REPLACE FUNCTION public.academy_guardian_otp_consume(p_fingerprint text)
+RETURNS boolean LANGUAGE sql SECURITY DEFINER SET search_path=''
+AS $fn$ SELECT private.academy_guardian_otp_consume(p_fingerprint); $fn$;
+REVOKE ALL ON FUNCTION public.academy_guardian_otp_consume(text) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.academy_guardian_otp_consume(text) TO service_role;
 COMMIT;
