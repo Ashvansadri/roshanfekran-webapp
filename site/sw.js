@@ -87,7 +87,7 @@ function safePushRoute(value){
   if(url.origin!==self.location.origin)return fallback;
   if(url.pathname!=="/"&&url.pathname!=="/index.html")return fallback;
   if(url.search)return fallback;
-  if(!/^#\\/(?:updates|portal|courses|missions)(?:[/?].*)?$/.test(url.hash))return fallback;
+  if(!new RegExp("^#/(?:updates|portal|courses|missions)(?:[/?].*)?$").test(url.hash))return fallback;
   return "/"+url.hash;
  }catch{return fallback}
 }
