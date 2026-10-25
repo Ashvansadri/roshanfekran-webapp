@@ -62,6 +62,14 @@ for(const size of [180,192,512])assert(sw.includes("/assets/rf-icon-"+size+".png
 for(const name of ["rf_hero_real3d.webp","rf_ai_real3d.webp","rf_crypto_real3d.webp","rf_forex_real3d.webp","rf_architecture_real3d.webp"])assert(existsSync(join(site,"assets",name)),"Local cinematic asset missing: "+name);
 assert(!css.includes("roshanfekran-academy-control.floot.app/_cdn/"),"Cinematic CSS must not depend on legacy Floot CDN");
 
+// The installed PWA must keep every first-party screen and cinematic asset usable offline.
+for(const path of [...scripts.filter(f=>f!=="sw.js"),...styles,"manifest.webmanifest","favicon.svg"])
+ assert(sw.includes('"/'+path+'"'),"PWA offline shell missing public resource: "+path);
+for(const name of ["rf_hero_real3d.webp","rf_ai_real3d.webp","rf_crypto_real3d.webp","rf_forex_real3d.webp","rf_architecture_real3d.webp"])
+ assert(sw.includes('"/assets/'+name+'"'),"PWA offline shell missing local cinematic image: "+name);
+assert(sw.includes('url.origin!==self.location.origin')&&sw.includes('url.search')&&sw.includes('PUBLIC_FILES.has(url.pathname)'),"PWA cache must exclude cross-origin, query-bearing and unlisted requests");
+
+
 const motion=readFileSync(join(site,"motion.js"),"utf8");
 assert(motion.includes("ScrollTrigger") && motion.includes("Lenis"),"Missing GSAP / Lenis integration");
 assert(motion.includes("prefers-reduced-motion"),"Motion must honor user preference");

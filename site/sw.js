@@ -1,15 +1,74 @@
-const CACHE="rf-academy-public-v14";
-const SHELL=["/","/index.html","/manifest.webmanifest","/assets/rf-icon-180.png","/assets/rf-icon-192.png","/assets/rf-icon-512.png","/styles.css","/experience.css","/portal.css","/app.js","/portal.js","/public-resume.js","/enroll.js","/enroll.css","/scene.js","/scene.css","/invites.css","/luxury.css","/luxury.js","/motion.css","/motion.js","/homepage.css","/homepage.js","/portal-premium.css","/cinematic.css","/cinematic.js","/academy-ops.css","/academy-ops.js","/family-monitor.css","/family-monitor.js","/assets/rf_hero_real3d.webp","/assets/rf_ai_real3d.webp","/assets/rf_crypto_real3d.webp","/assets/rf_forex_real3d.webp","/assets/rf_architecture_real3d.webp","/favicon.svg"];
-self.addEventListener("install",event=>{event.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)));self.skipWaiting()});
-self.addEventListener("activate",event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith("rf-academy-")&&k!==CACHE).map(k=>caches.delete(k)))));self.clients.claim()});
+/* Public offline shell only. Private data and authentication responses are never cached. */
+const CACHE="rf-academy-public-v15";
+const SHELL=[
+ "/",
+ "/index.html",
+ "/manifest.webmanifest",
+ "/favicon.svg",
+ "/assets/rf-icon-180.png",
+ "/assets/rf-icon-192.png",
+ "/assets/rf-icon-512.png",
+ "/assets/rf_hero_real3d.webp",
+ "/assets/rf_ai_real3d.webp",
+ "/assets/rf_crypto_real3d.webp",
+ "/assets/rf_forex_real3d.webp",
+ "/assets/rf_architecture_real3d.webp",
+ "/styles.css",
+ "/experience.css",
+ "/portal.css",
+ "/enroll.css",
+ "/scene.css",
+ "/invites.css",
+ "/luxury.css",
+ "/motion.css",
+ "/homepage.css",
+ "/portal-premium.css",
+ "/cinematic.css",
+ "/academy-ops.css",
+ "/family-monitor.css",
+ "/app.js",
+ "/portal.js",
+ "/enroll.js",
+ "/public-resume.js",
+ "/scene.js",
+ "/luxury.js",
+ "/motion.js",
+ "/homepage.js",
+ "/cinematic.js",
+ "/academy-ops.js",
+ "/family-monitor.js"
+];
+const PUBLIC_FILES=new Set(SHELL);
+
+self.addEventListener("install",event=>{
+ event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)));
+ self.skipWaiting();
+});
+self.addEventListener("activate",event=>{
+ event.waitUntil(caches.keys().then(keys=>Promise.all(
+  keys.filter(key=>key.startsWith("rf-academy-public-")&&key!==CACHE).map(key=>caches.delete(key))
+ )));
+ self.clients.claim();
+});
 self.addEventListener("fetch",event=>{
- if(event.request.method!=="GET")return;
- const u=new URL(event.request.url);
- // Never cache private API responses, credentials or cross-origin resources.
- if(u.origin!==self.location.origin||u.pathname.startsWith("/_api/"))return;
- if(event.request.mode==="navigate"){
-  event.respondWith(fetch(event.request).catch(()=>caches.match("/index.html")));
+ const request=event.request;
+ if(request.method!=="GET")return;
+ const url=new URL(request.url);
+ // Same-origin, query-free, explicitly public static resources only.
+ // Never cache session-bearing URLs, gateway/API responses, or third-party requests.
+ if(url.origin!==self.location.origin||url.search||!PUBLIC_FILES.has(url.pathname))return;
+ if(request.mode==="navigate"){
+  event.respondWith(fetch(request).then(response=>{
+   if(!response.ok)throw Error("Offline fallback");
+   return response;
+  }).catch(()=>caches.match("/index.html")));
   return;
  }
- if(SHELL.includes(u.pathname))event.respondWith(fetch(event.request).then(r=>{if(r.ok){const cp=r.clone();caches.open(CACHE).then(c=>c.put(event.request,cp))}return r}).catch(()=>caches.match(event.request)));
+ event.respondWith(fetch(request).then(response=>{
+  if(response.ok&&response.type==="basic"){
+   const copy=response.clone();
+   event.waitUntil(caches.open(CACHE).then(cache=>cache.put(request,copy)));
+  }
+  return response;
+ }).catch(()=>caches.match(request)));
 });
