@@ -22,7 +22,7 @@ test('installed PWA retains all public scenes and scripts offline without cachin
   const cache=await caches.open(names[0]);
   return (await cache.keys()).map(request=>new URL(request.url).pathname);
  });
- for(const asset of ['/index.html','/homepage.js','/academy-ops.js','/portal-premium.css',
+ for(const asset of ['/index.html','/homepage.js','/academy-ops.js','/daily-admin.js','/daily-admin.css','/portal-premium.css',
    '/assets/rf_hero_real3d.webp','/assets/rf_ai_real3d.webp','/assets/rf_crypto_real3d.webp','/assets/rf_forex_real3d.webp'])
   expect(paths,asset+' must be precached').toContain(asset);
  expect(paths.every(path=>!path.startsWith('/_api/')&&!path.startsWith('/auth/'))).toBe(true);

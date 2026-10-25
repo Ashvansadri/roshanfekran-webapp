@@ -136,7 +136,7 @@ async function load(nextRole,apiFn){
    return proxy("/rest/v1/"+table+"?select="+cols+"&limit=150&order="+(key==="applications"?"submitted_at":key==="payments"?"submitted_at":key==="assignments"?"created_at":"id")+".desc");
   });
   if(canSeeRisk)jobs.push(proxy(riskPath,"POST",{}));
-  if(["owner","manager"].includes(String(nextRole?.role||"")))jobs.push(window.RFDAILY.load(nextRole,request));
+  if(["owner","manager"].includes(String(nextRole?.role||"")))jobs.push(window.RFDAILY?.load?.(nextRole,request));
   else window.RFDAILY?.reset?.();
   const results=await Promise.allSettled(jobs);
   if(generation!==sessionEpoch)return false;
