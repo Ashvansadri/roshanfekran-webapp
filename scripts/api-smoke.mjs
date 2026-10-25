@@ -23,7 +23,7 @@ async function deny(label,action,additional,expectedStatus,headers={}){
   try{
    const {r,d}=await request(action,additional,headers);
    assert.equal(r.status,expectedStatus,label+" must reject with HTTP "+expectedStatus);
-   assert.equal(typeof d?.error,"string",label+" must return an error");
+   assert(typeof (d?.error||d?.message||d?.error_description)==="string",label+" must return an error (gateway or PostgREST format)");
    assert.equal(d.ok,undefined,label+" must not report success");
    for(const field of ["access_token","refresh_token","students","guardians","payments","enrollments","profile"]){
     assert.equal(d[field],undefined,label+" must not disclose "+field);
