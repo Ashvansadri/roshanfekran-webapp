@@ -33,6 +33,9 @@ async function deny(label,action,additional,expectedStatus,headers={}){
  }
  throw Error(label+" negative authorization check failed: "+last?.message);
 }
+// Credentialless Auth readiness is checked against the deployed gateway.
+const authPreflight=await read("auth_preflight");
+assert.deepEqual(authPreflight,{ok:true,auth:"reachable"},"Auth diagnostics must disclose neither accounts nor provider settings");
 const catalog=await read("public_catalog");
 assert(Array.isArray(catalog.courses),"courses must be an array");
 assert(catalog.courses.every(c=>typeof c.title==="string"),"catalog titles must be text");
@@ -78,4 +81,4 @@ assert([400,401].includes(expired.r.status),"Synthetic refresh must be rejected 
 assert.equal(expired.d?.access_token,undefined,"Invalid refresh must never return an access token");
 assert.equal(expired.d?.refresh_token,undefined,"Invalid refresh must never return a refresh token");
 await deny("invalid public resume token","public_showcase",{token:"00000000-0000-4000-8000-000000000000"},404);
-console.log("PASS: live public catalog ("+catalog.courses.length+" course(s)), news, daily content and registration info; eighteen real anonymous/invalid-access denial checks; no writes.");
+console.log("PASS: live credentialless Auth reachability, public catalog ("+catalog.courses.length+" course(s)), news, daily content and registration info; eighteen real anonymous/invalid-access denial checks; no writes.");
