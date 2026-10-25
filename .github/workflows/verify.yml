@@ -36,6 +36,26 @@ jobs:
         run: node scripts/guardian-phone-gateway.test.mjs
       - name: Parse serverless gateway TypeScript syntax
         run: npx --yes esbuild@0.25.12 supabase/functions/academy-gateway/index.ts --outfile=/tmp/academy-gateway-syntax.js
+      - name: Run offline operations, finance and role-isolation regressions
+        run: |
+          set -e
+          for test_file in \
+            scripts/ops-course.test.mjs \
+            scripts/ops-class.test.mjs \
+            scripts/ops-teacher.test.mjs \
+            scripts/ops-isolation.test.mjs \
+            scripts/ops-write-confirmation.test.mjs \
+            scripts/ops-attendance.test.mjs \
+            scripts/ops-attendance-export.test.mjs \
+            scripts/ops-finance.test.mjs \
+            scripts/ops-contracts.test.mjs \
+            scripts/ops-risk.test.mjs \
+            scripts/enrollment-financial-integrity.test.mjs \
+            scripts/payment-amount-integrity.test.mjs \
+            scripts/gateway-archive.test.mjs; do
+            echo "Checking ${test_file}"
+            node "${test_file}"
+          done
       - name: Read-only smoke test against live Supabase public gateway
         run: node scripts/api-smoke.mjs
       - name: Safe live guardian onboarding status (never sends SMS)
