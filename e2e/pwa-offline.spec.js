@@ -8,6 +8,8 @@ test('installed PWA retains all public scenes and scripts offline without cachin
  );
  await page.goto('/',{waitUntil:'load'});
  await page.evaluate(async()=>{
+  // The production page auto-registers on HTTPS; local HTTP CI explicitly registers.
+  await navigator.serviceWorker.register('/sw.js');
   await navigator.serviceWorker.ready;
   if(!navigator.serviceWorker.controller)await new Promise((resolve,reject)=>{
    const timer=setTimeout(()=>reject(Error('Service worker did not control the page')),12000);
