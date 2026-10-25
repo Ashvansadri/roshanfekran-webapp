@@ -25,6 +25,10 @@ test('Render staging serves working interactive rooms and protected login screen
   await expect(page).toHaveURL(LIVE+'/#/access');
   await expect(page.locator('#rf-login input[name="email"]')).toBeVisible({timeout:15000});
   await expect(page.locator('#rf-login input[name="password"]')).toBeVisible();
+  // Read-only end-to-end diagnostic: no email, password, or personal data.
+  await page.getByRole('button',{name:/بررسی اتصال ورود/}).click();
+  await expect(page.locator('.portal-success')).toContainText('سرویس احراز هویت در دسترس‌اند',{timeout:15000});
+  expect(await page.evaluate(()=>sessionStorage.getItem('rf_safe_session_v1'))).toBeNull();
   await page.goto(LIVE+'/#/workspace',{waitUntil:'domcontentloaded',timeout:45000});
   await expect(page.locator('#rf-login')).toBeVisible({timeout:15000});
   await expect(page.locator('.rf-dashboard')).toHaveCount(0);
