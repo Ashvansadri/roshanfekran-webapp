@@ -201,10 +201,18 @@ function allowedProxy(path:string,method:string,token:string){
  if((path==='/auth/v1/token?grant_type=password'||path==='/auth/v1/token?grant_type=refresh_token')&&method==='POST')return true;
  if(!token)return false;
  if(path==='/auth/v1/user'&&method==='GET')return true;
- if(!path.startsWith('/rest/v1/'))return false;
  if(!['GET','POST','PATCH'].includes(method))return false;
- if(path.includes('/academy_staff_invites')||path.includes('/academy_student_invites')||path.includes('/academy_guardian_invites'))return false;
- if(path.includes('/rpc/academy_bootstrap_')||path.includes('/rpc/academy_claim_staff_invite_service'))return false;
+ // Restrict the proxy to canonical academy tables and RPCs. URL normalization
+ // must never turn an allowed /rest/v1/ prefix into a different API endpoint.
+ let pathname='';
+ try{
+  const u=new URL(path,SUPA);
+  if(u.origin!==new URL(SUPA).origin||u.hash||u.pathname!==path.split('?')[0])return false;
+  pathname=u.pathname;
+ }catch{return false}
+ if(!/^\/rest\/v1\/(?:academy_[a-z0-9_]+|rpc\/academy_[a-z0-9_]+)$/.test(pathname))return false;
+ if(['/rest/v1/academy_staff_invites','/rest/v1/academy_student_invites','/rest/v1/academy_guardian_invites'].includes(pathname))return false;
+ if(pathname.startsWith('/rest/v1/rpc/academy_bootstrap_')||pathname==='/rest/v1/rpc/academy_claim_staff_invite_service')return false;
  return true;
 }
 
