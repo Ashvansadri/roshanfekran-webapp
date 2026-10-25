@@ -895,16 +895,44 @@ Deno.serve(async(req:Request)=>{
    const saved=await jo(await svc('/rest/v1/academy_daily_reads?on_conflict=content_id,student_id','POST',payload,'resolution=merge-duplicates,return=representation'));
    return jr({ok:true,record:Array.isArray(saved)?saved[0]:saved});
   }
+  // Only the VAPID public key is exposed. Never expose the private signing key.
+  if(b.action==='push_config'){
+   const publicKey=String(Deno.env.get('VAPID_PUBLIC_KEY')||'').trim();
+   const available=/^[A-Za-z0-9_-]{80,100}$/.test(publicKey);
+   return jr({ok:true,available,public_key:available?publicKey:null});
+  }
+  if(b.action==='push_status'){
+   const token=bt(req),u=await currentUser(token),st=await studentByUser(u.id);
+   if(!st||!st.portal_enabled)throw gatewayHttpError(403,'Student portal access required');
+   const rows=await jo(await svc('/rest/v1/academy_push_subscriptions?select=identity&user_id=eq.'+encodeURIComponent(u.id)+'&active=eq.true&limit=50','GET',null));
+   return jr({ok:true,identities:(Array.isArray(rows)?rows:[]).map((x:any)=>String(x.identity||''))});
+  }
   if(b.action==='push_save'){
    const token=bt(req),u=await currentUser(token),st=await studentByUser(u.id);
-   if(!st||!st.portal_enabled)throw new Error('Student portal access required');
-   const sub=b.subscription&&typeof b.subscription==='object'?b.subscription:null;
+   if(!st||!st.portal_enabled)throw gatewayHttpError(403,'Student portal access required');
+   const sub=b.subscription&&typeof b.subscription==='object'&&!Array.isArray(b.subscription)?b.subscription:null;
    if(!sub)throw new Error('اشتراک اعلان معتبر نیست');
    const identity=String(sub.endpoint||sub.fcmToken||sub.apnsToken||'').trim();
    if(identity.length<12||identity.length>2000)throw new Error('شناسه اعلان معتبر نیست');
-   const platform=String(sub.platform||((sub.fcmToken||sub.apnsToken)?'native':'web')).slice(0,20);
-   const row=await jo(await svc('/rest/v1/academy_push_subscriptions?on_conflict=identity','POST',{user_id:u.id,student_id:st.id,identity,subscription:sub,platform,active:true,updated_at:new Date().toISOString()},'resolution=merge-duplicates,return=representation'));
-   return jr({ok:true,identity,record:Array.isArray(row)?row[0]:row});
+   const platform=typeof sub.endpoint==='string'?'web':String(sub.platform||'native').slice(0,20);
+   if(platform==='web'){
+    let endpoint:URL;try{endpoint=new URL(identity)}catch{throw new Error('آدرس Push معتبر نیست')}
+    if(endpoint.protocol!=='https:'||endpoint.username||endpoint.password||!endpoint.hostname)throw new Error('آدرس Push باید HTTPS باشد');
+    const keys=sub.keys;
+    if(!keys||typeof keys!=='object'||!['p256dh','auth'].every(k=>typeof keys[k]==='string'&&/^[A-Za-z0-9_-]{8,200}$/.test(keys[k])))throw new Error('کلیدهای اشتراک Push معتبر نیستند');
+   }
+   const scope='/rest/v1/academy_push_subscriptions?user_id=eq.'+encodeURIComponent(u.id)+'&identity=eq.'+encodeURIComponent(identity);
+   const existing=await jo(await svc(scope+'&select=id','GET',null));
+   const data={subscription:sub,student_id:st.id,platform,active:true,updated_at:new Date().toISOString()};
+   if(Array.isArray(existing)&&existing.length){
+    const updated=await jo(await svc(scope,'PATCH',data,'return=representation'));
+    if(!Array.isArray(updated)||updated.length!==1)throw gatewayHttpError(403,'ثبت اشتراک امکان‌پذیر نیست');
+   }else{
+    // A globally unique endpoint belonging to another account must never be reassigned.
+    const created=await jo(await svc('/rest/v1/academy_push_subscriptions?on_conflict=identity','POST',{...data,user_id:u.id,identity},'resolution=ignore-duplicates,return=representation'));
+    if(!Array.isArray(created)||created.length!==1)throw gatewayHttpError(403,'این اشتراک قابل ثبت برای حساب شما نیست');
+   }
+   return jr({ok:true,identity});
   }
   if(b.action==='push_delete'){
    const token=bt(req),u=await currentUser(token);

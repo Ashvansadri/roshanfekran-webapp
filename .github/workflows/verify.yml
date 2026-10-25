@@ -18,6 +18,8 @@ jobs:
         run: node scripts/verify.mjs
       - name: Verify PWA push safety and notification navigation
         run: node scripts/pwa-push.test.mjs
+      - name: Verify Push subscription ownership and opt-in readiness
+        run: node scripts/push-subscription-security.test.mjs
       - name: Check assignment submission privilege hardening
         run: node scripts/submission-write-grants.test.mjs
       - name: Verify archived-teacher and staff authorization guards

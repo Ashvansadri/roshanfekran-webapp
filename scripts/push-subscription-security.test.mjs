@@ -1,0 +1,13 @@
+import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+const source=readFileSync(new URL("../supabase/functions/academy-gateway/index.ts",import.meta.url),"utf8");
+assert(source.includes("if(b.action==='push_config')"),"VAPID public config missing");
+assert(source.includes("if(b.action==='push_status')"),"Scoped status action missing");
+const save=source.slice(source.indexOf("if(b.action==='push_save')"),source.indexOf("if(b.action==='push_delete')"));
+assert(save.includes("user_id=eq."),"Update must be owner scoped");
+assert(save.includes("'resolution=ignore-duplicates,return=representation'"),"Conflicts must not reassign endpoints");
+assert(!save.includes("resolution=merge-duplicates"),"Unsafe global upsert");
+assert(save.includes("endpoint.protocol!=='https:'"),"Web Push HTTPS required");
+assert(save.includes("keys[k]"),"Web Push keys validation required");
+assert(!save.includes("record:Array.isArray"),"Never return subscription secret material");
+console.log("PASS: student-scoped Push ownership and public VAPID readiness");
