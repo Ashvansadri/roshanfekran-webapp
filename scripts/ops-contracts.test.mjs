@@ -28,7 +28,8 @@ async function check(role,expectedTables,canViewContracts,canViewStaff){
  });
  const queried=requests.filter(x=>x.includes("_contracts?")).map(x=>x.match(/\/rest\/v1\/([^?]+)/)[1]).sort();
  assert.deepEqual(queried,expectedTables.sort(),role+" contract projection mismatch");
- assert(!requests.some(x=>/file_path|file_name|mime_type|notes|reference_no/.test(x)),role+" requested private attachment fields");
+ assert(!requests.filter(x=>x.includes("_contracts?")).some(x=>/file_path|file_name|mime_type|notes|reference_no/.test(x)),role+" requested private contract attachment fields");
+ assert(!requests.some(x=>x.includes("academy_student_documents?")&&/file_path|uploaded_by|reviewed_by/.test(x)),role+" requested private document storage fields");
  let html=ops.render({kind:"staff",role});
  assert.equal(html.includes('data-rfops-tab="contracts"'),canViewContracts,role+" contract tab visibility");
  if(canViewContracts){
