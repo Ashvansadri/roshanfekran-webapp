@@ -154,4 +154,10 @@ console.log(paymentAmountQA.stdout.trim());
 const enrollmentIntegrityQA=spawnSync(process.execPath,[join(root,"scripts/enrollment-financial-integrity.test.mjs")],{encoding:"utf8"});
 assert.equal(enrollmentIntegrityQA.status,0,"Enrollment financial integrity regression failed: "+enrollmentIntegrityQA.stderr+" "+enrollmentIntegrityQA.stdout);
 console.log(enrollmentIntegrityQA.stdout.trim());
+// Student service requests migrated from legacy Floot; data remains RLS-scoped.
+assert(portal.includes("function studentServicesPanel()"),"Student service center missing");
+assert(portal.includes("academy_student_requests?select=id,category,subject,body,status,staff_note,created_at"),"Student request RLS projection missing");
+assert(portal.includes('if(role?.kind!=="student"||!studentServiceReady)'),"Service request role/readiness guard missing");
+assert(portal.includes('rpc("academy_submit_service_request"'),"Service request must use server-authorized RPC");
+assert(portal.includes("finance.enrollments.some(e=>e.id===enrollmentId)"),"Enrollment ownership precheck missing");
 console.log("PASS: frontend, private projections, archive role guards and PWA metadata.");
