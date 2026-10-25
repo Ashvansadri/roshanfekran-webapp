@@ -17,7 +17,9 @@ test('installed PWA retains all public scenes and scripts offline without cachin
   });
  });
  const paths=await page.evaluate(async()=>{
-  const cache=await caches.open('rf-academy-public-v15');
+  const names=(await caches.keys()).filter(name=>name.startsWith('rf-academy-public-'));
+  if(names.length!==1)throw Error('Expected exactly one active public shell cache');
+  const cache=await caches.open(names[0]);
   return (await cache.keys()).map(request=>new URL(request.url).pathname);
  });
  for(const asset of ['/index.html','/homepage.js','/academy-ops.js','/portal-premium.css',
