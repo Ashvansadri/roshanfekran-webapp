@@ -66,3 +66,50 @@ test('Render staging serves working interactive rooms and protected login screen
   expect(failures,'Uncaught browser JavaScript errors').toEqual([]);
  }finally{await page.close()}
 });
+
+
+test('Gateway rejects anonymous, forged and path-confused access without disclosing data',async({request})=>{
+ test.setTimeout(120000);
+ const END='https://sdsdzktsqpahpdrgmzuo.supabase.co/functions/v1/academy-gateway';
+ const check=async(body,authorization,allowed)=>{
+  const headers={'Content-Type':'application/json'};
+  if(authorization)headers.Authorization='Bearer '+authorization;
+  const res=await request.post(END,{headers,data:body,timeout:30000});
+  expect(allowed,'HTTP '+res.status()+' for '+body.action).toContain(res.status());
+  expect(res.headers()['cache-control']||'').toContain('no-store');
+  const json=await res.json();
+  expect(json?.access_token,'No tokens in denied responses').toBeFalsy();
+  expect(json?.refresh_token,'No refresh token in denied responses').toBeFalsy();
+  return json;
+ };
+ const anonymousRole=await check({action:'resolve_portal'},null,[401]);
+ expect(anonymousRole.error).toBe('AUTH_REQUIRED');
+ await check({action:'proxy',path:'/rest/v1/academy_students?select=id&limit=1',method:'GET'},null,[401]);
+ await check({action:'resolve_portal'},'invalid-test-jwt',[401]);
+ await check({action:'proxy',path:'/rest/v1/academy_students/../../auth/v1/admin/users',method:'GET'},'invalid-test-jwt',[403]);
+ await check({action:'proxy',path:'/auth/v1/token?grant_type=refresh_token',method:'POST',body:{refresh_token:'invalid-test-refresh-token'}},null,[400,401,403,429]);
+});
+
+test('Expired synthetic session is removed on definitive refresh rejection',async({browser})=>{
+ test.setTimeout(90000);
+ const page=await browser.newPage({viewport:{width:1280,height:850}});
+ await page.addInitScript(()=>{
+  sessionStorage.setItem('rf_safe_session_v1',JSON.stringify({
+   access_token:'synthetic-expired-access-token',
+   refresh_token:'synthetic-expired-refresh-token',
+   expires_at:Date.now()-60000
+  }));
+ });
+ await page.route('**/functions/v1/academy-gateway',async route=>{
+  const body=route.request().postDataJSON()||{};
+  if(body.action==='proxy'&&body.path==='/auth/v1/token?grant_type=refresh_token'){
+   await route.fulfill({status:400,contentType:'application/json',body:JSON.stringify({error:'invalid_grant'})});
+  }else await route.continue();
+ });
+ try{
+  await page.goto(LIVE+'/#/workspace',{waitUntil:'domcontentloaded',timeout:45000});
+  await expect(page.locator('#rf-login')).toBeVisible({timeout:20000});
+  await expect.poll(()=>page.evaluate(()=>sessionStorage.getItem('rf_safe_session_v1'))).toBeNull();
+  await expect(page.locator('.rf-dashboard')).toHaveCount(0);
+ }finally{await page.close()}
+});
