@@ -60,6 +60,9 @@ async function guardianByUser(userId:string){const rows=await jo(await svc('/res
 async function sha256(v:string){const d=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v));return Array.from(new Uint8Array(d)).map(x=>x.toString(16).padStart(2,'0')).join('')}
 
 function mimeExt(mime:string){return mime==='image/jpeg'?'jpg':mime==='image/png'?'png':mime==='image/webp'?'webp':mime==='application/pdf'?'pdf':''}
+function validPaymentReceiptKey(key:string){
+ return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(?:jpg|png|webp|pdf)$/i.test(key);
+}
 function decodeBase64(data:string,max:number){const clean=String(data||'').replace(/^data:[^;]+;base64,/,'');if(!clean||clean.length>Math.ceil(max*4/3)+32)throw new Error('حجم فایل بیشتر از حد مجاز است');let raw='';try{raw=atob(clean)}catch{throw new Error('فایل معتبر نیست')}if(raw.length>max)throw new Error('حجم فایل بیشتر از حد مجاز است');return Uint8Array.from(raw,c=>c.charCodeAt(0))}
 async function uploadObject(bucket:string,key:string,bytes:Uint8Array,mime:string){const r=await svcRaw('/storage/v1/object/'+bucket+'/'+key,'POST',bytes,mime);await jo(r);return key}
 async function signedObject(bucket:string,key:string,seconds=600){
@@ -338,7 +341,8 @@ Deno.serve(async(req:Request)=>{
   }
   if(b.action==='payment_receipt_url'){
    const token=bt(req),u=await currentUser(token),role=await currentRole(token,u.id),key=String(b.path||'');if(!key)throw new Error('مسیر فایل لازم است');
-   if(!['owner','manager','finance'].includes(String(role||''))){const st=await studentByUser(u.id);if(!st||!key.startsWith(st.id+'/'))throw new Error('Not authorized');}
+   if(!validPaymentReceiptKey(key))throw new Error('مسیر رسید معتبر نیست');
+   if(!['owner','manager','finance'].includes(String(role||''))){const st=await studentByUser(u.id);if(!st||key.split('/')[0]!==st.id)throw new Error('Not authorized');}
    return jr({ok:true,url:await signedObject('academy-payment-receipts',key,600)});
   }
   if(b.action==='self_registration_info'){
@@ -779,18 +783,33 @@ Deno.serve(async(req:Request)=>{
    if(!rows?.length||!rows[0].receipt_path)throw new Error('رسید پیدا نشد');
    return jr({ok:true,url:await signedObject('academy-registration-receipts',rows[0].receipt_path,600),status:rows[0].status});
   }
-  if(b.action==='student_assignment_upload'||b.action==='assignment_file_upload'){
-   const token=bt(req),u=await currentUser(token),st=await studentByUser(u.id);if(!st||!st.portal_enabled)throw new Error('Student portal access required');
-   const aid=String(b.assignment_id||'');if(!aid)throw new Error('شناسه تکلیف لازم است');
-   const ar=await jo(await svc('/rest/v1/academy_assignments?select=id,course_id,published&id=eq.'+encodeURIComponent(aid)+'&published=eq.true&limit=1','GET',null));if(!ar?.length)throw new Error('تکلیف معتبر نیست');
-   const er=await jo(await svc('/rest/v1/academy_enrollments?select=id&student_id=eq.'+encodeURIComponent(st.id)+'&course_id=eq.'+encodeURIComponent(ar[0].course_id)+'&status=eq.active&limit=1','GET',null));if(!er?.length)throw new Error('این تکلیف متعلق به دوره فعال شما نیست');
-   const mime=String(b.mime||''),ext=mimeExt(mime);if(!['jpg','png','webp','pdf'].includes(ext))throw new Error('فقط PDF یا تصویر مجاز است');
-   const bytes=decodeBase64(String(b.data_base64||''),5242880),file_name=String(b.file_name||'').slice(0,180)||null,key=st.id+'/assignments/'+aid+'/'+crypto.randomUUID()+'.'+ext;
+  if(b.action==='student_assignment_upload'){
+   // Legacy compatibility: use the scoped RPC, never direct service-role submission writes.
+   const token=bt(req),u=await currentUser(token),st=await studentByUser(u.id);
+   if(!st||!st.portal_enabled)throw new Error('Student portal access required');
+   const aid=String(b.assignment_id||'');
+   if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(aid))throw new Error('شناسه تکلیف معتبر نیست');
+   const ar=await jo(await svc('/rest/v1/academy_assignments?select=id,course_id,published&id=eq.'+encodeURIComponent(aid)+'&published=eq.true&limit=1','GET',null));
+   if(!ar?.length)throw new Error('تکلیف معتبر نیست');
+   const er=await jo(await svc('/rest/v1/academy_enrollments?select=id&student_id=eq.'+encodeURIComponent(st.id)+'&course_id=eq.'+encodeURIComponent(ar[0].course_id)+'&status=eq.active&limit=1','GET',null));
+   if(!er?.length)throw new Error('این تکلیف متعلق به دوره فعال شما نیست');
+   const mime=String(b.mime||''),ext=mimeExt(mime);
+   if(!['jpg','png','webp','pdf'].includes(ext))throw new Error('فقط PDF یا تصویر مجاز است');
+   const bytes=decodeBase64(String(b.data_base64||''),5242880);
+   const file_name=String(b.file_name||'').slice(0,180)||null;
+   const key=st.id+'/assignments/'+aid+'/'+crypto.randomUUID()+'.'+ext;
    await uploadObject('academy-student-documents',key,bytes,mime);
-   const old=await jo(await svc('/rest/v1/academy_assignment_submissions?select=id&assignment_id=eq.'+encodeURIComponent(aid)+'&student_id=eq.'+encodeURIComponent(st.id)+'&limit=1','GET',null));
-   const payload={submission_text:String(b.submission_text||'').trim()||null,submission_url:String(b.submission_url||'').trim()||null,file_path:key,file_name,mime_type:mime,status:'submitted',submitted_at:new Date().toISOString(),score:null,feedback:null,reviewed_by:null,reviewed_at:null};
-   const row=old?.length?await jo(await svc('/rest/v1/academy_assignment_submissions?id=eq.'+encodeURIComponent(old[0].id),'PATCH',payload,'return=representation')):await jo(await svc('/rest/v1/academy_assignment_submissions','POST',{assignment_id:aid,student_id:st.id,...payload},'return=representation'));
-   return jr({ok:true,record:Array.isArray(row)?row[0]:row});
+   try{
+    const out=await jo(await supa('/rest/v1/rpc/academy_submit_assignment_with_file','POST',{
+     p_assignment_id:aid,p_submission_text:String(b.submission_text||'').trim()||null,
+     p_submission_url:String(b.submission_url||'').trim()||null,
+     p_file_path:key,p_file_name:file_name,p_mime_type:mime
+    },token));
+    return jr({ok:true,path:key,record:out});
+   }catch(e){
+    try{await jo(await svc('/storage/v1/object/academy-student-documents/'+key,'DELETE',null))}catch{}
+    throw e;
+   }
   }
   if(b.action==='student_document_upload'){
    const token=bt(req),u=await currentUser(token),st=await studentByUser(u.id);if(!st||!st.portal_enabled)throw new Error('Student portal access required');

@@ -22,6 +22,8 @@ jobs:
         run: node scripts/archived-teacher-guards.test.mjs
       - name: Check API DDL privilege hardening migration
         run: node scripts/api-ddl-privileges.test.mjs
+      - name: Verify private receipt paths and legacy assignment RPC enforcement
+        run: node scripts/gateway-private-files.test.mjs
       - name: Read-only smoke test against live Supabase public gateway
         run: node scripts/api-smoke.mjs
   browser-smoke:
