@@ -99,6 +99,13 @@ async function studentByUser(userId:string){
  if(student&&(student.status==='archived'||student.archived_at!==null&&student.archived_at!==undefined))throw new Error('حساب هنرجو آرشیو شده است');
  return student;
 }
+// A linked student may retain a valid Auth token after staff disable portal access.
+// Every privileged file operation must enforce the current portal grant server-side.
+function requireStudentPortal(st:any){
+ if(!st||st.portal_enabled!==true||st.status==='archived'||st.archived_at)
+  throw gatewayHttpError(403,'Student portal access required');
+ return st;
+}
 async function guardianByUser(userId:string){const rows=await jo(await svc('/rest/v1/academy_guardians?select=id,user_id,full_name,email,mobile,active&user_id=eq.'+encodeURIComponent(userId)+'&active=eq.true&limit=1','GET',null));return Array.isArray(rows)&&rows.length?rows[0]:null}
 
 async function guardianPushEligible(userId:string){
@@ -417,7 +424,7 @@ Deno.serve(async(req:Request)=>{
      await jo(await svc('/rest/v1/academy_students?id=eq.'+encodeURIComponent(targetStudent),'PATCH',{avatar_url:url},'return=representation'));
    }else{
      const st=role?null:await studentByUser(u.id);
-     if(st&&!role){const key='students/'+st.id+'/'+crypto.randomUUID()+'.'+ext;await uploadObject('academy-avatars',key,bytes,mime);url=SUPA+'/storage/v1/object/public/academy-avatars/'+key;await jo(await svc('/rest/v1/academy_students?id=eq.'+encodeURIComponent(st.id),'PATCH',{avatar_url:url},'return=representation'));}
+     if(st&&!role){requireStudentPortal(st);const key='students/'+st.id+'/'+crypto.randomUUID()+'.'+ext;await uploadObject('academy-avatars',key,bytes,mime);url=SUPA+'/storage/v1/object/public/academy-avatars/'+key;await jo(await svc('/rest/v1/academy_students?id=eq.'+encodeURIComponent(st.id),'PATCH',{avatar_url:url},'return=representation'));}
      else{if(!role)throw new Error('حساب مجاز پیدا نشد');const key='staff/'+u.id+'/'+crypto.randomUUID()+'.'+ext;await uploadObject('academy-avatars',key,bytes,mime);url=SUPA+'/storage/v1/object/public/academy-avatars/'+key;await jo(await svc('/rest/v1/academy_staff?user_id=eq.'+encodeURIComponent(u.id),'PATCH',{avatar_url:url},'return=representation'));}
    }
    return jr({ok:true,url});
@@ -462,7 +469,8 @@ Deno.serve(async(req:Request)=>{
     if(!Array.isArray(courses)||courses.length!==1||courses[0].teacher_user_id!==u.id||courses[0].archived_at!==null||courses[0].status==='archived')throw new Error('Not authorized');
    }else if(!['owner','manager'].includes(String(role||''))){
     const st=await studentByUser(u.id);
-    if(!st||st.id!==sub.student_id)throw new Error('Not authorized');
+    requireStudentPortal(st);
+    if(st.id!==sub.student_id)throw new Error('Not authorized');
    }
    // Both upload flows use private buckets; infer the bucket from a validated stored path.
    const legacyPrefix=sub.student_id+'/'+sub.assignment_id+'/';
@@ -482,7 +490,7 @@ Deno.serve(async(req:Request)=>{
   if(b.action==='payment_receipt_url'){
    const token=bt(req),u=await currentUser(token),role=await currentRole(token,u.id),key=String(b.path||'');if(!key)throw new Error('مسیر فایل لازم است');
    if(!validPaymentReceiptKey(key))throw new Error('مسیر رسید معتبر نیست');
-   if(!['owner','manager','finance'].includes(String(role||''))){const st=await studentByUser(u.id);if(!st||key.split('/')[0]!==st.id)throw new Error('Not authorized');}
+   if(!['owner','manager','finance'].includes(String(role||''))){const st=requireStudentPortal(await studentByUser(u.id));if(key.split('/')[0]!==st.id)throw new Error('Not authorized');}
    return jr({ok:true,url:await signedObject('academy-payment-receipts',key,600)});
   }
   if(b.action==='self_registration_info'){
@@ -616,7 +624,7 @@ Deno.serve(async(req:Request)=>{
    }
 
    const students=await jo(await svc('/rest/v1/academy_students?select=id,status,portal_enabled&user_id=eq.'+encodeURIComponent(u.id)+'&archived_at=is.null&limit=1','GET',null));
-   if(Array.isArray(students)&&students.length&&students[0].portal_enabled!==false&&students[0].status!=='archived'){
+   if(Array.isArray(students)&&students.length&&students[0].portal_enabled===true&&students[0].status!=='archived'){
      return jr({ok:true,kind:'student',role:'student',route:'/portal'});
    }
 
@@ -966,7 +974,7 @@ Deno.serve(async(req:Request)=>{
    const token=bt(req),u=await currentUser(token),role=await currentRole(token,u.id),id=String(b.document_id||'');if(!id)throw new Error('شناسه مدرک لازم است');
    const rows=await jo(await svc('/rest/v1/academy_student_documents?select=id,student_id,file_path,file_name,mime_type,status&id=eq.'+encodeURIComponent(id)+'&limit=1','GET',null));
    if(!Array.isArray(rows)||!rows.length)throw new Error('مدرک پیدا نشد');const doc=rows[0];
-   if(!['owner','manager','registrar'].includes(String(role||''))){const st=await studentByUser(u.id);if(!st||st.id!==doc.student_id)throw new Error('Not authorized');}
+   if(!['owner','manager','registrar'].includes(String(role||''))){const st=requireStudentPortal(await studentByUser(u.id));if(st.id!==doc.student_id)throw new Error('Not authorized');}
    return jr({ok:true,url:await signedObject('academy-student-documents',doc.file_path,600),file_name:doc.file_name,mime_type:doc.mime_type,status:doc.status});
   }
   if(b.action==='verify_certificate'){
