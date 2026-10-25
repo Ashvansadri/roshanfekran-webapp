@@ -156,3 +156,53 @@ test('Student service requests render and submit only to a mocked authorized RPC
   expect(lastPayload?.p_enrollment_id).toBeNull();
  }finally{await page.close()}
 });
+
+test('Render LIVE staff service editor uses audited RPC with synthetic data only',async({browser})=>{
+ test.setTimeout(90000);
+ const page=await browser.newPage({viewport:{width:1280,height:850}});
+ const gateway='https://sdsdzktsqpahpdrgmzuo.supabase.co/functions/v1/academy-gateway';
+ const student='33333333-3333-4333-8333-333333333333';
+ const requestId='11111111-1111-4111-8111-111111111111';
+ let reply=null;
+ await page.addInitScript(()=>{
+  sessionStorage.setItem('rf_safe_session_v1',JSON.stringify({
+   access_token:'synthetic-staff-live-token',refresh_token:'synthetic-refresh',
+   expires_at:Date.now()+3600000
+  }));
+ });
+ await page.route(gateway,async route=>{
+  const b=route.request().postDataJSON()||{};
+  let result=[];
+  if(b.action==='resolve_portal')result={kind:'staff',role:'registrar'};
+  else if(b.action==='proxy'){
+   const path=String(b.path||'');
+   if(path.startsWith('/rest/v1/academy_students?'))
+    result=[{id:student,full_name:'هنرجوی آزمایشی',status:'active',archived_at:null}];
+   else if(path.startsWith('/rest/v1/academy_student_requests?'))
+    result=[{id:requestId,student_id:student,category:'certificate',subject:'درخواست تست',body:'متن ساختگی',status:'open',priority:'normal'}];
+   else if(path==='/rest/v1/rpc/academy_reply_service_request'){
+    reply=b.body;result={ok:true,id:requestId,status:b.body.p_status,priority:b.body.p_priority};
+   }
+  }else if(b.action==='public_catalog')result={ok:true,courses:[],settings:{}};
+  else if(b.action==='public_news')result={ok:true,ai:[],markets:[],world:[]};
+  await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(result)});
+ });
+ page.on('dialog',d=>d.accept());
+ try{
+  await page.goto(LIVE+'/#/workspace',{waitUntil:'domcontentloaded',timeout:45000});
+  await expect(page.locator('.rfov-module-grid [data-rfops-tab="serviceDesk"]')).toBeVisible({timeout:25000});
+  await page.locator('.rfov-module-grid [data-rfops-tab="serviceDesk"]').click();
+  const editor=page.locator('.rfops-service-editor');
+  await expect(editor).toHaveCount(1);
+  await editor.locator('summary').click();
+  await editor.locator('select[name="status"]').selectOption('resolved');
+  await editor.locator('textarea[name="staff_note"]').fill('نتیجه تست بدون تغییر داده واقعی');
+  await editor.locator('button[type="submit"]').click();
+  await expect.poll(()=>reply).not.toBeNull();
+  expect(reply).toEqual({
+   p_request_id:requestId,p_status:'resolved',p_priority:'normal',
+   p_staff_note:'نتیجه تست بدون تغییر داده واقعی'
+  });
+  await expect(page.locator('#rfops-main')).toContainText('با تأیید سرور');
+ }finally{await page.close()}
+});
