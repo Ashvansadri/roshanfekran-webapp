@@ -87,7 +87,15 @@ async function api(action,body={},auth=false,retry=true){
 }
 async function proxy(path,method="GET",body=null){return api("proxy",{path,method,body},true)}
 async function rpc(name,body={}){if(!/^academy_[a-z0-9_]+$/.test(name))throw Error("عملیات معتبر نیست");return proxy("/rest/v1/rpc/"+name,"POST",body)}
-function refresh(){if(window.RFCORE?.render)window.RFCORE.render();else window.dispatchEvent(new Event("hashchange"))}
+function refresh(){
+ const navLink=document.querySelector(".nav-signin");
+ if(navLink){
+  const signed=Boolean(session?.access_token);
+  navLink.href=signed?"#/workspace":"#/access";
+  navLink.innerHTML=signed?'پنل من <span aria-hidden="true">↗</span>':'ورود <span aria-hidden="true">↗</span>';
+ }
+ if(window.RFCORE?.render)window.RFCORE.render();else window.dispatchEvent(new Event("hashchange"));
+}
 function showError(e){error=e instanceof Error?e.message:String(e||"خطای غیرمنتظره");notice="";refresh()}
 function showNotice(t){notice=t;error="";refresh()}
 const actions=()=>'<div class="workspace-actions"><button type="button" class="portal-secondary" data-rf="refresh">به‌روزرسانی ↻</button><button type="button" class="portal-secondary" data-rf="logout">خروج ایمن ↗</button></div>';
@@ -317,7 +325,7 @@ function staffPage(){
  '<div class="rf-invite-grid"><form id="rf-invite-staff" class="rf-form"><h3>همکار و مدرس</h3><label class="portal-field"><span>نام همکار</span><input name="full_name" minlength="3" required/></label><label class="portal-field"><span>ایمیل</span><input name="email" type="email" required dir="ltr"/></label><label class="portal-field"><span>نقش</span><select name="staff_role"><option value="teacher">مدرس</option><option value="viewer">مشاهده‌گر</option><option value="registrar">مسئول ثبت‌نام</option><option value="finance">امور مالی</option><option value="manager">مدیر</option></select></label><button class="btn btn-primary">صدور دعوت امن</button></form>'+
  '<form id="rf-invite-student" class="rf-form"><h3>فعال‌سازی هنرجو</h3><label class="portal-field"><span>پرونده بدون حساب</span><select name="student_id" required>'+studentsOpt+'</select></label><label class="portal-field"><span>ایمیل هنرجو</span><input type="email" name="email" dir="ltr" required/></label><button class="btn btn-outline" '+(studentsOpt?"":"disabled")+' type="submit">ایجاد لینک ورود</button></form>'+
  '<form id="rf-invite-guardian" class="rf-form"><h3>دعوت خانواده</h3><label class="portal-field"><span>هنرجو</span><select name="student_id" required>'+eligibleStudents.map(x=>'<option value="'+esc(x.id)+'">'+esc(x.full_name)+'</option>').join("")+'</select></label><label class="portal-field"><span>نام سرپرست</span><input name="full_name" required minlength="3"/></label><label class="portal-field"><span>ایمیل سرپرست</span><input name="email" type="email" dir="ltr" required/></label><label class="portal-field"><span>شماره همراه (اختیاری)</span><input name="mobile" inputmode="numeric" dir="ltr"/></label><button class="btn btn-outline">ساخت لینک با مجوز والد</button></form></div><p class="rf-caption">با ارسال دعوت، لینک به حافظه کلیپ‌بورد منتقل می‌شود؛ آن را فقط برای شخص مشخص‌شده ارسال کنید. هیچ رمز عبوری به‌جای او تنظیم نمی‌شود.</p></section>':"";
- return '<main class="shell rf-dashboard">'+heading("ACADEMY OPERATIONS",role?.kind==="teacher"?"فضای کاری مدرس":"مرکز مدیریت روشنفکران","اطلاعات دوره، پذیرش، مالی، خانواده و کلاس‌ها در همین سایت بررسی می‌شوند.")+
+ return '<main class="shell rf-dashboard rf-premium-workspace">'+heading("ACADEMY OPERATIONS",role?.kind==="teacher"?"فضای کاری مدرس":"مرکز مدیریت روشنفکران","اطلاعات دوره، پذیرش، مالی، خانواده و کلاس‌ها در همین سایت بررسی می‌شوند.")+
  actions()+toast()+(window.RFOPS?.render?.(role)||'<div class="rf-panel">در حال بارگذاری عملیات…</div>')+inviteBlock+'</main>';
 }
 
