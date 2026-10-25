@@ -243,6 +243,16 @@ Deno.serve(async(req:Request)=>{
  if(req.method!=='POST')return jr({error:'فقط درخواست POST مجاز است'},405);
  const b=await body(req);
  try{
+  // Credentialless diagnostics: check only Auth reachability. Never expose users, roles or Auth settings.
+  if(b.action==='auth_preflight'){
+   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),5000);
+   try{
+    const upstream=await fetch(SUPA+'/auth/v1/settings',{method:'GET',headers:{apikey:ANON},signal:controller.signal});
+    if(!upstream.ok)throw gatewayHttpError(503,'AUTH_UNAVAILABLE');
+    return jr({ok:true,auth:'reachable'});
+   }catch{throw gatewayHttpError(503,'AUTH_UNAVAILABLE')}
+   finally{clearTimeout(timer)}
+  }
   if(b.action==='status')return jr(await jo(await svc('/rest/v1/rpc/academy_bootstrap_status','POST',{})));
   if(b.action==='bootstrap_owner'){
    const st=await jo(await svc('/rest/v1/rpc/academy_bootstrap_status','POST',{}));
