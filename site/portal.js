@@ -6,7 +6,7 @@ const safeURL=v=>{try{let u=new URL(String(v));return u.protocol==="https:"?u.hr
 const date=v=>{try{return new Intl.DateTimeFormat("fa-IR-u-ca-persian",{dateStyle:"medium"}).format(new Date(v))}catch{return "—"}};
 const num=v=>new Intl.NumberFormat("fa-IR").format(Number(v||0));
 let pushConfig=null,pushStatus=null,pushLocalEndpoint="",pushError="";
-let session=null,role=null,journey=null,parent=null,parentDetails=null,familyTip=null,resume=null,works=[],missions=[],campaigns=[],studentAssignments=[],studentSubmissions=[],studentNotifications=[],staffData=null,finance=null,dailyFeed=null,dailyFeedError="",profileFormOpen=false,workFormOpen=false,stage=0,busy=false,error="",notice="",loading=false,quizQuestions=null,quizLoading=false;
+let session=null,role=null,journey=null,parent=null,parentDetails=null,familyTip=null,resume=null,works=[],missions=[],campaigns=[],studentAssignments=[],studentSubmissions=[],studentNotifications=[],studentServiceRequests=[],studentServiceReady=false,staffData=null,finance=null,dailyFeed=null,dailyFeedError="",profileFormOpen=false,workFormOpen=false,stage=0,busy=false,error="",notice="",loading=false,quizQuestions=null,quizLoading=false;
 try{const saved=sessionStorage.getItem("rf_safe_session_v1");if(saved)session=JSON.parse(saved)}catch{sessionStorage.removeItem("rf_safe_session_v1")}
 const token=()=>session?.access_token||"";
 const setSession=x=>{if(!x?.access_token||!x?.refresh_token)throw Error("پاسخ ورود ناقص است");session={access_token:x.access_token,refresh_token:x.refresh_token,expires_at:Date.now()+Math.max(1,Number(x.expires_in||3600))*1000};sessionStorage.setItem("rf_safe_session_v1",JSON.stringify(session))};
@@ -55,7 +55,7 @@ const clear=()=>{
  for(const ctl of activeRequests)ctl.abort();
  activeRequests.clear();renewing=null;
  session=null;role=null;journey=null;parent=null;parentDetails=null;familyTip=null;resume=null;
- works=[];missions=[];campaigns=[];studentAssignments=[];studentSubmissions=[];studentNotifications=[];staffData=null;finance=null;dailyFeed=null;dailyFeedError="";pushConfig=null;pushStatus=null;pushLocalEndpoint="";pushError="";quizQuestions=null;
+ works=[];missions=[];campaigns=[];studentAssignments=[];studentSubmissions=[];studentNotifications=[];studentServiceRequests=[];studentServiceReady=false;staffData=null;finance=null;dailyFeed=null;dailyFeedError="";pushConfig=null;pushStatus=null;pushLocalEndpoint="";pushError="";quizQuestions=null;
  profileFormOpen=false;workFormOpen=false;loading=false;busy=false;
  sessionStorage.removeItem("rf_safe_session_v1");
  const print=document.getElementById("rf-print-content");if(print)print.replaceChildren();
@@ -138,6 +138,8 @@ async function loadStudentExtras(){
   api("daily_for_me",{},true),
   api("push_config"),
   api("push_status",{},true),
+  // RLS-scoped read: only the signed-in student can see these requests.
+  proxy("/rest/v1/academy_student_requests?select=id,category,subject,body,status,staff_note,created_at&order=created_at.desc&limit=30"),
  ]);
  requireCurrent(generation);
  works=items[0].status==="fulfilled"&&Array.isArray(items[0].value)?items[0].value:[];
@@ -153,6 +155,8 @@ async function loadStudentExtras(){
  pushStatus=items[11].status==="fulfilled"&&items[11].value?.ok&&Array.isArray(items[11].value.identities)?items[11].value:null;
  pushError=items[11].status==="rejected"?"وضعیت اشتراک از سرور دریافت نشد.":"";
  pushLocalEndpoint="";
+ studentServiceReady=items[12].status==="fulfilled"&&Array.isArray(items[12].value);
+ studentServiceRequests=studentServiceReady?items[12].value:[];
  if(navigator.serviceWorker?.getRegistration){
   try{const reg=await navigator.serviceWorker.getRegistration();const sub=await reg?.pushManager?.getSubscription();requireCurrent(generation);pushLocalEndpoint=String(sub?.endpoint||"")}catch{pushLocalEndpoint=""}
  }
@@ -278,6 +282,26 @@ function vapidBytes(key){
  if(raw.length!==65)throw Error("طول کلید عمومی اعلان معتبر نیست.");
  return Uint8Array.from(raw,c=>c.charCodeAt(0));
 }
+function studentServicesPanel(){
+ if(role?.kind!=="student")return "";
+ const categories={financial:"مالی",certificate:"گواهی",schedule:"برنامه کلاس",absence:"حضور و غیاب",documents:"مدارک",other:"سایر"};
+ const statuses={open:"باز",in_progress:"در حال بررسی",resolved:"پاسخ داده شد",closed:"بسته"};
+ const choices=finance?.ready?finance.enrollments.map((e,i)=>'<option value="'+esc(e.id)+'">ثبت‌نام شماره '+num(i+1)+'</option>').join(""):"";
+ const form=studentServiceReady?'<form id="rf-service-request" class="rf-form"><label class="portal-field"><span>نوع درخواست</span><select name="category" required>'+Object.entries(categories).map(([key,label])=>'<option value="'+key+'">'+label+'</option>').join("")+'</select></label>'+
+ (choices?'<label class="portal-field"><span>دوره مرتبط (اختیاری)</span><select name="enrollment_id"><option value="">بدون دوره مشخص</option>'+choices+'</select></label>':"")+
+ '<label class="portal-field"><span>عنوان درخواست</span><input name="subject" minlength="3" maxlength="120" required placeholder="مثلاً درخواست گواهی دوره"/></label>'+
+ '<label class="portal-field"><span>شرح درخواست</span><textarea name="body" minlength="3" maxlength="1200" rows="4" required placeholder="جزئیات را برای بررسی آموزشگاه بنویسید"></textarea></label>'+
+ '<button class="btn btn-primary" type="submit" '+(busy?"disabled":"")+'>ثبت و ارسال درخواست ←</button></form>':
+ '<p class="portal-alert" role="status">سوابق درخواست‌ها دریافت نشد؛ برای جلوگیری از ثبت تکراری، صفحه را به‌روزرسانی کنید.</p>';
+ const records=studentServiceReady?(studentServiceRequests.length?studentServiceRequests.map(row=>
+  '<article class="rf-work"><div class="rf-panel-title"><h3>'+esc(row.subject)+'</h3>'+badge(statuses[row.status]||row.status||"در انتظار")+'</div>'+
+  '<p>'+esc(categories[row.category]||row.category||"سایر")+' · '+esc(date(row.created_at))+'</p><p>'+esc(row.body||"")+'</p>'+
+  (row.staff_note?'<div class="portal-success"><strong>پاسخ آموزشگاه: </strong>'+esc(row.staff_note)+'</div>':"")+'</article>'
+ ).join(""):'<p class="rf-caption">هنوز درخواستی ثبت نشده است.</p>'):"";
+ return '<section class="rf-panel" aria-label="مرکز خدمات هنرجو"><span class="rf-overline">STUDENT SERVICE CENTER</span><h2>مرکز خدمات هنرجو</h2>'+
+ '<p>درخواست مالی، گواهی، برنامه کلاس یا مدارک را ثبت کنید و پاسخ آموزشگاه را همین‌جا ببینید.</p>'+
+ '<div class="rf-grid-two"><div>'+form+'</div><div><h3>پیگیری درخواست‌ها</h3>'+records+'</div></div></section>';
+}
 function studentPage(){
  const steps=Array.isArray(journey?.stages)?journey.stages:[],progress=Number(journey?.percentage||0);
  const headingText=journey?.student_name||"هنرجوی روشنفکران";
@@ -307,7 +331,7 @@ function studentPage(){
  actions()+toast()+'<div class="rf-progress-wrap"><div><span class="rf-overline">YOUR PROGRESS</span><h2>'+num(progress)+'٪ <small>تکمیل پرونده</small></h2></div><div class="rf-track"><span style="width:'+Math.max(0,Math.min(100,progress))+'%"></span></div><p>'+esc(journey.message||"مسیر رشد شما آغاز شده است.")+'</p></div>'+
  '<div class="rf-stages">'+steps.map((s,i)=>'<button class="rf-stage '+(i===stageIndex?"is-selected":"")+'" data-rf="stage" data-step="'+i+'"><span>'+(s.done?"✓":num(i+1))+'</span><b>'+esc(s.title)+'</b><small>'+(s.done?"تکمیل‌شده":i===stageIndex?"مرحله جاری":"آماده تکمیل")+'</small></button>').join("")+'</div>'+
  '<section class="rf-grid-two">'+right+
- '<div class="rf-panel"><div class="rf-panel-title"><span>✧</span><h3>مأموریت‌های ۹۰روزه</h3></div><p>۲۴ پروژه در سه مرحله، با تحویل و تأیید واقعی مدرس یا مدیر.</p><div class="rf-meters"><span>مأموریت‌های پذیرفته‌شده</span><strong>'+num(journey.missions_approved||0)+' / ۲۴</strong></div><div class="rf-mini-missions">'+missions.slice(0,6).map(m=>'<div><span>'+num(m.mission_no)+'</span><b>'+esc(m.title)+'</b></div>').join("")+'</div><a class="btn btn-outline" href="#/missions">مشاهده مسیر پروژه‌ها ↗</a></div></section>'+dailyPanel()+pushPanel()+financePanel()+(window.RFFAMILY?.student?.(studentAssignments,studentSubmissions,studentNotifications)||'')+'</main>';
+ '<div class="rf-panel"><div class="rf-panel-title"><span>✧</span><h3>مأموریت‌های ۹۰روزه</h3></div><p>۲۴ پروژه در سه مرحله، با تحویل و تأیید واقعی مدرس یا مدیر.</p><div class="rf-meters"><span>مأموریت‌های پذیرفته‌شده</span><strong>'+num(journey.missions_approved||0)+' / ۲۴</strong></div><div class="rf-mini-missions">'+missions.slice(0,6).map(m=>'<div><span>'+num(m.mission_no)+'</span><b>'+esc(m.title)+'</b></div>').join("")+'</div><a class="btn btn-outline" href="#/missions">مشاهده مسیر پروژه‌ها ↗</a></div></section>'+dailyPanel()+pushPanel()+financePanel()+studentServicesPanel()+(window.RFFAMILY?.student?.(studentAssignments,studentSubmissions,studentNotifications)||'')+'</main>';
 }
 function missionsPage(){
  if(role?.kind!=="student")return '<main class="shell rf-panel-container"><div class="rf-empty">مشاهده مأموریت‌ها ویژه هنرجو است. <a href="#/access">ورود</a></div></main>';
@@ -367,7 +391,7 @@ async function inviteLink(path,kind,email){
  catch{return "لینک اختصاصی ساخته شد؛ آن را کپی کنید: "+link}
 }
 async function submit(e){
- const f=e.target;if(!["rf-login","rf-activate","rf-profile-save","rf-work-save","rf-avatar-upload","rf-quiz","rf-campaign-launch","rf-invite-staff","rf-invite-student","rf-student-task","rf-phone-request","rf-phone-verify"].includes(f.id)&&!f.classList.contains("rf-mission-submit"))return;e.preventDefault();if(busy)return;const generation=authEpoch;busy=true;error="";notice="";
+ const f=e.target;if(!["rf-login","rf-activate","rf-profile-save","rf-work-save","rf-avatar-upload","rf-quiz","rf-campaign-launch","rf-invite-staff","rf-invite-student","rf-student-task","rf-service-request","rf-phone-request","rf-phone-verify"].includes(f.id)&&!f.classList.contains("rf-mission-submit"))return;e.preventDefault();if(busy)return;const generation=authEpoch;busy=true;error="";notice="";
  try{
  const d=new FormData(f);
  if(f.id==="rf-phone-request"){
@@ -395,6 +419,22 @@ async function submit(e){
   const response=await api(act,{email:d.get("email"),password:d.get("password"),invite_token:d.get("code")});
   if(!response.access_token)throw Error("حساب هنوز فعال نشده است");
   window.RFOPS?.reset?.();setSession(response);role=null;location.hash="#/workspace";loadWorkspace();
+ }else if(f.id==="rf-service-request"){
+   if(role?.kind!=="student"||!studentServiceReady)throw Error("ابتدا اطلاعات پرونده را به‌روزرسانی کنید.");
+   const category=String(d.get("category")||"");
+   const subject=String(d.get("subject")||"").trim(),details=String(d.get("body")||"").trim();
+   const enrollmentId=String(d.get("enrollment_id")||"");
+   if(!["financial","certificate","schedule","absence","documents","other"].includes(category))throw Error("نوع درخواست معتبر نیست.");
+   if(subject.length<3||subject.length>120||details.length<3||details.length>1200)throw Error("عنوان و شرح درخواست را در محدوده مجاز وارد کنید.");
+   if(enrollmentId&&(!finance?.ready||!finance.enrollments.some(e=>e.id===enrollmentId)))throw Error("ثبت‌نام انتخاب‌شده متعلق به این پرونده نیست.");
+   const saved=await rpc("academy_submit_service_request",{p_category:category,p_subject:subject,p_body:details,p_enrollment_id:enrollmentId||null});
+   if(!saved?.ok)throw Error("تأیید ثبت درخواست از سرور دریافت نشد.");
+   try{
+    const updated=await proxy("/rest/v1/academy_student_requests?select=id,category,subject,body,status,staff_note,created_at&order=created_at.desc&limit=30");
+    requireCurrent(generation);
+    if(Array.isArray(updated))studentServiceRequests=updated;
+    showNotice("درخواست ثبت شد و برای رسیدگی به آموزشگاه ارسال شد.");
+   }catch(e){requireCurrent(generation);showNotice("درخواست ثبت شد؛ فهرست پیگیری موقتاً به‌روز نشد. برای جلوگیری از ثبت تکراری، صفحه را بعداً تازه کنید.");}
  }else if(f.id==="rf-student-task"){
   const taskId=String(d.get("assignment_id")||""),explanation=String(d.get("submission_text")||"").trim(),url=String(d.get("submission_url")||"").trim();
   if(!/^[0-9a-f-]{36}$/i.test(taskId)||!studentAssignments.some(a=>a.id===taskId))throw Error("این تکلیف معتبر یا متعلق به حساب شما نیست.");
