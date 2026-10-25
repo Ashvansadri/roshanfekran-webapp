@@ -1,0 +1,16 @@
+-- MANUAL EMERGENCY ROLLBACK ONLY; never run as a routine deployment.
+-- Re-granting these rights reopens RLS-bypassing TRUNCATE access.
+-- A DBA must approve and restore only the exact pre-change grants from
+-- an audited ACL snapshot; do NOT blindly grant privileges to all tables.
+--
+-- Example for a specifically documented table ONLY (replace quoted name):
+-- GRANT TRUNCATE, REFERENCES, TRIGGER, MAINTAIN
+--   ON TABLE public."approved_table" TO authenticated;
+--
+-- Example for a specifically documented creation role ONLY:
+-- ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+--   GRANT TRUNCATE, REFERENCES, TRIGGER, MAINTAIN ON TABLES TO authenticated;
+--
+-- Existing RLS SELECT/INSERT/UPDATE/DELETE policies remain unchanged;
+-- prefer fixing any affected administrative operation with a narrowly
+-- scoped server-side SECURITY DEFINER function instead of rollback.
