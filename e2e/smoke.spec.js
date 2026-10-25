@@ -16,6 +16,8 @@ async function apiMock(page,authRole=null){
   else if(payload.action==='public_registration_info'){result={ok:true,course:{id:'course-1009',code:'course-1009',title:'هوش مصنوعی کاربردی',base_fee:1500000,capacity:20,seats_left:9,session_count:12},pricing:{full_amount:1500000,installment_total:1575000},link:{slug:'course-1009',installment_enabled:true,installment_max_count:3},settings:{}};code=200}
   else if(payload.action==='public_showcase'){result={error:'لینک نامعتبر یا لغو شده'};code=404}
   else if(authRole==='student'&&payload.action==='daily_for_me'){result={ok:true,today:[],latest:null,archive:[],streak:0,completed_count:0};code=200}
+  else if(authRole==='student'&&payload.action==='push_config'){result={ok:true,available:false,public_key:null};code=200}
+  else if(authRole==='student'&&payload.action==='push_status'){result={ok:true,identities:[]};code=200}
   else if(authRole&&payload.action==='resolve_portal'){result={kind:authRole};code=200}
   else if(authRole&&payload.action==='proxy'){
    const path=String(payload.path||'');
