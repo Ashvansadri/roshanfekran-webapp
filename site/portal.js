@@ -168,15 +168,22 @@ async function loadStaffExtras(){
 function heading(k,title,subtitle){return '<div class="rf-page-head"><div><div class="rf-overline">'+esc(k)+'</div><h1>'+title+'</h1><p>'+esc(subtitle)+'</p></div></div>'}
 let rfFamilyPhone="";
 function loginPage(){
- return '<main class="rf-auth shell"><section class="rf-auth-story"><div class="eyebrow">ROSHANFEKRAN · SECURE SPACE</div><h1>یک حساب،<br/><span class="gradient-text">یک مسیر رشد متفاوت.</span></h1><p>سامانه نقش شما را پس از تأیید هویت شناسایی می‌کند؛ هنرجو، خانواده، مدرس و مدیریت هرکدام به محیط اختصاصی خود هدایت می‌شوند.</p><div class="rf-tick">◈ حریم خصوصی و امنیت اطلاعات اولویت ماست.</div></section><div class="rf-auth-card">'+
- '<div class="rf-auth-symbol">✧</div><span class="rf-overline">ACCOUNT ACCESS</span><h2>ورود به پورتال</h2><p>اطلاعات حساب فعال آموزشگاه را وارد کنید.</p>'+toast()+
- '<form id="rf-login" class="rf-form"><label class="portal-field"><span>ایمیل</span><input name="email" type="email" required autocomplete="username" placeholder="name@example.com" dir="ltr"/></label><label class="portal-field"><span>رمز عبور</span><input name="password" type="password" required autocomplete="current-password" placeholder="رمز حساب فعال شما" dir="ltr"/></label><button class="btn btn-primary" type="submit" '+(busy?"disabled":"")+'>'+(busy?"در حال بررسی...":"ورود امن ←")+'</button></form>'+
- ''+
- <div class="rf-phone-auth"><div class="rf-phone-heading"><span class="rf-phone-signal">◈</span><div><strong>ورود خانواده با شماره موبایل</strong><small>بدون نیاز به ایمیل و رمز عبور · برای سرپرست تأییدشده</small></div></div>'+
- (rfFamilyPhone?'<div class="rf-phone-summary"><span>کد پیامک برای شماره انتخاب‌شده</span><b dir="ltr">'+esc(rfFamilyPhone.replace(/(\+989\d{2})\d{5}(\d{2})/,"$1•••••$2"))+'</b></div><form id="rf-phone-verify" class="rf-form rf-phone-form"><label class="portal-field"><span>کد ۶ رقمی پیامک</span><input name="otp" inputmode="numeric" type="text" pattern="[0-9۰-۹]{6}" maxlength="6" autocomplete="one-time-code" required placeholder="۱۲۳۴۵۶" dir="ltr"/></label><button type="submit" class="btn btn-primary">تأیید شماره و ورود ←</button><button type="button" class="portal-secondary rf-phone-reset" data-rf="phone-reset">تغییر شماره</button></form>':
- '<form id="rf-phone-request" class="rf-form rf-phone-form"><label class="portal-field"><span>شماره موبایل سرپرست</span><input name="phone" type="tel" inputmode="tel" autocomplete="tel" required placeholder="۰۹۱۲۱۲۳۴۵۶۷" dir="ltr"/></label><button type="submit" class="btn btn-primary">دریافت کد ورود ←</button></form>')+
- '<p class="rf-caption">مدیر آموزشگاه باید ابتدا نظارت خانواده را با شماره شما تأیید کرده باشد. برای ارسال واقعی کد، سرویس پیامک باید در Supabase فعال باشد.</p></div>+
- '<p class="rf-caption">با ایمیل و رمز فعال همین آموزشگاه وارد شوید. لطفاً رمز خود را در گفت‌وگو ارسال نکنید.</p><div class="rf-access-support"><a href="#/courses">ثبت‌نام یا فعال‌سازی هنرجو ↗</a><a href="tel:09164880996">راهنمایی ورود و رمز عبور ↗</a></div></div></main>';
+ const phoneUI=rfFamilyPhone?
+  '<div class="rf-phone-summary"><span>شماره انتخاب‌شده</span><b dir="ltr">'+esc(rfFamilyPhone.replace(/(\+989\d{2})\d{5}(\d{2})/,"$1•••••$2"))+'</b></div>'+
+  '<form id="rf-phone-verify" class="rf-form rf-phone-form"><label class="portal-field"><span>کد ۶ رقمی پیامک</span><input name="otp" inputmode="numeric" type="text" pattern="[0-9۰-۹٠-٩]{6}" maxlength="6" autocomplete="one-time-code" required placeholder="۱۲۳۴۵۶" dir="ltr"/></label><button type="submit" class="btn btn-primary">تأیید شماره و ورود ←</button><button type="button" class="portal-secondary rf-phone-reset" data-rf="phone-reset">تغییر شماره</button></form>':
+  '<form id="rf-phone-request" class="rf-form rf-phone-form"><label class="portal-field"><span>شماره موبایل سرپرست</span><input name="phone" type="tel" inputmode="tel" autocomplete="tel" required placeholder="۰۹۱۲۱۲۳۴۵۶۷" dir="ltr"/></label><button type="submit" class="btn btn-primary">دریافت کد ورود ←</button></form>';
+ return '<main class="rf-auth shell"><section class="rf-auth-story">'+
+ '<div class="eyebrow">ROSHANFEKRAN · SECURE SPACE</div><h1>یک حساب،<br/><span class="gradient-text">یک مسیر رشد متفاوت.</span></h1>'+
+ '<p>هر عضو با هویت معتبر وارد فضای خودش می‌شود؛ مدیریت، هنرجو، مدرس و خانواده از همین درگاه استفاده می‌کنند.</p>'+
+ '<div class="rf-tick">◈ حریم خصوصی و دسترسی مجاز</div></section><div class="rf-auth-card">'+
+ '<div class="rf-auth-symbol">✧</div><span class="rf-overline">ACCOUNT ACCESS</span><h2>ورود به پورتال</h2>'+toast()+
+ '<div class="rf-phone-auth"><div class="rf-phone-heading"><span class="rf-phone-signal">◈</span><div><strong>ورود خانواده با موبایل</strong><small>بدون ایمیل یا رمز · فقط برای سرپرست مورد تأیید</small></div></div>'+
+ phoneUI+'<p class="rf-caption">ابتدا مدیر شماره سرپرست را تأیید می‌کند؛ دریافت کد نیازمند سرویس پیامک فعال است.</p></div>'+
+ '<details class="rf-email-login" open><summary>ورود هنرجو، مدرس و کارکنان با ایمیل</summary>'+
+ '<form id="rf-login" class="rf-form"><label class="portal-field"><span>ایمیل</span><input name="email" type="email" required autocomplete="username" placeholder="name@example.com" dir="ltr"/></label>'+
+ '<label class="portal-field"><span>رمز عبور</span><input name="password" type="password" required autocomplete="current-password" placeholder="رمز حساب فعال شما" dir="ltr"/></label>'+
+ '<button class="btn btn-primary" type="submit" '+(busy?'disabled':'')+'>'+(busy?'در حال بررسی…':'ورود امن ←')+'</button></form></details>'+
+ '<div class="rf-access-support"><a href="#/courses">ثبت‌نام در دوره‌ها ↗</a><a href="tel:09164880996">راهنمایی ورود ↗</a></div></div></main>';
 }
 function activate(){
  const frag=location.hash.split("?")[1]||"",q=new URLSearchParams(frag);
