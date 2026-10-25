@@ -1,0 +1,27 @@
+import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+const edge=readFileSync(new URL("../supabase/functions/academy-gateway/index.ts",import.meta.url),"utf8");
+const db=readFileSync(new URL("../supabase/migrations/20261025_guardian_phone_otp.sql",import.meta.url),"utf8");
+const portal=readFileSync(new URL("../site/portal.js",import.meta.url),"utf8");
+const ops=readFileSync(new URL("../site/academy-ops.js",import.meta.url),"utf8");
+const need=(content,phrase)=>assert(content.includes(phrase),"Missing safeguard: "+phrase);
+for(const s of ["guardian_phone_request","guardian_phone_verify","academy_guardian_phone_claim","guardianPhone(","academy_guardian_otp_consume","/auth/v1/verify","/auth/v1/otp"]){need(edge,s)}
+const begin=edge.slice(edge.indexOf("if(b.action==='guardian_phone_request')"),edge.indexOf("if(b.action==='guardian_phone_verify')"));
+const guardianCheck=begin.indexOf("academy_guardians?select=");
+const consentCheck=begin.indexOf("academy_guardian_students?select=");
+const otp=begin.indexOf("'/auth/v1/otp'");
+assert(guardianCheck>=0&&consentCheck>guardianCheck&&otp>consentCheck,"Do not send OTP to unapproved phones");
+need(begin,"!guardian)return jr({ok:true,requested:true})");
+need(begin,"if(quota!==true)");
+const verify=edge.slice(edge.indexOf("if(b.action==='guardian_phone_verify')"),edge.indexOf("if(b.action==='invite_guardian')"));
+assert(verify.indexOf("academy_guardian_phone_claim")>verify.indexOf("'/auth/v1/verify'"),"Must claim only after Auth verifies SMS code");
+assert(verify.indexOf("if(!claim.ok)")<verify.indexOf("return jr({access_token:"),"Never return tokens for unapproved guardians");
+need(db,"phone_confirmed_at IS NOT NULL");
+need(db,"REVOKE ALL ON FUNCTION public.academy_guardian_phone_claim() FROM PUBLIC, anon");
+need(db,"GRANT EXECUTE ON FUNCTION public.academy_guardian_phone_claim() TO authenticated");
+need(db,"REVOKE ALL ON FUNCTION public.academy_guardian_otp_consume(text) FROM PUBLIC,anon,authenticated");
+need(ops,"academy_guardian_phone_invite");
+assert(!/name="email"\s+required/.test(ops.slice(ops.indexOf("function family(){"),ops.indexOf("function applications(){"))),"Guardian onboarding must not require email");
+need(portal,"id=\"rf-phone-request\"");
+need(portal,"id=\"rf-phone-verify\"");
+console.log("PASS: admin-approved phone-only guardian onboarding, SMS OTP precondition, claim guard and private quota.");
