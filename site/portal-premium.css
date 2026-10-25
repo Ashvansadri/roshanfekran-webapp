@@ -142,3 +142,14 @@
 .rf-daily-archive-row small{color:#b1cbbd}
 .rf-daily-archive-row button{border:1px solid #a7e9ca70;background:#173d33;color:#e8ffef;border-radius:7px;padding:10px 14px;cursor:pointer}
 @media(max-width:600px){.rf-daily-head{align-items:flex-start}.rf-daily-mark{font-size:32px}.rf-daily-archive-row{align-items:flex-start}.rf-daily-stats span{width:100%;justify-content:space-between}}
+
+/* Consent-based Push settings in the student journey */
+.rf-push-panel{position:relative;overflow:hidden;margin-block:22px;border:1px solid #a5efc85e;background:radial-gradient(circle at 12% 5%,#25715b55,transparent 52%),linear-gradient(145deg,#102b32,#07161e);border-radius:24px;padding:clamp(20px,3vw,34px);box-shadow:0 24px 65px #0005}
+.rf-push-intro{display:flex;align-items:flex-start;gap:18px}
+.rf-push-icon{width:60px;height:60px;display:grid;place-items:center;flex-shrink:0;border:1px solid #c8ffdf7d;border-radius:20px;background:linear-gradient(135deg,#b6f6d738,#66bcae1f);font-size:30px;color:#caffdf}
+.rf-push-intro h2{font-size:clamp(20px,2.7vw,29px);color:#effff4;margin:6px 0}
+.rf-push-intro p,.rf-push-panel .rf-caption{color:#b4d7c7;line-height:2;font-size:12px}
+.rf-push-state{margin:18px 0;padding:14px 18px;border:1px solid #91d7bc54;border-radius:14px;background:#051c2280;color:#d8f9e9;font-size:13px;line-height:2}
+.rf-push-actions{display:flex;gap:12px;flex-wrap:wrap}
+.rf-push-actions button:disabled{opacity:.45;cursor:not-allowed}
+@media(max-width:600px){.rf-push-intro{gap:10px}.rf-push-icon{width:45px;height:45px;border-radius:14px}.rf-push-actions button{flex:1 1 100%}}

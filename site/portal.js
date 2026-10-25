@@ -5,6 +5,7 @@ const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&
 const safeURL=v=>{try{let u=new URL(String(v));return u.protocol==="https:"?u.href:"#"}catch{return "#"}};
 const date=v=>{try{return new Intl.DateTimeFormat("fa-IR-u-ca-persian",{dateStyle:"medium"}).format(new Date(v))}catch{return "—"}};
 const num=v=>new Intl.NumberFormat("fa-IR").format(Number(v||0));
+let pushConfig=null,pushStatus=null,pushLocalEndpoint="",pushError="";
 let session=null,role=null,journey=null,parent=null,parentDetails=null,familyTip=null,resume=null,works=[],missions=[],campaigns=[],studentAssignments=[],studentSubmissions=[],studentNotifications=[],staffData=null,finance=null,dailyFeed=null,dailyFeedError="",profileFormOpen=false,workFormOpen=false,stage=0,busy=false,error="",notice="",loading=false,quizQuestions=null,quizLoading=false;
 try{const saved=sessionStorage.getItem("rf_safe_session_v1");if(saved)session=JSON.parse(saved)}catch{sessionStorage.removeItem("rf_safe_session_v1")}
 const token=()=>session?.access_token||"";
@@ -51,7 +52,7 @@ const clear=()=>{
  for(const ctl of activeRequests)ctl.abort();
  activeRequests.clear();renewing=null;
  session=null;role=null;journey=null;parent=null;parentDetails=null;familyTip=null;resume=null;
- works=[];missions=[];campaigns=[];studentAssignments=[];studentSubmissions=[];studentNotifications=[];staffData=null;finance=null;dailyFeed=null;dailyFeedError="";quizQuestions=null;
+ works=[];missions=[];campaigns=[];studentAssignments=[];studentSubmissions=[];studentNotifications=[];staffData=null;finance=null;dailyFeed=null;dailyFeedError="";pushConfig=null;pushStatus=null;pushLocalEndpoint="";pushError="";quizQuestions=null;
  profileFormOpen=false;workFormOpen=false;loading=false;busy=false;
  sessionStorage.removeItem("rf_safe_session_v1");
  const print=document.getElementById("rf-print-content");if(print)print.replaceChildren();
@@ -120,6 +121,8 @@ async function loadStudentExtras(){
   proxy("/rest/v1/academy_assignment_submissions?select=id,assignment_id,status,submitted_at,score&limit=100"),
   proxy("/rest/v1/academy_notifications?select=id,student_id,kind,title,body,due_at,read_at&order=created_at.desc&limit=50"),
   api("daily_for_me",{},true),
+  api("push_config"),
+  api("push_status",{},true),
  ]);
  requireCurrent(generation);
  works=items[0].status==="fulfilled"&&Array.isArray(items[0].value)?items[0].value:[];
@@ -131,6 +134,13 @@ async function loadStudentExtras(){
  const dailyResult=items[9];
  dailyFeed=dailyResult.status==="fulfilled"&&dailyResult.value?.ok&&Array.isArray(dailyResult.value.archive)?dailyResult.value:null;
  dailyFeedError=dailyFeed?"":dailyResult.status==="rejected"?String(dailyResult.reason?.message||"دریافت نکته‌های روز ممکن نیست."):"داده نکته‌های روز معتبر نیست.";
+ pushConfig=items[10].status==="fulfilled"&&items[10].value?.ok?items[10].value:null;
+ pushStatus=items[11].status==="fulfilled"&&items[11].value?.ok&&Array.isArray(items[11].value.identities)?items[11].value:null;
+ pushError=items[11].status==="rejected"?"وضعیت اشتراک از سرور دریافت نشد.":"";
+ pushLocalEndpoint="";
+ if(navigator.serviceWorker?.getRegistration){
+  try{const reg=await navigator.serviceWorker.getRegistration();const sub=await reg?.pushManager?.getSubscription();requireCurrent(generation);pushLocalEndpoint=String(sub?.endpoint||"")}catch{pushLocalEndpoint=""}
+ }
  const f=items.slice(3,6);
  finance=f.every(x=>x.status==="fulfilled"&&Array.isArray(x.value))
   ?{ready:true,enrollments:f[0].value,installments:f[1].value,payments:f[2].value}
@@ -218,6 +228,28 @@ function dailyPanel(){
  (previous.length?'<details class="rf-daily-archive"><summary>تمرین‌های پیشین ('+num(previous.length)+')</summary>'+previous.map(x=>'<div class="rf-daily-archive-row"><div><strong>'+esc(x.title||"تمرین")+'</strong><small>'+esc(date(x.publish_date))+'</small></div>'+(x.read?.completed_at?'<span class="rf-daily-done">✓ تکمیل‌شده</span>':'<button type="button" data-rf="daily-complete" data-id="'+esc(x.id)+'" '+(busy?"disabled":"")+'>ثبت تکمیل</button>')+'</div>').join("")+'</details>':""))+
  '<p class="rf-caption">فقط محتوای منتشرشده و دوره‌های مجاز شما نمایش داده می‌شود. ثبت پیشرفت از طریق سرور انجام می‌شود.</p></section>';
 }
+function pushPanel(){
+ if(role?.kind!=="student")return "";
+ const capable=!!(window.isSecureContext&&"Notification" in window&&navigator.serviceWorker&&window.PushManager);
+ const ready=pushConfig?.available===true&&typeof pushConfig.public_key==="string"&&/^[A-Za-z0-9_-]{80,100}$/.test(pushConfig.public_key);
+ const statusReady=!!pushStatus&&Array.isArray(pushStatus.identities);
+ const enabled=!!pushLocalEndpoint&&statusReady&&pushStatus.identities.includes(pushLocalEndpoint);
+ const denied=capable&&Notification.permission==="denied";
+ const reason=!capable?"مرورگر یا اتصال فعلی از اعلان امن پشتیبانی نمی‌کند.":!statusReady?"وضعیت امن اشتراک قابل تأیید نیست.":!ready?"کلید عمومی VAPID هنوز روی سرور تنظیم نشده است؛ اعلان واقعی فعال نیست.":denied?"اجازه اعلان در تنظیمات مرورگر مسدود است.":"";
+ return '<section class="rf-panel rf-push-panel" aria-label="تنظیمات اعلان‌های آموزشی"><div class="rf-push-intro"><span class="rf-push-icon" aria-hidden="true">✦</span><div><span class="rf-overline">OPTIONAL LEARNING ALERTS</span><h2>اعلان تمرین روزانه</h2><p>فعال‌سازی فقط با انتخاب شما انجام می‌شود. محتوای خصوصی در اعلان نمایش داده نمی‌شود.</p></div></div>'+
+ '<div class="rf-push-state" role="status">'+(enabled?"✓ اعلان روی این دستگاه ثبت شده است.":reason||"اعلان این دستگاه غیرفعال است؛ با اجازه شما فعال می‌شود.")+'</div>'+
+ (pushError?'<p class="portal-alert" role="alert">'+esc(pushError)+'</p>':"")+
+ '<div class="rf-push-actions"><button type="button" class="btn btn-primary" data-rf="push-enable" '+(!ready||!statusReady||!capable||denied||enabled||busy?"disabled":"")+'>فعال‌سازی اختیاری</button>'+
+ '<button type="button" class="portal-secondary" data-rf="push-disable" '+(!enabled||busy?"disabled":"")+'>لغو اعلان این دستگاه</button></div>'+
+ '<p class="rf-caption">این تنظیم فقط برای همین دستگاه است. بدون مجوز مرورگر، هیچ اشتراکی ثبت نمی‌شود.</p></section>';
+}
+function vapidBytes(key){
+ if(!/^[A-Za-z0-9_-]{80,100}$/.test(String(key||"")))throw Error("کلید عمومی اعلان معتبر نیست.");
+ const base64=key.replace(/-/g,"+").replace(/_/g,"/");
+ const raw=atob(base64+"=".repeat((4-base64.length%4)%4));
+ if(raw.length!==65)throw Error("طول کلید عمومی اعلان معتبر نیست.");
+ return Uint8Array.from(raw,c=>c.charCodeAt(0));
+}
 function studentPage(){
  const steps=Array.isArray(journey?.stages)?journey.stages:[],progress=Number(journey?.percentage||0);
  const headingText=journey?.student_name||"هنرجوی روشنفکران";
@@ -247,7 +279,7 @@ function studentPage(){
  actions()+toast()+'<div class="rf-progress-wrap"><div><span class="rf-overline">YOUR PROGRESS</span><h2>'+num(progress)+'٪ <small>تکمیل پرونده</small></h2></div><div class="rf-track"><span style="width:'+Math.max(0,Math.min(100,progress))+'%"></span></div><p>'+esc(journey.message||"مسیر رشد شما آغاز شده است.")+'</p></div>'+
  '<div class="rf-stages">'+steps.map((s,i)=>'<button class="rf-stage '+(i===stageIndex?"is-selected":"")+'" data-rf="stage" data-step="'+i+'"><span>'+(s.done?"✓":num(i+1))+'</span><b>'+esc(s.title)+'</b><small>'+(s.done?"تکمیل‌شده":i===stageIndex?"مرحله جاری":"آماده تکمیل")+'</small></button>').join("")+'</div>'+
  '<section class="rf-grid-two">'+right+
- '<div class="rf-panel"><div class="rf-panel-title"><span>✧</span><h3>مأموریت‌های ۹۰روزه</h3></div><p>۲۴ پروژه در سه مرحله، با تحویل و تأیید واقعی مدرس یا مدیر.</p><div class="rf-meters"><span>مأموریت‌های پذیرفته‌شده</span><strong>'+num(journey.missions_approved||0)+' / ۲۴</strong></div><div class="rf-mini-missions">'+missions.slice(0,6).map(m=>'<div><span>'+num(m.mission_no)+'</span><b>'+esc(m.title)+'</b></div>').join("")+'</div><a class="btn btn-outline" href="#/missions">مشاهده مسیر پروژه‌ها ↗</a></div></section>'+dailyPanel()+financePanel()+(window.RFFAMILY?.student?.(studentAssignments,studentSubmissions,studentNotifications)||'')+'</main>';
+ '<div class="rf-panel"><div class="rf-panel-title"><span>✧</span><h3>مأموریت‌های ۹۰روزه</h3></div><p>۲۴ پروژه در سه مرحله، با تحویل و تأیید واقعی مدرس یا مدیر.</p><div class="rf-meters"><span>مأموریت‌های پذیرفته‌شده</span><strong>'+num(journey.missions_approved||0)+' / ۲۴</strong></div><div class="rf-mini-missions">'+missions.slice(0,6).map(m=>'<div><span>'+num(m.mission_no)+'</span><b>'+esc(m.title)+'</b></div>').join("")+'</div><a class="btn btn-outline" href="#/missions">مشاهده مسیر پروژه‌ها ↗</a></div></section>'+dailyPanel()+pushPanel()+financePanel()+(window.RFFAMILY?.student?.(studentAssignments,studentSubmissions,studentNotifications)||'')+'</main>';
 }
 function missionsPage(){
  if(role?.kind!=="student")return '<main class="shell rf-panel-container"><div class="rf-empty">مشاهده مأموریت‌ها ویژه هنرجو است. <a href="#/access">ورود</a></div></main>';
@@ -386,7 +418,7 @@ async function submit(e){
 async function click(e){
  const control=e.target.closest("[data-rf]");if(!control)return;
  const action=control.dataset.rf;
- if(!["logout","refresh","stage","consent","resume","share-on","share-off","notification-read","daily-complete"].includes(action))return;
+ if(!["logout","refresh","stage","consent","resume","share-on","share-off","notification-read","daily-complete","push-enable","push-disable"].includes(action))return;
  e.preventDefault();
  if(action==="logout"){clear();error="";notice="";location.hash="#/access";refresh();return}
  if(busy)return;
@@ -399,6 +431,35 @@ async function click(e){
   const approve=control.dataset.allow==="true";
   if(!confirm(approve?"با آگاهی از شرایط، اجازه نمایش عمومی رزومه این هنرجو را می‌دهید؟":"رضایت انتشار عمومی را لغو می‌کنید؟"))return;
   await rpc("academy_consent_showcase",{p_student_id:control.dataset.student,p_allow:approve});parent=await rpc("academy_parent_journey_snapshot");showNotice(approve?"رضایت ثبت شد؛ انتشار همچنان نیازمند اقدام خود هنرجوست.":"رضایت لغو و انتشار عمومی غیرفعال شد.");
+ }
+ if(action==="push-enable"){
+  if(role?.kind!=="student"||!pushStatus?.ok||!pushConfig?.available)throw Error("فعال‌سازی اعلان هنوز در دسترس نیست.");
+  if(!window.isSecureContext||!("Notification" in window)||!navigator.serviceWorker||!window.PushManager)throw Error("مرورگر از اعلان امن پشتیبانی نمی‌کند.");
+  const permission=Notification.permission==="granted"?"granted":await Notification.requestPermission();
+  requireCurrent(generation);
+  if(permission!=="granted"){showNotice("اجازه اعلان داده نشد؛ هیچ اشتراکی ثبت نشد.");return}
+  const reg=await navigator.serviceWorker.register("/sw.js");
+  await navigator.serviceWorker.ready;
+  const existing=await reg.pushManager.getSubscription();
+  const subscription=existing||await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:vapidBytes(pushConfig.public_key)});
+  try{await api("push_save",{subscription:subscription.toJSON()},true)}
+  catch(e){if(!existing)await subscription.unsubscribe().catch(()=>{});throw e}
+  requireCurrent(generation);
+  pushLocalEndpoint=subscription.endpoint;
+  pushStatus=await api("push_status",{},true);
+  showNotice("اعلان این دستگاه با رضایت شما ثبت شد؛ ارسال واقعی پس از راه‌اندازی سرویس ارسال انجام می‌شود.");return;
+ }
+ if(action==="push-disable"){
+  if(role?.kind!=="student")throw Error("این تنظیم فقط برای هنرجو است.");
+  const reg=await navigator.serviceWorker?.getRegistration();
+  const subscription=await reg?.pushManager?.getSubscription();
+  if(!subscription?.endpoint)throw Error("اشتراک فعالی روی این دستگاه پیدا نشد.");
+  await api("push_delete",{identity:subscription.endpoint},true);
+  await subscription.unsubscribe();
+  requireCurrent(generation);
+  pushLocalEndpoint="";
+  pushStatus=await api("push_status",{},true);
+  showNotice("اشتراک اعلان این دستگاه لغو شد.");return;
  }
  if(action==="daily-complete"){
   if(role?.kind!=="student"||!dailyFeed)throw Error("فقط هنرجوی واردشده می‌تواند تمرین را تکمیل کند.");
