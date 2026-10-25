@@ -15,7 +15,7 @@ assert(!save.includes("record:Array.isArray"),"Never return subscription secret 
 const extract=name=>{
  const m=source.match(new RegExp("function "+name+"\\([^)]*\\)\\{[\\s\\S]*?\\n\\}"));
  assert(m,"Missing "+name+" implementation");
- return m[0].replace(/:string(?=\\))/g,"").replace(/:any(?=\\))/g,"").replace(/:any(?=\\{)/g,"");
+ return m[0].replaceAll(":string","").replaceAll(":any","");
 };
 const validEndpoint=vm.runInNewContext(extract("validWebPushEndpoint")+"; validWebPushEndpoint",{URL});
 const validKeys=vm.runInNewContext(extract("validWebPushKeys")+"; validWebPushKeys",{atob});
