@@ -20,6 +20,8 @@ jobs:
         run: node scripts/pwa-push.test.mjs
       - name: Verify Push subscription ownership and opt-in readiness
         run: node scripts/push-subscription-security.test.mjs
+      - name: Guard scheduled daily learning release and Push delivery eligibility
+        run: node scripts/daily-content-release.test.mjs
       - name: Check assignment submission privilege hardening
         run: node scripts/submission-write-grants.test.mjs
       - name: Verify archived-teacher and staff authorization guards

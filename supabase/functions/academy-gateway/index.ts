@@ -70,6 +70,9 @@ function validWebPushKeys(keys:any){
   return size(keys.p256dh)===65&&size(keys.auth)===16;
  }catch{return false}
 }
+// Publication date is evaluated on the server in the academy's local timezone.
+function tehranToday(){return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Tehran',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}
+function dailyIsAvailable(item:any,today:string){return item?.status==='published'&&/^\d{4}-\d{2}-\d{2}$/.test(String(item?.publish_date||''))&&String(item.publish_date)<=today}
 async function currentUser(token:string){
  if(!token)throw gatewayHttpError(401,'AUTH_REQUIRED');
  const response=await supa('/auth/v1/user','GET',null,token);
@@ -903,8 +906,9 @@ Deno.serve(async(req:Request)=>{
    const token=bt(req),u=await currentUser(token),st=await studentByUser(u.id);
    if(!st||!st.portal_enabled)throw new Error('Student portal access required');
    const content_id=String(b.content_id||'');if(!content_id)throw new Error('شناسه محتوای روزانه لازم است');
-   const rows=await jo(await svc('/rest/v1/academy_daily_content?select=id,audience,course_id,status&id=eq.'+encodeURIComponent(content_id)+'&status=eq.published&limit=1','GET',null));
-   if(!rows?.length)throw new Error('محتوا در دسترس نیست');
+   const today=tehranToday();
+   const rows=await jo(await svc('/rest/v1/academy_daily_content?select=id,audience,course_id,status,publish_date&id=eq.'+encodeURIComponent(content_id)+'&status=eq.published&publish_date=lte.'+encodeURIComponent(today)+'&limit=1','GET',null));
+   if(!rows?.length||!dailyIsAvailable(rows[0],today))throw gatewayHttpError(403,'این محتوا هنوز برای تکمیل منتشر نشده است');
    const item=rows[0];
    if(item.audience==='course'){
     const e=await jo(await svc('/rest/v1/academy_enrollments?select=id&student_id=eq.'+encodeURIComponent(st.id)+'&course_id=eq.'+encodeURIComponent(item.course_id)+'&status=eq.active&limit=1','GET',null));
@@ -1016,8 +1020,8 @@ Deno.serve(async(req:Request)=>{
    const id=String(b.content_id||'');
    const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Tehran',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
    const q=id
-    ?'/rest/v1/academy_daily_content?select=*&id=eq.'+encodeURIComponent(id)+'&status=eq.published&push_enabled=eq.true&limit=1'
-    :'/rest/v1/academy_daily_content?select=*&publish_date=eq.'+encodeURIComponent(today)+'&status=eq.published&push_enabled=eq.true&order=audience.asc&limit=1';
+    ?'/rest/v1/academy_daily_content?select=*&id=eq.'+encodeURIComponent(id)+'&status=eq.published&publish_date=lte.'+encodeURIComponent(today)+'&push_enabled=eq.true&push_sent_at=is.null&limit=1'
+    :'/rest/v1/academy_daily_content?select=*&publish_date=eq.'+encodeURIComponent(today)+'&status=eq.published&push_enabled=eq.true&push_sent_at=is.null&order=audience.asc&limit=1';
    const tips=await jo(await svc(q,'GET',null));if(!tips?.length)throw new Error('محتوای منتشرشده و قابل اعلان پیدا نشد');
    const tip=tips[0];
    let subs=await jo(await svc('/rest/v1/academy_push_subscriptions?select=identity,student_id,subscription&active=eq.true','GET',null));
