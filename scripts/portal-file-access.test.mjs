@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 const source=readFileSync(new URL("../supabase/functions/academy-gateway/index.ts",import.meta.url),"utf8");
-const helper=source.match(/function requireStudentPortal\\(st:any\\)\\{[\\s\\S]*?\\n\\}/)?.[0];
+const helper=source.match(/function requireStudentPortal\(st:any\)\{[\s\S]*?\n\}/)?.[0];
 assert(helper,"Central student portal gate missing");
 const requireStudentPortal=new Function("gatewayHttpError",helper.replace("(st:any)","(st)")+";return requireStudentPortal;")(
  (status,message)=>Object.assign(new Error(message),{status})
