@@ -69,6 +69,17 @@ for(const size of [180,192,512])assert(sw.includes("/assets/rf-icon-"+size+".png
 for(const name of ["rf_hero_real3d.webp","rf_ai_real3d.webp","rf_crypto_real3d.webp","rf_forex_real3d.webp","rf_architecture_real3d.webp"])assert(existsSync(join(site,"assets",name)),"Local cinematic asset missing: "+name);
 assert(!css.includes("roshanfekran-academy-control.floot.app/_cdn/"),"Cinematic CSS must not depend on legacy Floot CDN");
 
+// Reject placeholders, HTML error pages, or damaged downloads masquerading as local CGI.
+// A WebP file must have RIFF/WEBP magic and enough bytes for a real image payload.
+for(const name of ["rf_hero_real3d.webp","rf_ai_real3d.webp","rf_crypto_real3d.webp","rf_forex_real3d.webp","rf_architecture_real3d.webp"]){
+ const bytes=readFileSync(join(site,"assets",name));
+ assert(bytes.length>4096,"Cinematic image is suspiciously small: "+name);
+ assert.equal(bytes.toString("ascii",0,4),"RIFF","Invalid WebP RIFF signature: "+name);
+ assert.equal(bytes.toString("ascii",8,12),"WEBP","Invalid WebP format signature: "+name);
+ assert.equal(bytes.readUInt32LE(4)+8,bytes.length,"Truncated or corrupt WebP asset: "+name);
+}
+
+
 // The installed PWA must keep every first-party screen and cinematic asset usable offline.
 for(const path of [...scripts.filter(f=>f!=="sw.js"),...styles,"manifest.webmanifest","favicon.svg"])
  assert(sw.includes('"/'+path+'"'),"PWA offline shell missing public resource: "+path);
