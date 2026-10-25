@@ -48,7 +48,15 @@ async function invitedAccount(email:string,password:string,name:string){
  const session=await jo(await supa('/auth/v1/token?grant_type=password','POST',{email,password}));
  return {user,session};
 }
-async function currentUser(token:string){if(!token)throw new Error('ابتدا وارد حساب کاربری شوید');return jo(await supa('/auth/v1/user','GET',null,token))}
+function gatewayHttpError(status:number,message:string){return Object.assign(new Error(message),{status})}
+async function currentUser(token:string){
+ if(!token)throw gatewayHttpError(401,'AUTH_REQUIRED');
+ const response=await supa('/auth/v1/user','GET',null,token);
+ if(response.status===401||response.status===403)throw gatewayHttpError(401,'AUTH_REQUIRED');
+ if(response.status===429)throw gatewayHttpError(429,'AUTH_RATE_LIMIT');
+ if(response.status>=500)throw gatewayHttpError(503,'AUTH_UNAVAILABLE');
+ return jo(response);
+}
 async function currentRole(token:string,userId:string){const rows=await jo(await supa('/rest/v1/academy_staff?select=role,active&user_id=eq.'+encodeURIComponent(userId)+'&active=eq.true&archived_at=is.null','GET',null,token));return Array.isArray(rows)&&rows.length?rows[0].role:null}
 async function studentByUser(userId:string){
  const rows=await jo(await svc('/rest/v1/academy_students?select=id,user_id,full_name,email,portal_enabled,avatar_url,status,archived_at&user_id=eq.'+encodeURIComponent(userId)+'&limit=1','GET',null));
@@ -1107,12 +1115,15 @@ Deno.serve(async(req:Request)=>{
   }
   if(b.action==='proxy'){
    const path=String(b.path||''),method=String(b.method||'GET').toUpperCase(),token=bt(req);
-   if(!allowedProxy(path,method,token))throw new Error(token?'مسیر یا روش غیرمجاز است':'ابتدا وارد حساب کاربری شوید');
+   if(!allowedProxy(path,method,token))throw gatewayHttpError(token?403:401,token?'مسیر یا روش غیرمجاز است':'AUTH_REQUIRED');
    const authToken=path.startsWith('/auth/v1/token?')?'':token;
    const r=await supa(path,method,b.body??null,authToken,String(b.prefer||'return=representation'));
    const t=await r.text();let d:any;try{d=t?JSON.parse(t):null}catch{d=t}
    return jr(d,r.status);
   }
   throw new Error('عملیات ناشناخته');
- }catch(e){return jr({error:String((e as Error).message||e)},400)}
+ }catch(e){
+  const status=Number((e as {status?:number})?.status)||400;
+  return jr({error:String((e as Error).message||e)},[401,403,429,503].includes(status)?status:400);
+ }
 });

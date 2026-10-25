@@ -49,7 +49,8 @@ if(link){
 // Real negative tests against the deployed gateway; these never authenticate or mutate data.
 // A failed authorization must not be mistaken for a passing public endpoint test.
 await deny("anonymous portal resolution","resolve_portal",{},401);
-await deny("anonymous private student snapshot","proxy",{path:"/rest/v1/rpc/academy_student_journey_snapshot",method:"POST",body:{}},400);
-await deny("anonymous private financial table","proxy",{path:"/rest/v1/academy_payments?select=id,amount&limit=1",method:"GET"},400);
+await deny("anonymous private student snapshot","proxy",{path:"/rest/v1/rpc/academy_student_journey_snapshot",method:"POST",body:{}},401);
+await deny("anonymous private financial table","proxy",{path:"/rest/v1/academy_payments?select=id,amount&limit=1",method:"GET"},401);
+await deny("forbidden proxy route","proxy",{path:"/auth/v1/admin/users",method:"GET"},403,{"authorization":"Bearer synthetic-test-only-not-a-session"});
 await deny("invalid public resume token","public_showcase",{token:"00000000-0000-4000-8000-000000000000"},404);
-console.log("PASS: live public catalog ("+catalog.courses.length+" course(s)), news, daily content and registration info; four real anonymous/invalid-access denial checks; no writes.");
+console.log("PASS: live public catalog ("+catalog.courses.length+" course(s)), news, daily content and registration info; five real anonymous/invalid-access denial checks; no writes.");
