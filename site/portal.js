@@ -11,6 +11,8 @@ try{const saved=sessionStorage.getItem("rf_safe_session_v1");if(saved)session=JS
 const token=()=>session?.access_token||"";
 const setSession=x=>{if(!x?.access_token||!x?.refresh_token)throw Error("پاسخ ورود ناقص است");session={access_token:x.access_token,refresh_token:x.refresh_token,expires_at:Date.now()+Math.max(1,Number(x.expires_in||3600))*1000};sessionStorage.setItem("rf_safe_session_v1",JSON.stringify(session))};
 let renewing=null;
+let staffOverviewInitialized=false;
+function openStaffLandingOnce(){if(!staffOverviewInitialized){window.RFOPS?.showOverview?.();staffOverviewInitialized=true;}}
 // Only a definitive invalid refresh credential should end the session.
 // Temporary gateway outages and timeouts must leave the session retryable.
 const permanentAuthError=message=>Object.assign(new Error(message),{authPermanent:true});
@@ -49,6 +51,7 @@ function authError(s,d){
 const clear=()=>{
  authEpoch++;
  window.RFOPS?.reset?.();
+ staffOverviewInitialized=false;
  for(const ctl of activeRequests)ctl.abort();
  activeRequests.clear();renewing=null;
  session=null;role=null;journey=null;parent=null;parentDetails=null;familyTip=null;resume=null;
@@ -161,7 +164,7 @@ async function loadStudentExtras(){
 async function loadStaffExtras(){
  const generation=authEpoch;
  // Teachers have no direct RLS access to course/roster tables. RFOPS uses the scoped RPC.
- if(role.kind==="teacher"){staffData={};if(window.RFOPS?.load){await window.RFOPS.load(role,api);requireCurrent(generation)}return}
+ if(role.kind==="teacher"){staffData={};if(window.RFOPS?.load){await window.RFOPS.load(role,api);requireCurrent(generation);openStaffLandingOnce()}return}
  const names=["academy_courses","academy_students","academy_enrollments","academy_registration_requests"];
  // Fetch only fields used by this view; never request national ID, contact, finance or private notes.
  const projections={
@@ -175,7 +178,7 @@ async function loadStaffExtras(){
  const res=await Promise.allSettled(requests);
  requireCurrent(generation);
  staffData={};names.forEach((n,i)=>staffData[n]=res[i].status==="fulfilled"&&Array.isArray(res[i].value)?res[i].value:[]);
- if(window.RFOPS?.load){await window.RFOPS.load(role,api);requireCurrent(generation)}
+ if(window.RFOPS?.load){await window.RFOPS.load(role,api);requireCurrent(generation);openStaffLandingOnce()}
 }
 function heading(k,title,subtitle){return '<div class="rf-page-head"><div><div class="rf-overline">'+esc(k)+'</div><h1>'+title+'</h1><p>'+esc(subtitle)+'</p></div></div>'}
 let rfFamilyPhone="";
