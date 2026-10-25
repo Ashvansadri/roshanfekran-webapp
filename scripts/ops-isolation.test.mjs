@@ -4,7 +4,8 @@ import {join} from "node:path";
 import assert from "node:assert/strict";
 
 const source=readFileSync(join(new URL("../",import.meta.url).pathname,"site/academy-ops.js"),"utf8");
-const root={addEventListener(){}};
+const handlers={};
+const root={addEventListener(name,handler){handlers[name]=handler},contains(){return true}};
 const window={RFCORE:{render(){}}};
 const document={getElementById(){return root}};
 new Function("window","document","location","navigator","confirm","prompt",source)(
@@ -24,6 +25,11 @@ const fresh=await ops.load({kind:"staff",role:"owner"},(_,{path})=>
 assert.equal(fresh,true);
 pending.forEach(({path,resolve})=>resolve(path.includes("/academy_students?")?[{id:"old",full_name:"OLD_ACCOUNT_PRIVATE"}]:[]));
 assert.equal(await oldLoad,false,"Late request must be discarded");
+// Default overview intentionally avoids listing personally identifying names.
+const summary=ops.render({kind:"staff",role:"owner"});
+assert(summary.includes("rfov-overview"),"Owner should see the new overview");
+assert(!summary.includes("NEW_ACCOUNT_ONLY"),"Overview must not display student identity rows");
+handlers.click({target:{closest(selector){return selector==="[data-rfops-tab]"?{dataset:{rfopsTab:"students"}}:null}},preventDefault(){}});
 const markup=ops.render({kind:"staff",role:"owner"});
 assert(markup.includes("NEW_ACCOUNT_ONLY"),"Current account data should remain visible");
 assert(!markup.includes("OLD_ACCOUNT_PRIVATE"),"Prior account data leaked");
