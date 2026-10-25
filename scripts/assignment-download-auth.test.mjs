@@ -6,6 +6,9 @@ const start=source.indexOf(marker),end=source.indexOf("  if(b.action==='payment_
 assert(start>=0&&end>start,"Missing unified assignment file action");
 assert.equal(source.indexOf(marker,start+marker.length),-1,"Duplicate unreachable action is forbidden");
 const block=source.slice(start,end);
+const portalGuard=source.match(/function requireStudentPortal\\(st:any\\)\\{[\\s\\S]*?\\n\\}/)?.[0];
+assert(portalGuard,"Student portal access guard missing");
+const requireStudentPortal=new Function("gatewayHttpError",portalGuard.replace("(st:any)","(st)")+";return requireStudentPortal;")((status,message)=>Object.assign(new Error(message),{status}));
 const ids={submission:"11111111-1111-4111-8111-111111111111",student:"22222222-2222-4222-8222-222222222222",assignment:"33333333-3333-4333-8333-333333333333",course:"44444444-4444-4444-8444-444444444444",file:"55555555-5555-4555-8555-555555555555",teacher:"66666666-6666-4666-8666-666666666666",other:"77777777-7777-4777-8777-777777777777"};
 const oldPath=ids.student+"/"+ids.assignment+"/"+ids.file+".pdf";
 const newPath=ids.student+"/assignments/"+ids.assignment+"/"+ids.file+".pdf";
@@ -31,7 +34,7 @@ for(const [name,role,userId,assignedId,status,archivedAt,filePath,allowed,expect
   if(path.includes("/academy_courses?"))return assignedId===userId&&status!=="archived"&&!archivedAt?[{id:ids.course,teacher_user_id:assignedId,status,archived_at:null}]:[];
   throw Error("Unexpected query "+path);
  };
- const run=new Function("bt","currentUser","currentRole","svc","jo","studentByUser","signedObject","jr","return async function run(b,req){"+block+"throw Error('no action');}")(req=>"synthetic-token",async()=>({id:userId}),async()=>role,svc,jo,async()=>userId===ids.student?{id:ids.student}:null,async(bucket,path)=>{signed++;bucketUsed=bucket;return "https://example.invalid/"+bucket+"/"+path},x=>x);
+ const run=new Function("bt","currentUser","currentRole","svc","jo","studentByUser","signedObject","jr","requireStudentPortal","return async function run(b,req){"+block+"throw Error('no action');}")(req=>"synthetic-token",async()=>({id:userId}),async()=>role,svc,jo,async()=>userId===ids.student?{id:ids.student,portal_enabled:true,status:"active",archived_at:null}:null,async(bucket,path)=>{signed++;bucketUsed=bucket;return "https://example.invalid/"+bucket+"/"+path},x=>x,requireStudentPortal);
  const invoke=()=>run({action:"assignment_file_url",submission_id:ids.submission},{});
  if(allowed){const res=await invoke();assert.equal(res.ok,true,name);assert.equal(signed,1,name);assert.equal(bucketUsed,expectedBucket,name)}
  else{await assert.rejects(invoke(),/Not authorized|مسیر فایل معتبر نیست/,name);assert.equal(signed,0,name)}
