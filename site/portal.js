@@ -101,7 +101,11 @@ async function loadWorkspace(){
  loading=true;finance=null;dailyFeed=null;dailyFeedError="";try{
   role=await api("resolve_portal",{},true);
   if(role.kind==="student"){journey=await rpc("academy_student_journey_snapshot");await loadStudentExtras()}
-  else if(role.kind==="guardian"){const a=await Promise.allSettled([rpc("academy_parent_journey_snapshot"),rpc("academy_family_tip_today"),rpc("academy_parent_portal_snapshot")]);requireCurrent(generation);parent=a[0].status==="fulfilled"?a[0].value:null;familyTip=a[1].status==="fulfilled"?a[1].value:null;parentDetails=a[2].status==="fulfilled"?a[2].value:null}
+  else if(role.kind==="guardian"){const a=await Promise.allSettled([rpc("academy_parent_journey_snapshot"),rpc("academy_family_tip_today"),rpc("academy_parent_portal_snapshot")]);requireCurrent(generation);parent=a[0].status==="fulfilled"?a[0].value:null;familyTip=a[1].status==="fulfilled"?a[1].value:null;parentDetails=a[2].status==="fulfilled"?a[2].value:null;
+  const opts=await Promise.allSettled([api("push_config"),api("push_status",{},true)]);requireCurrent(generation);
+  pushConfig=opts[0].status==="fulfilled"&&opts[0].value?.ok?opts[0].value:null;
+  pushStatus=opts[1].status==="fulfilled"&&opts[1].value?.ok?opts[1].value:null;
+  pushLocalEndpoint="";pushError=""}
   else if(role.kind==="staff"||role.kind==="teacher"){await loadStaffExtras()}
   error="";
  }catch(e){if(!currentEpoch(generation))return;error=e.message||"ارتباط امن با حساب برقرار نشد";if(/AUTH_REQUIRED|JWT|401|expired|Unauthorized|NO_ACTIVE_ROLE|نقش فعال ندارد/i.test(error))clear()}
@@ -201,7 +205,7 @@ function parentPage(){
  (children.length?children.map(c=>'<article class="rf-child"><h3>'+esc(c.name)+'</h3><div class="rf-meters"><span>آثار تأییدشده</span><b>'+num(c.works_approved)+' / '+num(c.works_uploaded)+'</b></div><div class="rf-meters"><span>مأموریت‌های موفق</span><b>'+num(c.mission_approved_count)+'</b></div><div class="rf-meters"><span>آزمون مهارتی</span><b>'+(c.quiz_passed?"قبول‌شده":"در انتظار")+'</b></div><div class="rf-meters"><span>اجازه نمایش عمومی</span><b>'+(c.guardian_consent?"فعال":"غیرفعال")+'</b></div><div class="rf-action-row"><button class="portal-secondary" data-rf="consent" data-student="'+esc(c.student_id)+'" data-allow="true">تأیید با رضایت آگاهانه</button><button class="portal-secondary" data-rf="consent" data-student="'+esc(c.student_id)+'" data-allow="false">لغو رضایت</button></div><p class="rf-caption">تأیید والد به‌تنهایی رزومه را منتشر نمی‌کند؛ خود هنرجو نیز باید آن را فعال کند.</p></article>').join(""):'<div class="rf-empty">در این حساب هنوز ارتباط هنرجو و سرپرست با مجوز دیدن سوابق ثبت نشده است.</div>')+
  '</div><div class="rf-panel"><div class="rf-panel-title"><span>◎</span><h3>آموزش خانواده؛ درس امروز</h3></div>'+
  (familyTip?'<div class="rf-lesson"><div class="rf-overline">DAY '+num(familyTip.day_no)+' / ۳۰</div><h3>'+esc(familyTip.title)+'</h3><p>'+esc(familyTip.explanation)+'</p><div class="rf-lesson-practice"><strong>تمرین سه‌دقیقه‌ای</strong><p>'+esc(familyTip.exercise)+'</p></div><small>'+esc(familyTip.safety_note)+'</small></div>':'<div class="rf-empty">درس روز فقط برای والدین دارای مجوز مشاهده وضعیت هنرجو فعال می‌شود.</div>')+
- '<a class="btn btn-outline" href="#/courses">آشنایی با دوره‌های آموزشی</a></div></section>'+(window.RFFAMILY?.parent?.(parentDetails)||'')+'</main>';
+ '<a class="btn btn-outline" href="#/courses">آشنایی با دوره‌های آموزشی</a></div></section>'+(window.RFFAMILY?.parent?.(parentDetails)||'')+pushPanel()+'</main>';
 }
 
 function financePanel(){
@@ -242,14 +246,14 @@ function dailyPanel(){
  '<p class="rf-caption">فقط محتوای منتشرشده و دوره‌های مجاز شما نمایش داده می‌شود. ثبت پیشرفت از طریق سرور انجام می‌شود.</p></section>';
 }
 function pushPanel(){
- if(role?.kind!=="student")return "";
+ if(!["student","guardian"].includes(role?.kind))return "";
  const capable=!!(window.isSecureContext&&"Notification" in window&&navigator.serviceWorker&&window.PushManager);
  const ready=pushConfig?.available===true&&typeof pushConfig.public_key==="string"&&/^[A-Za-z0-9_-]{80,100}$/.test(pushConfig.public_key);
  const statusReady=!!pushStatus&&Array.isArray(pushStatus.identities);
  const enabled=!!pushLocalEndpoint&&statusReady&&pushStatus.identities.includes(pushLocalEndpoint);
  const denied=capable&&Notification.permission==="denied";
  const reason=!capable?"مرورگر یا اتصال فعلی از اعلان امن پشتیبانی نمی‌کند.":!statusReady?"وضعیت امن اشتراک قابل تأیید نیست.":!ready?"کلید عمومی VAPID هنوز روی سرور تنظیم نشده است؛ اعلان واقعی فعال نیست.":denied?"اجازه اعلان در تنظیمات مرورگر مسدود است.":"";
- return '<section class="rf-panel rf-push-panel" aria-label="تنظیمات اعلان‌های آموزشی"><div class="rf-push-intro"><span class="rf-push-icon" aria-hidden="true">✦</span><div><span class="rf-overline">OPTIONAL LEARNING ALERTS</span><h2>اعلان تمرین روزانه</h2><p>فعال‌سازی فقط با انتخاب شما انجام می‌شود. محتوای خصوصی در اعلان نمایش داده نمی‌شود.</p></div></div>'+
+ return '<section class="rf-panel rf-push-panel" aria-label="تنظیمات اعلان‌های آموزشی"><div class="rf-push-intro"><span class="rf-push-icon" aria-hidden="true">✦</span><div><span class="rf-overline">OPTIONAL LEARNING ALERTS</span><h2>اعلان‌های آموزشی و پیگیری خانواده</h2><p>با اجازه شما فعال می‌شود. جزئیات خصوصی تکلیف در پیام بیرون از پورتال نمایش داده نمی‌شود.</p></div></div>'+
  '<div class="rf-push-state" role="status">'+(enabled?"✓ اعلان روی این دستگاه ثبت شده است.":reason||"اعلان این دستگاه غیرفعال است؛ با اجازه شما فعال می‌شود.")+'</div>'+
  (pushError?'<p class="portal-alert" role="alert">'+esc(pushError)+'</p>':"")+
  '<div class="rf-push-actions"><button type="button" class="btn btn-primary" data-rf="push-enable" '+(!ready||!statusReady||!capable||denied||enabled||busy?"disabled":"")+'>فعال‌سازی اختیاری</button>'+
@@ -461,7 +465,7 @@ async function click(e){
   await rpc("academy_consent_showcase",{p_student_id:control.dataset.student,p_allow:approve});parent=await rpc("academy_parent_journey_snapshot");showNotice(approve?"رضایت ثبت شد؛ انتشار همچنان نیازمند اقدام خود هنرجوست.":"رضایت لغو و انتشار عمومی غیرفعال شد.");
  }
  if(action==="push-enable"){
-  if(role?.kind!=="student"||!pushStatus?.ok||!pushConfig?.available)throw Error("فعال‌سازی اعلان هنوز در دسترس نیست.");
+  if(!["student","guardian"].includes(role?.kind)||!pushStatus?.ok||!pushConfig?.available)throw Error("فعال‌سازی اعلان هنوز در دسترس نیست.");
   if(!window.isSecureContext||!("Notification" in window)||!navigator.serviceWorker||!window.PushManager)throw Error("مرورگر از اعلان امن پشتیبانی نمی‌کند.");
   const permission=Notification.permission==="granted"?"granted":await Notification.requestPermission();
   requireCurrent(generation);
@@ -478,7 +482,7 @@ async function click(e){
   showNotice("اعلان این دستگاه با رضایت شما ثبت شد؛ ارسال واقعی پس از راه‌اندازی سرویس ارسال انجام می‌شود.");return;
  }
  if(action==="push-disable"){
-  if(role?.kind!=="student")throw Error("این تنظیم فقط برای هنرجو است.");
+  if(!["student","guardian"].includes(role?.kind))throw Error("مجوز تنظیم اعلان برای این حساب وجود ندارد.");
   const reg=await navigator.serviceWorker?.getRegistration();
   const subscription=await reg?.pushManager?.getSubscription();
   if(!subscription?.endpoint)throw Error("اشتراک فعالی روی این دستگاه پیدا نشد.");
