@@ -266,11 +266,12 @@ test('photorealistic assets are used in live home and all course worlds',async({
  await expect(page.locator('.rf26-track')).toHaveCount(3);
  const photos=await page.evaluate(()=>{
  const root=document.querySelector('.rf26-home');
- const hero=getComputedStyle(document.querySelector('.rf26-stage'),'::before').backgroundImage;
+ const scenes=[...document.querySelectorAll('.rf-cinema-scene .rf-cinema-photo')].map(img=>({src:new URL(img.src).pathname,loaded:img.complete&&img.naturalWidth>50}));
  const worlds=[...document.querySelectorAll('.rf26-track-visual')].map(el=>getComputedStyle(el).backgroundImage);
- return {hero,worlds,allHaveRealAssets:worlds.every(x=>x.includes('images.unsplash.com')&&!x.includes('floot.app'))};
+ return {scenes,worlds,allHaveRealAssets:scenes.length===3&&scenes.every(x=>x.src.startsWith('/assets/rf_')&&x.src.endsWith('.webp'))&&worlds.every(x=>x.includes('images.unsplash.com')&&!x.includes('floot.app'))};
  });
- expect(photos.hero).toContain('images.unsplash.com');
+ expect(photos.scenes.map(x=>x.src)).toEqual(['/assets/rf_ai_real3d.webp','/assets/rf_crypto_real3d.webp','/assets/rf_forex_real3d.webp']);
+ expect(photos.scenes[0].loaded).toBe(true);
  expect(photos.allHaveRealAssets).toBe(true);
  expect(errors).toEqual([]);
  await page.close();
