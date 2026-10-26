@@ -95,17 +95,24 @@ function render(state){
  const pill=state.loading?"در حال دریافت دوره‌ها":state.error?"دریافت دوره‌ها":" "+toPersian(opened)+" دوره قابل ثبت‌نام";
  const daily=state.daily?.today||state.daily?.latest;
  return '<main class="rf26-home">'+
- '<section class="rf26-hero" aria-labelledby="rf26-main-title"><div class="rf26-hero-atmosphere" aria-hidden="true"></div><div class="rf26-hero-grid shell">'+
- '<div class="rf26-hero-copy"><div class="rf26-eyebrow"><span class="rf26-eyebrow-glow"></span><span>آموزشگاه روشنفکران / اقلید</span><i></i><span class="rf26-latin">FUTURE-READY LEARNING</span></div>'+
- '<h1 id="rf26-main-title">آینده را <span class="rf26-hero-white">انتظار نکش.</span><br><em>خودت بسازش.</em></h1>'+
- '<p>اینجا آموزش، به یک تجربه واقعی تبدیل می‌شود؛ از اولین جرقه کنجکاوی تا پروژه، نمونه‌کار و هویت حرفه‌ای خودت.</p>'+
- '<div class="rf26-hero-actions"><button type="button" class="rf26-btn rf26-btn-glow" data-rf26-scroll="rf26-discover">مسیر خودم را پیدا کنم <span aria-hidden="true">↗</span></button>'+
- '<a href="#/courses" class="rf26-btn rf26-btn-ghost">دوره‌های ثبت‌نام باز <span aria-hidden="true">←</span></a></div>'+
- '<div class="rf26-hero-proof"><span><b>01</b> تمرین و پروژه</span><span><b>02</b> ارزیابی مهارت</span><span><b>03</b> رزومه قابل ارائه</span></div></div>'+
- '<div class="rf26-stage" aria-label="نمای هنری سه‌بعدی فناوری و یادگیری"><div class="rf26-stage-circles" aria-hidden="true"></div><div class="rf26-scene-caption" aria-hidden="true">THE FUTURE IS NOW <span>✦</span></div>'+
- '<div class="rf26-orbit-label rf26-label-a"><span>01 /</span><b>CREATE</b><small>هوش مصنوعی</small></div><div class="rf26-orbit-label rf26-label-b"><span>02 /</span><b>EXPLORE</b><small>فناوری مالی</small></div>'+
- '<div class="rf26-stage-footer"><span>RF — LEARNING UNIVERSE</span><span dir="ltr">EST. IN EQLID / IRAN</span></div></div></div>'+
- '<div class="rf26-hero-foot shell"><span class="rf26-now"><i></i> '+enc(pill)+'</span><button type="button" data-rf26-scroll="rf26-tracks">بیشتر کشف کن <span>↓</span></button><span class="rf26-hero-index" dir="ltr">SCROLL / 001</span></div></section>'+
+ '<section class="rf26-hero rf-cinema-landing" aria-labelledby="rf26-main-title">'+
+ '<div class="rf-cinema-panels">'+
+ '<article class="rf-cinema-scene rf-cinema-ai"><img class="rf-cinema-photo" src="/assets/rf_ai_real3d.webp" alt="" width="1600" height="900" fetchpriority="high" decoding="async"/><div class="rf-cinema-shade" aria-hidden="true"></div>'+
+ '<div class="rf-cinema-content shell"><div class="rf26-hero-copy"><div class="rf26-eyebrow rf-cinema-eyebrow"><span class="rf26-eyebrow-glow"></span><span>آموزشگاه روشنفکران · اقلید</span><i></i><span class="rf26-latin">ROSHANFEKRAN / FUTURE ACADEMY</span></div>'+
+ '<span class="rf-cinema-kicker"><i></i> 01 / ARTIFICIAL INTELLIGENCE</span>'+
+ '<h1 id="rf26-main-title">آینده را <span class="rf-cinema-light">انتظار نکش.</span><br/><em>خودت بسازش.</em></h1>'+
+ '<p>در دنیای هوش مصنوعی، از یک ایده ساده تا ساخت پروژه‌ها و ابزارهای هوشمند قدم بردار.</p>'+
+ '<div class="rf26-hero-actions"><button type="button" class="rf26-btn rf26-btn-glow" data-rf26-scroll="rf26-discover">کشف مسیر یادگیری <span aria-hidden="true">↗</span></button><a href="#/courses" class="rf26-btn rf26-btn-ghost">دوره‌های ثبت‌نام باز <span aria-hidden="true">←</span></a></div>'+
+ '<div class="rf-cinema-points"><span>پروژه واقعی</span><span>یادگیری عملی</span><span>رزومه مهارتی</span></div></div></div>'+
+ '<div class="rf-cinema-edge"><span>THE FUTURE IS CREATED HERE</span><span>001 / 003</span></div></article>'+
+ '<article class="rf-cinema-scene rf-cinema-chain"><img class="rf-cinema-photo" src="/assets/rf_crypto_real3d.webp" alt="" loading="lazy" decoding="async" width="1600" height="900"/><div class="rf-cinema-shade" aria-hidden="true"></div>'+
+ '<div class="rf-cinema-content shell"><div class="rf-cinema-story"><span class="rf-cinema-kicker"><i></i> 02 / BLOCKCHAIN TECHNOLOGY</span><h2>فناوری را فقط نبین.<br/><em>درکش کن.</em></h2><p>در فضای ارز دیجیتال، از ساختار بلاکچین و امنیت کیف پول تا شناخت مسئولانه دارایی‌های دیجیتال یاد بگیر.</p><a class="rf-cinema-link" href="#/courses">مشاهده دوره‌های ارز دیجیتال <span aria-hidden="true">↗</span></a></div></div>'+
+ '<div class="rf-cinema-edge"><span>DECENTRALIZED / DIGITAL / SECURE</span><span>002 / 003</span></div></article>'+
+ '<article class="rf-cinema-scene rf-cinema-markets"><img class="rf-cinema-photo" src="/assets/rf_forex_real3d.webp" alt="" loading="lazy" decoding="async" width="1600" height="900"/><div class="rf-cinema-shade" aria-hidden="true"></div>'+
+ '<div class="rf-cinema-content shell"><div class="rf-cinema-story"><span class="rf-cinema-kicker"><i></i> 03 / MARKET INTELLIGENCE</span><h2>بازار را تحلیل کن.<br/><em>نه حدس.</em></h2><p>نمودارخوانی، سناریوسازی و مدیریت ریسک را در محیطی حرفه‌ای و پروژه‌محور بیاموز؛ بدون وعده سود.</p><a class="rf-cinema-link" href="#/courses">ورود به مسیر فارکس و بازار <span aria-hidden="true">↗</span></a></div></div>'+
+ '<div class="rf-cinema-edge"><span>ANALYZE / PLAN / MANAGE RISK</span><span>003 / 003</span></div></article></div>'+
+ '<div class="rf26-hero-foot shell"><span class="rf26-now"><i></i> '+enc(pill)+'</span><button type="button" data-rf26-scroll="rf26-tracks">مسیرهای آموزشی <span aria-hidden="true">↓</span></button><span class="rf26-hero-index" dir="ltr">ROSHANFEKRAN — 2026</span></div>'+
+ '<p class="rf-cinema-disclaimer shell">تصاویر، فضاسازی مفهومی فناوری هستند و نمای ساختمان واقعی آموزشگاه نیستند.</p></section>'+
  '<div class="rf26-ticker" aria-label="حوزه‌های آموزشی"><div class="rf26-ticker-track" aria-hidden="true"><span>AI & CREATIVE TECHNOLOGY</span><i>✳</i><span>BLOCKCHAIN LITERACY</span><i>✳</i><span>MARKET INTELLIGENCE</span><i>✳</i><span>PROJECT-BASED LEARNING</span><i>✳</i><span>AI & CREATIVE TECHNOLOGY</span><i>✳</i><span>BLOCKCHAIN LITERACY</span></div></div>'+
  '<section class="rf-spatial shell" id="rf-spatial"><div class="rf-spatial-intro"><span>EXPERIENCE / 01—03</span><h2>سه جهان برای کشف آینده</h2><p>بین فضاهای آموزشی حرکت کن و حوزه موردعلاقه‌ات را بشناس.</p></div><div class="rf-spatial-scene" data-rf-room-active="0"><div class="rf-spatial-copy"><strong class="rf-spatial-kicker">AI / STUDIO</strong><h3 class="rf-spatial-title">کارگاه هوش مصنوعی</h3><p class="rf-spatial-desc">از ایده‌پردازی تا ساخت پروژه‌های هوشمند</p><a href="#/courses">دوره‌های ثبت‌نام باز ↗</a></div><div class="rf-spatial-menu" role="group" aria-label="انتخاب فضای آموزشی"><button type="button" data-rf-room="0" aria-pressed="true">۰۱ / هوش مصنوعی</button><button type="button" data-rf-room="1" aria-pressed="false">۰۲ / ارز دیجیتال</button><button type="button" data-rf-room="2" aria-pressed="false">۰۳ / فارکس</button></div></div><small class="rf-spatial-caption">تصاویر، فضاسازی مفهومی هستند و نمای ساختمان واقعی آموزشگاه نیستند.</small></section>'+
  '<section class="rf26-tracks-wrap" id="rf26-tracks"><div class="shell"><div class="rf26-section-top"><span class="rf26-section-code">01 / CHOOSE YOUR WORLD</span><div class="rf26-section-line"></div><span>سه مسیر برای آینده‌ای که می‌سازی</span></div>'+

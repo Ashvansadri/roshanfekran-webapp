@@ -1,0 +1,92 @@
+/* ROSHANFEKRAN / CINEMATIC REFERENCE — production layer
+   The learning worlds are rendered with first-party assets and real, accessible links.
+   The artwork is conceptual, never presented as a photo of the campus. */
+:root{--rf-cinema-night:#030d12;--rf-cinema-ice:#c8fcf4;--rf-cinema-gold:#efc78e}
+body{background:#030b10!important}
+.top-note{background:#071114!important;color:#bedbd4!important;letter-spacing:.03em}
+.nav{border:1px solid rgba(126,225,219,.17)!important;border-top:0!important;background:rgba(3,14,20,.92)!important;backdrop-filter:blur(22px) saturate(125%);-webkit-backdrop-filter:blur(22px) saturate(125%);box-shadow:0 16px 48px #0007!important}
+.nav .brand-mark{border:1px solid #9fded283;border-radius:12px!important;box-shadow:inset 0 0 18px #5addcb2d,0 0 26px #1aa8b91f!important}
+.nav .navlinks .nav-signin{background:linear-gradient(115deg,#f5ddb5,#ccae7c)!important;color:#101d20!important;border-color:#eed4a8!important;border-radius:12px!important;box-shadow:0 6px 30px #f1b66c23!important}
+.rf26-home .rf-cinema-landing{height:auto!important;min-height:0!important;padding:0!important;margin:0!important;overflow:visible!important;background:var(--rf-cinema-night)!important;isolation:isolate}
+.rf-cinema-landing::before,.rf-cinema-landing::after{display:none!important}
+.rf-cinema-panels{display:grid;grid-template-columns:minmax(0,1fr);gap:5px;background:#a3edeb;box-shadow:0 30px 120px #001a22}
+.rf-cinema-scene{position:relative;isolation:isolate;min-height:455px;overflow:hidden;background:radial-gradient(ellipse at 50% 45%,#174d59,#06131a 70%);display:flex;align-items:center;box-shadow:inset 0 0 100px #0008}
+.rf-cinema-ai{min-height:clamp(565px,46vw,750px)}
+.rf-cinema-chain{min-height:clamp(420px,36vw,560px)}
+.rf-cinema-markets{min-height:clamp(430px,37vw,580px)}
+.rf-cinema-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 50%;z-index:-3;transform:scale(1.015);filter:saturate(1.07) contrast(1.07);transition:transform 1.3s cubic-bezier(.2,.6,.2,1),filter 1s ease}
+.rf-cinema-chain .rf-cinema-photo{object-position:center 50%}
+.rf-cinema-markets .rf-cinema-photo{object-position:center 56%}
+.rf-cinema-scene:hover .rf-cinema-photo{transform:scale(1.065);filter:saturate(1.15) contrast(1.09)}
+.rf-cinema-shade{position:absolute;inset:0;z-index:-2;pointer-events:none;background:linear-gradient(270deg,rgba(1,10,16,.94) 0%,rgba(1,12,20,.82) 18%,rgba(2,17,26,.46) 50%,rgba(1,8,13,.12) 78%),linear-gradient(0deg,rgba(1,10,14,.75),transparent 24%,transparent 74%,rgba(0,11,17,.27))}
+.rf-cinema-chain .rf-cinema-shade{background:linear-gradient(270deg,rgba(1,11,16,.95),rgba(2,13,22,.75) 24%,rgba(2,10,17,.13) 66%),linear-gradient(0deg,#020e16cb,transparent 45%)}
+.rf-cinema-markets .rf-cinema-shade{background:linear-gradient(270deg,rgba(0,8,15,.94),rgba(0,10,16,.72) 27%,rgba(0,8,15,.09) 71%),linear-gradient(0deg,#030c12db,transparent 45%)}
+.rf-cinema-scene::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(ellipse at 74% 48%,#08ceec22,transparent 43%),linear-gradient(90deg,transparent 70%,#d4b37a0e);mix-blend-mode:screen}
+.rf-cinema-scene::after{content:"";position:absolute;inset:0;pointer-events:none;border:1px solid #ddfbef2c;box-shadow:inset 0 0 70px #041d2399}
+.rf-cinema-content{position:relative!important;width:100%!important;max-width:1380px!important;margin-inline:auto!important;padding:95px 44px 80px!important;z-index:2}
+.rf-cinema-landing .rf26-hero-copy{max-width:650px!important;padding:0!important;margin:0!important;text-align:right!important;background:none!important;border:none!important;box-shadow:none!important}
+.rf-cinema-eyebrow{display:flex!important;align-items:center!important;flex-wrap:wrap!important;gap:12px!important;background:rgba(4,26,33,.6)!important;border:1px solid #7dc5ca50!important;border-radius:100px!important;padding:9px 18px!important;width:max-content!important;max-width:100%!important;line-height:1.7!important;color:#d5f5ee!important}
+.rf-cinema-eyebrow .rf26-latin{font-size:9px!important;color:#98d5dc!important;letter-spacing:1.6px!important}
+.rf-cinema-kicker{display:flex;direction:ltr;width:max-content;align-items:center;gap:12px;font:750 11px/1.8 "Segoe UI",Arial,sans-serif!important;letter-spacing:2.9px;color:#e3bd86;margin:29px 0 12px;text-shadow:0 2px 12px #000}
+.rf-cinema-kicker i{height:6px;width:6px;border-radius:50%;background:#4af0e8;box-shadow:0 0 14px #4af0e8}
+.rf-cinema-landing #rf26-main-title{font-size:clamp(45px,5.2vw,82px)!important;font-weight:900!important;line-height:1.44!important;letter-spacing:-2.9px!important;color:#f6fffd!important;margin:5px 0 21px!important;text-shadow:0 3px 42px #000c}
+.rf-cinema-light{color:#fff!important}
+.rf-cinema-landing h1 em,.rf-cinema-story h2 em{font-style:normal!important;color:#73e9df!important;text-shadow:0 0 34px #13e2dd3b}
+.rf-cinema-landing .rf26-hero-copy>p,.rf-cinema-story p{font-size:clamp(14px,1.25vw,18px)!important;color:#d2e3df!important;line-height:2.1!important;max-width:560px!important;text-shadow:0 2px 20px #000}
+.rf-cinema-landing .rf26-hero-actions{display:flex!important;flex-wrap:wrap!important;gap:12px!important;margin:27px 0 24px!important}
+.rf-cinema-landing .rf26-btn{border-radius:12px!important;min-height:54px;font-weight:800}
+.rf-cinema-landing .rf26-btn-glow{background:linear-gradient(120deg,#f5dca9,#d3a86d)!important;border:1px solid #ffe8c1!important;color:#0e1a1c!important;box-shadow:0 12px 38px #e0ac6b40!important}
+.rf-cinema-landing .rf26-btn-ghost{background:#041b23a8!important;border:1px solid #9ddacb70!important;color:#eafff5!important}
+.rf-cinema-points{display:flex;flex-wrap:wrap;gap:20px;color:#bfe8da;font-size:11px;font-weight:600;margin-top:25px}
+.rf-cinema-points span{display:flex;align-items:center;gap:9px}
+.rf-cinema-points span::before{content:"✦";color:#e5c48b;font-size:12px}
+.rf-cinema-story{max-width:660px}
+.rf-cinema-story h2{font-size:clamp(43px,4.8vw,71px)!important;line-height:1.48!important;letter-spacing:-2px!important;font-weight:900!important;color:#f5faf8!important;text-shadow:0 7px 45px #000c}
+.rf-cinema-story p{margin:14px 0 24px!important}
+.rf-cinema-link{display:inline-flex;align-items:center;gap:25px;padding:14px 20px;color:#081b1c!important;background:#edd2a5;border:1px solid #fff0ca;border-radius:11px;font-weight:850;font-size:13px;box-shadow:0 8px 32px #0005;transition:transform .25s,background .25s}
+.rf-cinema-link:hover{transform:translateY(-3px);background:#fff0cc}
+.rf-cinema-edge{position:absolute;z-index:2;bottom:20px;left:28px;display:flex;gap:22px;align-items:center;color:#c0dde1a8;font:700 10px/1.5 "Segoe UI",Arial,sans-serif!important;letter-spacing:1.8px;direction:ltr;text-shadow:0 2px 10px #000a}
+.rf-cinema-edge span:last-child{color:#e9c78a}
+.rf-cinema-landing .rf26-hero-foot{position:relative!important;inset:auto!important;transform:none!important;margin:0 auto!important;min-height:78px!important;width:100%!important;max-width:1380px!important;display:flex!important;justify-content:space-between!important;align-items:center!important;padding:14px 40px!important;gap:24px!important;border:none!important;background:#031419!important;z-index:3!important}
+.rf-cinema-landing .rf26-hero-foot button{background:none;color:#edf5ed;border:1px solid #76b0ab40;border-radius:8px;padding:10px 15px;cursor:pointer}
+.rf-cinema-disclaimer{padding:0 36px 17px!important;margin:0 auto!important;color:#9bb0aa;font-size:11px;line-height:1.8;max-width:1380px!important}
+.rf26-ticker{background:#08191e!important}
+.rf26-home .rf26-tracks-wrap{background:linear-gradient(180deg,#07151a,#0c2529)!important}
+.rf26-home .rf26-track{border:1px solid #9ad6d43b!important;border-radius:18px!important;overflow:hidden!important;background:#081c23!important}
+.rf26-home .rf26-track:hover{box-shadow:0 24px 68px #020708a8,0 0 0 1px #f5d5a15c!important}
+.rf26-home .rf26-track-visual{border-radius:10px!important}
+.rf-premium-workspace .rf-panel,.rf-dashboard .rf-panel,.rf-auth .rf-panel{border-color:#86b7b047!important;border-radius:19px!important;box-shadow:0 22px 55px #010f1970,inset 0 1px #b9f9ef16!important;background:linear-gradient(150deg,#0d2732f2,#07171ff5)!important}
+.rf-premium-workspace .rfops-card,.rf-dashboard .rfops-card{border-radius:16px!important;box-shadow:0 15px 35px #0003!important}
+.rf-premium-workspace .portal-field input,.rf-dashboard .portal-field input,.rf-auth input{border-radius:11px!important}
+.rf26-home :is(.rf-cinema-scene a,.rf-cinema-scene button):focus-visible{outline:3px solid #d7fef5!important;outline-offset:4px}
+@media (min-width:1500px){.rf-cinema-content{padding-inline:70px!important}}
+@media(max-width:780px){
+ .rf-cinema-ai{min-height:660px}.rf-cinema-chain,.rf-cinema-markets{min-height:470px}
+ .rf-cinema-content{padding:52px 24px 75px!important}
+ .rf-cinema-shade,.rf-cinema-chain .rf-cinema-shade,.rf-cinema-markets .rf-cinema-shade{background:linear-gradient(0deg,#030e15f7 0%,#03141de3 24%,#0517217a 61%,#03141d42 100%)!important}
+ .rf-cinema-scene{align-items:end!important}
+ .rf-cinema-photo{object-position:47% 27%}
+ .rf-cinema-landing #rf26-main-title{font-size:clamp(38px,8vw,57px)!important;line-height:1.5!important;letter-spacing:-1.5px!important}
+ .rf-cinema-story h2{font-size:clamp(35px,8vw,55px)!important}
+ .rf-cinema-edge{bottom:14px;left:15px;font-size:8px;letter-spacing:1px}
+ .rf-cinema-eyebrow{font-size:11px!important;padding:7px 12px!important}
+ .rf-cinema-landing .rf26-hero-foot{padding:15px 20px!important;min-height:70px!important}
+ .rf-cinema-landing .rf26-hero-index{display:none!important}
+ .rf-cinema-disclaimer{padding-inline:20px!important}
+}
+@media(max-width:420px){
+ .rf-cinema-ai{min-height:650px}.rf-cinema-chain,.rf-cinema-markets{min-height:500px}
+ .rf-cinema-content{padding:45px 20px 67px!important}
+ .rf-cinema-kicker{letter-spacing:1.6px;font-size:10px!important;margin-top:24px}
+ .rf-cinema-landing .rf26-hero-actions{flex-direction:column!important;align-items:stretch!important}
+ .rf-cinema-landing .rf26-btn{width:100%!important}
+ .rf-cinema-points{gap:9px 15px;margin:14px 0 0;font-size:10px}
+ .rf-cinema-story p{font-size:13px!important}
+ .rf-cinema-link{font-size:12px;max-width:100%}
+ .rf-cinema-landing .rf26-hero-foot{font-size:10px!important}
+}
+@media(hover:none){.rf-cinema-photo{transform:none}.rf-cinema-scene:hover .rf-cinema-photo{transform:none}}
+@media(prefers-reduced-motion:reduce){
+ .rf-cinema-photo,.rf-cinema-link{transition:none!important;transform:none!important;filter:none!important}
+ .rf-cinema-scene:hover .rf-cinema-photo,.rf-cinema-link:hover{transform:none!important}
+}
