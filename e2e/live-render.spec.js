@@ -207,3 +207,55 @@ test('Render LIVE staff service editor uses audited RPC with synthetic data only
   await expect(page.locator('#rfops-main')).toContainText('با تأیید سرور');
  }finally{await page.close()}
 });
+
+
+test('Render LIVE contract desk issues only on-demand signed links with synthetic staff identity',async({browser})=>{
+ test.setTimeout(90000);
+ const page=await browser.newPage({viewport:{width:1280,height:850}});
+ const gateway='https://sdsdzktsqpahpdrgmzuo.supabase.co/functions/v1/academy-gateway';
+ const student='33333333-3333-4333-8333-333333333333';
+ const contract='11111111-1111-4111-8111-111111111111';
+ const signed='https://sdsdzktsqpahpdrgmzuo.supabase.co/storage/v1/object/sign/academy-student-contracts/synthetic.pdf?token=synthetic-contract-token';
+ let fileCalls=0;
+ await page.addInitScript(()=>{
+  sessionStorage.setItem('rf_safe_session_v1',JSON.stringify({
+   access_token:'synthetic-contract-access',refresh_token:'synthetic-contract-refresh',
+   expires_at:Date.now()+3600000
+  }));
+ });
+ await page.route(gateway,async route=>{
+  const b=route.request().postDataJSON()||{};
+  let result=[];
+  if(b.action==='resolve_portal')result={kind:'staff',role:'owner'};
+  else if(b.action==='contract_file_url'){
+   fileCalls++;expect(b.kind).toBe('student');expect(b.id).toBe(contract);
+   result={ok:true,url:signed};
+  }else if(b.action==='proxy'){
+   const path=String(b.path||'');
+   if(path.startsWith('/rest/v1/academy_students?'))
+    result=[{id:student,full_name:'هنرجوی ساختگی',status:'active',archived_at:null}];
+   else if(path.startsWith('/rest/v1/academy_courses?'))
+    result=[{id:'44444444-4444-4444-8444-444444444444',title:'دوره ساختگی',status:'active'}];
+   else if(path.startsWith('/rest/v1/academy_student_contracts?'))
+    result=[{id:contract,student_id:student,course_id:'44444444-4444-4444-8444-444444444444',contract_no:'SYNTHETIC-001',status:'signed',delivered_copy:true}];
+  }else if(b.action==='public_catalog')result={ok:true,courses:[],settings:{}};
+  else if(b.action==='public_news')result={ok:true,ai:[],markets:[],world:[]};
+  await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(result)});
+ });
+ try{
+  await page.goto(LIVE+'/#/workspace',{waitUntil:'domcontentloaded',timeout:45000});
+  const tab=page.locator('[data-rfops-tab="contracts"]').first();
+  await expect(tab).toBeVisible({timeout:25000});
+  await tab.click();
+  await expect(page.getByText('SYNTHETIC-001')).toBeVisible();
+  expect(fileCalls,'Private contract URLs must not be prefetched').toBe(0);
+  const link=page.getByRole('link',{name:/بازکردن نسخه خصوصی/});
+  await expect(link).toHaveCount(0);
+  await page.getByRole('button',{name:/دریافت لینک امن قرارداد/}).click();
+  await expect(link).toBeVisible();
+  expect(await link.getAttribute('href')).toBe(signed);
+  expect(await link.getAttribute('referrerpolicy')).toBe('no-referrer');
+  expect(fileCalls,'One explicit signed link request').toBe(1);
+  // Never follow the signed URL: no real files, credentials, or records are accessed.
+ }finally{await page.close()}
+});
