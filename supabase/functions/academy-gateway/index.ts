@@ -236,6 +236,46 @@ function allowedProxy(path:string,method:string,token:string){
   };
   if(!directWrites[pathname]?.includes(method))return false;
  }
+ // Only RPCs used by the independent staging portal may be proxied.
+ // This is defense-in-depth, not a substitute for SQL EXECUTE grants and role checks.
+ // Floot uses its own backend and is not affected by this staging gateway list.
+ if(pathname.startsWith('/rest/v1/rpc/')){
+  const rpcName=pathname.slice('/rest/v1/rpc/'.length);
+  const stagingRpcNames=new Set([
+   'academy_attendance_roster',
+   'academy_consent_showcase',
+   'academy_create_student_contract_draft',
+   'academy_family_tip_today',
+   'academy_grade_assignment',
+   'academy_grade_showcase_quiz',
+   'academy_guardian_phone_invite',
+   'academy_invite_staff',
+   'academy_launch_mission_campaign',
+   'academy_list_student_risk',
+   'academy_mark_class_attendance',
+   'academy_mark_notification_read',
+   'academy_parent_journey_snapshot',
+   'academy_parent_portal_snapshot',
+   'academy_reply_service_request',
+   'academy_review_payment',
+   'academy_review_registration_request',
+   'academy_review_student_document',
+   'academy_save_showcase',
+   'academy_save_showcase_work',
+   'academy_set_showcase_share',
+   'academy_showcase_quiz_questions',
+   'academy_student_journey_snapshot',
+   'academy_student_resume_snapshot',
+   'academy_submit_assignment',
+   'academy_submit_mission',
+   'academy_submit_service_request',
+   'academy_teacher_workspace_core',
+   'academy_update_course_ops'
+  ]);
+  if(!stagingRpcNames.has(rpcName))return false;
+  // The risk projection is the only staging RPC invoked with GET.
+  if(method!=='POST'&&!(rpcName==='academy_list_student_risk'&&method==='GET'))return false;
+ }
  if(pathname.startsWith('/rest/v1/rpc/academy_bootstrap_')||pathname==='/rest/v1/rpc/academy_claim_staff_invite_service')return false;
  return true;
 }
