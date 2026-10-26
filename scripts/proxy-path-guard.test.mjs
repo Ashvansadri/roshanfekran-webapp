@@ -72,4 +72,22 @@ const cases=[
 assert.match(source,/staffRole=await currentRole\(token,user\.id\)/,'Guardian mutation must recheck management role on the server');
 for(const [path,method,token,expected] of cases)
  assert.equal(guard(path,method,token),expected,method+' '+path);
-console.log('PASS: '+cases.length+' canonical proxy routing and traversal/encoded-path checks.');
+// The gateway must not proxy every SECURITY DEFINER RPC merely because its
+// name begins with academy_. Keep the explicit staging allowlist synchronized
+// with the RPCs that the two portal clients actually invoke.
+const usedRpcs=new Set();
+for(const file of ['portal.js','academy-ops.js']){
+ const frontend=readFileSync(new URL('../site/'+file,import.meta.url),'utf8');
+ for(const match of frontend.matchAll(/(?:rpc\\(\\s*["']|\\/rpc\\/)(academy_[a-z0-9_]+)/g))usedRpcs.add(match[1]);
+}
+assert(usedRpcs.size>=25,'Unexpectedly few portal RPC references; review the extraction');
+for(const name of usedRpcs){
+ const method=name==='academy_list_student_risk'?'GET':'POST';
+ assert.equal(guard('/rest/v1/rpc/'+name,method,credential),true,'Portal RPC must remain reachable: '+name);
+}
+for(const name of ['academy_build_automation_queue','academy_complete_automation_job','academy_archive_staff','academy_bootstrap_owner']){
+ assert.equal(guard('/rest/v1/rpc/'+name,'POST',credential),false,'Privileged or unlisted RPC must be denied: '+name);
+}
+assert.equal(guard('/rest/v1/rpc/academy_review_payment','GET',credential),false,'Mutating RPC must not accept GET');
+assert.equal(guard('/rest/v1/rpc/academy_review_payment','PATCH',credential),false,'RPC must not accept PATCH');
+console.log('PASS: '+cases.length+' proxy routing checks; '+usedRpcs.size+' required staging RPCs; unlisted privileged RPCs denied.');
