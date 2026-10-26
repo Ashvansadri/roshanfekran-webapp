@@ -78,7 +78,7 @@ for(const [path,method,token,expected] of cases)
 const usedRpcs=new Set();
 for(const file of ['portal.js','academy-ops.js']){
  const frontend=readFileSync(new URL('../site/'+file,import.meta.url),'utf8');
- for(const match of frontend.matchAll(/(?:rpc\\(\\s*["']|\\/rpc\\/)(academy_[a-z0-9_]+)/g))usedRpcs.add(match[1]);
+ for(const match of frontend.matchAll(/(?:rpc\(\s*["']|\/rpc\/)(academy_[a-z0-9_]+)/g))usedRpcs.add(match[1]);
 }
 assert(usedRpcs.size>=25,'Unexpectedly few portal RPC references; review the extraction');
 for(const name of usedRpcs){
