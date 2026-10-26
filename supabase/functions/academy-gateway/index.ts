@@ -106,6 +106,18 @@ function requireStudentPortal(st:any){
   throw gatewayHttpError(403,'Student portal access required');
  return st;
 }
+// Contract attachment access must re-check the current active student row,
+// even when a legacy contract RLS policy grants staff access to archived rows.
+async function activeContractStudent(token:string,studentId:string){
+ if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(studentId))
+  throw gatewayHttpError(400,'شناسه هنرجو معتبر نیست');
+ const rows=await jo(await supa('/rest/v1/academy_students?select=id,status,archived_at&id=eq.'+encodeURIComponent(studentId)+'&status=eq.active&archived_at=is.null&limit=1','GET',null,token));
+ if(!Array.isArray(rows)||rows.length!==1||String(rows[0]?.id)!==studentId||
+    rows[0]?.status!=='active'||rows[0]?.archived_at!=null)
+  throw gatewayHttpError(403,'قرارداد فقط برای پرونده فعال و مجاز قابل دسترسی است');
+ return rows[0];
+}
+
 async function guardianByUser(userId:string){const rows=await jo(await svc('/rest/v1/academy_guardians?select=id,user_id,full_name,email,mobile,active&user_id=eq.'+encodeURIComponent(userId)+'&active=eq.true&limit=1','GET',null));return Array.isArray(rows)&&rows.length?rows[0]:null}
 
 async function guardianPushEligible(userId:string){
@@ -1273,6 +1285,7 @@ Deno.serve(async(req:Request)=>{
    if(!['owner','manager','registrar'].includes(String(role||'')))throw new Error('Not authorized');
    const student_id=String(b.student_id||''),course_id=String(b.course_id||'')||null;
    if(!student_id)throw new Error('هنرجو را انتخاب کنید');
+   await activeContractStudent(token,student_id);
    const mime=String(b.mime||''),ext=mimeExt(mime);if(!['jpg','png','webp','pdf'].includes(ext))throw new Error('فرمت قرارداد باید تصویر یا PDF باشد');
    const bytes=decodeBase64(String(b.data_base64||''),6291456);
    const key=student_id+'/'+crypto.randomUUID()+'.'+ext;
@@ -1294,8 +1307,10 @@ Deno.serve(async(req:Request)=>{
    const table=kind==='staff'?'academy_staff_contracts':'academy_student_contracts';
    const bucket=kind==='staff'?'academy-staff-contracts':'academy-student-contracts';
    if(kind==='staff'&&role==='registrar')throw new Error('Not authorized');
-   const rows=await jo(await supa('/rest/v1/'+table+'?select=id,file_path,file_name,mime_type&id=eq.'+encodeURIComponent(id)+'&limit=1','GET',null,token));
-   if(!Array.isArray(rows)||!rows.length||!rows[0].file_path)throw new Error('فایل قرارداد پیدا نشد');
+   const projection=kind==='student'?'id,student_id,file_path,file_name,mime_type':'id,file_path,file_name,mime_type';
+   const rows=await jo(await supa('/rest/v1/'+table+'?select='+projection+'&id=eq.'+encodeURIComponent(id)+'&limit=1','GET',null,token));
+   if(!Array.isArray(rows)||rows.length!==1||!rows[0].file_path)throw new Error('فایل قرارداد پیدا نشد');
+   if(kind==='student')await activeContractStudent(token,String(rows[0].student_id||''));
    return jr({ok:true,url:await signedObject(bucket,rows[0].file_path,900),file_name:rows[0].file_name,mime_type:rows[0].mime_type});
   }
 
