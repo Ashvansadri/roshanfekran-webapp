@@ -26,6 +26,8 @@ const api=async(_,{path})=>{
   posted_count:1,posted_total:300,voided_count:1,open_installment_count:1,
   remaining_installments:700,missing_schedule_count:1,enrollment_count:2,
   overpaid_enrollment_count:1,overpaid_excess_total:100,
+  installment_mismatch_count:1,installment_mismatch_amount:200,
+  installment_mismatch_cases:[{installment_id:"00000000-0000-4000-8000-000000000004",enrollment_id:"00000000-0000-4000-8000-000000000001",scheduled_amount:1000,recorded_paid:300,ledger_paid:100,difference:200}],
   overpaid_cases:[{enrollment_id:"00000000-0000-4000-8000-000000000001",student_id:"00000000-0000-4000-8000-000000000002",course_id:"00000000-0000-4000-8000-000000000003",final_fee:200,posted_total:300,excess:100}]
  };
  const table=Object.keys(data).find(k=>path.startsWith("/rest/v1/"+k+"?"));
@@ -42,6 +44,9 @@ assert(finance.includes("دفتر پرداخت‌های ثبت‌شده"),"Poste
 assert(finance.includes("۱ پرونده با پرداخت ثبت‌شده بیش از شهریه نهایی"),"Overpaid enrollment should trigger a reconciliation warning");
 assert(finance.includes("۱۰۰ تومان"),"Overpayment discrepancy must use posted payments minus final fee");
 assert(finance.includes("این هشدار از کل دفتر مالی سرور محاسبه شده است"),"Overpayment must be server-authoritative, not inferred from capped rows");
+assert(finance.includes("۱ قسط با دفتر پرداخت‌های قطعی تطبیق ندارد"),"Mismatch must trigger warning");
+assert(finance.includes("مغایرت اقساط و دفتر پرداخت"),"Mismatch details missing");
+assert(finance.includes("00000000-0000-4000-8000-000000000004"),"Installment ID missing");
 assert(finance.includes("پرونده‌های دارای مغایرت"),"Finance team must see actionable server-scoped discrepancy cases");
 assert(finance.includes("00000000-0000-4000-8000-000000000001"),"Missing enrollment must still be traceable by full ID");
 assert(finance.includes("۲۰۰ تومان")&&finance.includes("۱۰۰ تومان"),"Case should show final fee and excess");
@@ -55,7 +60,7 @@ const uncappedApi=async(action,body)=>{
   posted_count:4,posted_total:9000,voided_count:1,open_installment_count:1,
   remaining_installments:700,missing_schedule_count:1,enrollment_count:200,
   overpaid_enrollment_count:3,overpaid_excess_total:9999,
-  overpaid_cases:[]
+  overpaid_cases:[],installment_mismatch_count:3,installment_mismatch_amount:777,installment_mismatch_cases:[]
  };
  return api(action,body);
 };
@@ -63,7 +68,20 @@ await ops.load({kind:"staff",role:"finance"},uncappedApi);
 const uncappedFinance=ops.render({kind:"staff",role:"finance"});
 assert(uncappedFinance.includes("۳ پرونده با پرداخت ثبت‌شده بیش از شهریه نهایی"),"Overpayment count must come from full server aggregate even if only one overpaid row is loaded");
 assert(uncappedFinance.includes("۹٬۹۹۹ تومان"),"Overpayment excess must come from full server aggregate");
+assert(uncappedFinance.includes("کنترل تطبیق اقساط با دفتر پرداخت معتبر یا کامل نیست"),"Incomplete reconciliation must fail closed");
 assert(uncappedFinance.includes("جزئیات قابل اتکای مغایرت از سرور دریافت نشد"),"Incomplete case lists must fail closed without hiding valid aggregate");
+ops.reset();
+const cleanApi=async(action,body)=>{
+ if(body.path==="/rest/v1/rpc/academy_finance_reconciliation_snapshot")return {
+  posted_count:1,posted_total:300,voided_count:1,open_installment_count:1,
+  remaining_installments:700,missing_schedule_count:1,enrollment_count:2,
+  overpaid_enrollment_count:0,overpaid_excess_total:0,overpaid_cases:[],
+  installment_mismatch_count:0,installment_mismatch_amount:0,installment_mismatch_cases:[]
+ };
+ return api(action,body);
+};
+await ops.load({kind:"staff",role:"finance"},cleanApi);
+assert(ops.render({kind:"staff",role:"finance"}).includes("مبالغ ثبت‌شده اقساط با پرداخت‌های قطعی تخصیص‌یافته مطابقت دارند"),"Verified zero mismatch should be visible");
 ops.reset();
 const failingApi=async(action,body)=>{
  if(body.path==="/rest/v1/rpc/academy_finance_reconciliation_snapshot")throw Error("temporarily unavailable");

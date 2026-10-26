@@ -43,7 +43,7 @@ const grants={
  viewer:["courses"],
 };
 let role=null, request=null, datasets={},failures={},inflight=null,selected="students",working=false,info="",warning="",generated="";
-let financeSnapshot=null,financeSnapshotError="",financeCases=null;
+let financeSnapshot=null,financeSnapshotError="",financeCases=null,financeInstallmentCases=null;
 let sessionEpoch=0;
 let attendanceClassId="",attendanceSnapshot=null;
 let riskRows=[],riskFailure="";
@@ -52,7 +52,7 @@ let documentLink=null,contractLink=null;
 function reset(){
  sessionEpoch++;role=null;request=null;datasets={};failures={};inflight=null;
  selected="students";working=false;info="";warning="";generated="";attendanceClassId="";attendanceSnapshot=null;
- riskRows=[];riskFailure="";documentLink=null;contractLink=null;financeSnapshot=null;financeSnapshotError="";financeCases=null;window.RFDAILY?.reset?.();
+ riskRows=[];riskFailure="";documentLink=null;contractLink=null;financeSnapshot=null;financeSnapshotError="";financeCases=null;financeInstallmentCases=null;window.RFDAILY?.reset?.();
 }
 const meRole=()=>String(role?.role||"");
 const manage=()=>["owner","manager"].includes(meRole());
@@ -166,6 +166,19 @@ async function load(nextRole,apiFn){
     uuid(c?.enrollment_id)&&uuid(c?.student_id)&&uuid(c?.course_id)&&
     [c.final_fee,c.posted_total,c.excess].every(n=>Number.isSafeInteger(n)&&n>=0)&&
     c.excess>0&&c.posted_total-c.final_fee===c.excess)?cases:null;
+  // Do not infer full-ledger consistency from capped detail rows.
+  const installmentCases=financeSnapshot?.installment_mismatch_cases;
+  financeInstallmentCases=financeSnapshot&&
+   Number.isSafeInteger(financeSnapshot.installment_mismatch_count)&&financeSnapshot.installment_mismatch_count>=0&&
+   Number.isSafeInteger(financeSnapshot.installment_mismatch_amount)&&financeSnapshot.installment_mismatch_amount>=0&&
+   Array.isArray(installmentCases)&&installmentCases.length===Math.min(20,financeSnapshot.installment_mismatch_count)&&
+   new Set(installmentCases.map(c=>String(c?.installment_id))).size===installmentCases.length&&
+   installmentCases.every(c=>uuid(c?.installment_id)&&uuid(c?.enrollment_id)&&
+    [c.scheduled_amount,c.recorded_paid,c.ledger_paid,c.difference].every(n=>Number.isSafeInteger(n)&&n>=0)&&
+    c.difference>0&&Math.abs(c.recorded_paid-c.ledger_paid)===c.difference)&&
+   (financeSnapshot.installment_mismatch_count>20||
+    installmentCases.reduce((total,c)=>total+c.difference,0)===financeSnapshot.installment_mismatch_amount)
+    ?installmentCases:null;
   const activeIds=new Set((nextData.students||[]).filter(s=>s.status!=="archived"&&s.archived_at==null).map(s=>String(s.id)));
   riskRows=canSeeRisk&&riskResult?.status==="fulfilled"&&Array.isArray(riskResult.value)?
    riskResult.value.filter(s=>activeIds.has(String(s.student_id))&&s.status!=="archived")
@@ -443,6 +456,24 @@ function contracts(){
  (manage()?'<h4>قرارداد کارکنان</h4>'+staffTable:"")+
  '<p class="rf-caption">فایل‌ها تنها در فضای خصوصی Supabase نگهداری می‌شوند؛ لینک دریافت‌شده کوتاه‌مدت است و نباید برای اشخاص دیگر ارسال شود. قراردادهای فاقد فایل قابل بازکردن نیستند.</p>');
 }
+
+function installmentReconciliationView(){
+ if(!financeSnapshot)return "";
+ if(!financeInstallmentCases)
+  return '<div class="rfops-warn" role="status">کنترل تطبیق اقساط با دفتر پرداخت معتبر یا کامل نیست؛ تا بررسی سرور، وضعیت را تأییدشده تلقی نکنید.</div>';
+ if(financeSnapshot.installment_mismatch_count===0)
+  return '<p class="rf-caption">کنترل کامل دفتر پرداخت: مبالغ ثبت‌شده اقساط با پرداخت‌های قطعی تخصیص‌یافته مطابقت دارند.</p>';
+ return '<div class="rfops-warn" role="alert">'+fa(financeSnapshot.installment_mismatch_count)+
+  ' قسط با دفتر پرداخت‌های قطعی تطبیق ندارد (جمع قدرمطلق اختلاف: '+money(financeSnapshot.installment_mismatch_amount)+
+  '). این هشدار فقط برای بررسی است؛ هیچ پرداختی به‌صورت خودکار تغییر نمی‌کند.</div>'+
+  '<h4>مغایرت اقساط و دفتر پرداخت (حداکثر ۲۰ مورد)</h4><div class="rfops-table-wrap"><table>'+
+  '<thead><tr><th>شناسه قسط / ثبت‌نام</th><th>مبلغ قسط</th><th>پرداخت ثبت‌شده در قسط</th><th>جمع دفتر قطعی</th><th>اختلاف</th></tr></thead><tbody>'+
+  financeInstallmentCases.map(c=>'<tr><td>'+esc(c.installment_id)+
+   '<small>'+esc(c.enrollment_id)+'</small></td><td>'+money(c.scheduled_amount)+
+   '</td><td>'+money(c.recorded_paid)+'</td><td>'+money(c.ledger_paid)+
+   '</td><td>'+money(c.difference)+'</td></tr>').join("")+
+  '</tbody></table></div><p class="rf-caption">فقط پرداخت‌های دارای وضعیت posted و متصل به همان قسط لحاظ می‌شوند؛ رسیدها و قراردادها را پیش از هر اصلاح تطبیق دهید.</p>';
+}
 function finance(){
  const items=row("payments"),ledger=row("ledgerPayments"),inst=row("installments"),enrollments=row("enrollments");
  const enrollmentMap=new Map(enrollments.map(e=>[String(e.id),e]));
@@ -502,6 +533,7 @@ function finance(){
     '<td>'+money(c.final_fee)+'</td><td>'+money(c.posted_total)+'</td><td>'+money(c.excess)+'</td></tr>';}).join("")+
    '</tbody></table></div><p class="rf-caption">فقط موارد دارای اختلاف مثبت از کل دفتر مالی و با مجوز همین حساب نمایش داده می‌شوند؛ قبل از هر اصلاح، قرارداد و رسید بانکی بررسی شود.</p>':
    '<div class="rfops-warn" role="status">جزئیات قابل اتکای مغایرت از سرور دریافت نشد؛ برای شناسایی پرونده‌ها از گزارش ناقص استفاده نکنید.</div>'):"")+
+ installmentReconciliationView()+
  '<h4>سررسید و وضعیت اقساط</h4>'+
  (schedule.length?'<div class="rfops-table-wrap"><table><thead><tr><th>هنرجو / دوره</th><th>قسط</th><th>سررسید</th><th>مبلغ</th><th>پرداخت‌شده</th><th>مانده</th><th>وضعیت</th></tr></thead><tbody>'+schedule.map(i=>{
   const e=enrollmentMap.get(String(i.enrollment_id));
