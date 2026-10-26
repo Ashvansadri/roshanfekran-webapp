@@ -43,7 +43,7 @@ const grants={
  viewer:["courses"],
 };
 let role=null, request=null, datasets={},failures={},inflight=null,selected="students",working=false,info="",warning="",generated="";
-let financeSnapshot=null,financeSnapshotError="";
+let financeSnapshot=null,financeSnapshotError="",financeCases=null;
 let sessionEpoch=0;
 let attendanceClassId="",attendanceSnapshot=null;
 let riskRows=[],riskFailure="";
@@ -52,7 +52,7 @@ let documentLink=null,contractLink=null;
 function reset(){
  sessionEpoch++;role=null;request=null;datasets={};failures={};inflight=null;
  selected="students";working=false;info="";warning="";generated="";attendanceClassId="";attendanceSnapshot=null;
- riskRows=[];riskFailure="";documentLink=null;contractLink=null;financeSnapshot=null;financeSnapshotError="";window.RFDAILY?.reset?.();
+ riskRows=[];riskFailure="";documentLink=null;contractLink=null;financeSnapshot=null;financeSnapshotError="";financeCases=null;window.RFDAILY?.reset?.();
 }
 const meRole=()=>String(role?.role||"");
 const manage=()=>["owner","manager"].includes(meRole());
@@ -158,6 +158,14 @@ async function load(nextRole,apiFn){
   const totals=["posted_count","posted_total","voided_count","open_installment_count","remaining_installments","missing_schedule_count","enrollment_count","overpaid_enrollment_count","overpaid_excess_total"];
   financeSnapshot=snap&&typeof snap==="object"&&totals.every(k=>Number.isSafeInteger(snap[k])&&snap[k]>=0)?snap:null;
   financeSnapshotError=financial()&&!financeSnapshot?(financeResult?.status==="rejected"?String(financeResult.reason?.message||financeResult.reason):"پاسخ جمع‌بندی مالی معتبر نیست."):"";
+  // The optional, bounded reconciliation details must be complete and internally consistent.
+  // Older database deployments lack this field; never synthesize full-ledger cases from capped rows.
+  const cases=financeSnapshot?.overpaid_cases;
+  financeCases=Array.isArray(cases)&&cases.length===Math.min(20,financeSnapshot.overpaid_enrollment_count)&&
+   new Set(cases.map(c=>String(c?.enrollment_id))).size===cases.length&&cases.every(c=>
+    uuid(c?.enrollment_id)&&uuid(c?.student_id)&&uuid(c?.course_id)&&
+    [c.final_fee,c.posted_total,c.excess].every(n=>Number.isSafeInteger(n)&&n>=0)&&
+    c.excess>0&&c.posted_total-c.final_fee===c.excess)?cases:null;
   const activeIds=new Set((nextData.students||[]).filter(s=>s.status!=="archived"&&s.archived_at==null).map(s=>String(s.id)));
   riskRows=canSeeRisk&&riskResult?.status==="fulfilled"&&Array.isArray(riskResult.value)?
    riskResult.value.filter(s=>activeIds.has(String(s.student_id))&&s.status!=="archived")
@@ -485,6 +493,15 @@ function finance(){
   '<div class="rfops-warn" role="alert">'+fa(financeSnapshot.overpaid_enrollment_count)+' پرونده با پرداخت ثبت‌شده بیش از شهریه نهایی شناسایی شد (اختلاف مجموع: '+money(financeSnapshot.overpaid_excess_total)+'). این هشدار از کل دفتر مالی سرور محاسبه شده است؛ پیش از اصلاح، قرارداد و دفتر مالی را تطبیق دهید.</div>':
   !financeSnapshot&&ready("enrollments")&&ready("ledgerPayments")&&overpaid.length?
   '<div class="rfops-warn" role="alert">'+fa(overpaid.length)+' پرونده در جزئیات بارگذاری‌شده دارای پرداخت بیشتر از شهریه نهایی است (حداقل اختلاف مشاهده‌شده: '+money(overpaidExcess)+'). جمع‌بندی سرور در دسترس نیست؛ این هشدار کامل نیست و نباید مبنای تسویه قرار گیرد.</div>':"")+
+ (financeSnapshot&&financeSnapshot.overpaid_enrollment_count>0?
+  (financeCases?
+   '<h4>پرونده‌های دارای مغایرت (حداکثر ۲۰ مورد)</h4><div class="rfops-table-wrap"><table><thead><tr><th>پرونده و دوره</th><th>شهریه نهایی</th><th>پرداخت معتبر</th><th>اختلاف</th></tr></thead><tbody>'+
+   financeCases.map(c=>{const e=enrollmentMap.get(c.enrollment_id);return '<tr><td>'+
+    esc(e?name("students",e.student_id):"شناسه ثبت‌نام: "+c.enrollment_id)+
+    '<small>'+esc(e?name("courses",e.course_id):"شناسه دوره: "+c.course_id)+'</small></td>'+
+    '<td>'+money(c.final_fee)+'</td><td>'+money(c.posted_total)+'</td><td>'+money(c.excess)+'</td></tr>';}).join("")+
+   '</tbody></table></div><p class="rf-caption">فقط موارد دارای اختلاف مثبت از کل دفتر مالی و با مجوز همین حساب نمایش داده می‌شوند؛ قبل از هر اصلاح، قرارداد و رسید بانکی بررسی شود.</p>':
+   '<div class="rfops-warn" role="status">جزئیات قابل اتکای مغایرت از سرور دریافت نشد؛ برای شناسایی پرونده‌ها از گزارش ناقص استفاده نکنید.</div>'):"")+
  '<h4>سررسید و وضعیت اقساط</h4>'+
  (schedule.length?'<div class="rfops-table-wrap"><table><thead><tr><th>هنرجو / دوره</th><th>قسط</th><th>سررسید</th><th>مبلغ</th><th>پرداخت‌شده</th><th>مانده</th><th>وضعیت</th></tr></thead><tbody>'+schedule.map(i=>{
   const e=enrollmentMap.get(String(i.enrollment_id));
