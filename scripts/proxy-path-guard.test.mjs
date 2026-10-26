@@ -31,7 +31,23 @@ const cases=[
  ['/rest/v1/academy_installments?select=id','GET',credential,true],
  ['/rest/v1/academy_enrollments?select=id','GET',credential,true],
  ['/rest/v1/rpc/academy_create_student_contract_draft','POST',credential,true],
- ['/rest/v1/academy_students?id=eq.test','PATCH',credential,true],
+ ['/rest/v1/academy_students?id=eq.test','PATCH',credential,false],
+ ['/rest/v1/academy_students','POST',credential,false],
+ ['/rest/v1/academy_staff','PATCH',credential,false],
+ ['/rest/v1/academy_courses','PATCH',credential,false],
+ ['/rest/v1/academy_student_documents','POST',credential,false],
+ ['/rest/v1/academy_student_documents?id=eq.test','PATCH',credential,false],
+ ['/rest/v1/academy_student_requests','POST',credential,false],
+ ['/rest/v1/academy_student_requests?id=eq.test','PATCH',credential,false],
+ ['/rest/v1/academy_assignment_submissions','POST',credential,false],
+ ['/rest/v1/academy_showcase_works','POST',credential,false],
+ ['/rest/v1/academy_guardian_students','POST',credential,false],
+ ['/rest/v1/academy_guardian_students?id=eq.test','PATCH',credential,true],
+ ['/rest/v1/academy_guardian_students?id=eq.test','DELETE',credential,false],
+ ['/rest/v1/academy_classes','POST',credential,true],
+ ['/rest/v1/academy_classes?id=eq.test','PATCH',credential,false],
+ ['/rest/v1/academy_assignments','POST',credential,true],
+ ['/rest/v1/academy_assignments?id=eq.test','PATCH',credential,false],
  ['/rest/v1/rpc/academy_student_journey_snapshot','POST',credential,true],
  ['/rest/v1/academy_students','GET','',false],
  ['/rest/v1/academy_students','DELETE',credential,false],
@@ -53,6 +69,7 @@ const cases=[
  ['/rest/v1/other_table','GET',credential,false],
  ['/rest/v1/rpc/unscoped_function','POST',credential,false]
 ];
+assert.match(source,/staffRole=await currentRole\(token,user\.id\)/,'Guardian mutation must recheck management role on the server');
 for(const [path,method,token,expected] of cases)
  assert.equal(guard(path,method,token),expected,method+' '+path);
 console.log('PASS: '+cases.length+' canonical proxy routing and traversal/encoded-path checks.');

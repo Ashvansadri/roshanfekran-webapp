@@ -224,16 +224,18 @@ function allowedProxy(path:string,method:string,token:string){
  }catch{return false}
  if(!/^\/rest\/v1\/(?:academy_[a-z0-9_]+|rpc\/academy_[a-z0-9_]+)$/.test(pathname))return false;
  if(['/rest/v1/academy_staff_invites','/rest/v1/academy_student_invites','/rest/v1/academy_guardian_invites'].includes(pathname))return false;
- // Financial ledger, installment and enrollment mutations must use role-checked,
- // audited server RPCs. Legacy Floot talks to Supabase separately; this staging
- // gateway must not expose direct table writes even to a valid bearer token.
- // Read-only projections remain available subject to the underlying RLS.
- // Contracts follow the same rule to prevent unaudited draft/status changes.
- if(method!=='GET'&&[
-  '/rest/v1/academy_student_contracts','/rest/v1/academy_staff_contracts',
-  '/rest/v1/academy_payments','/rest/v1/academy_installments',
-  '/rest/v1/academy_enrollments'
- ].includes(pathname))return false;
+ // Default-deny direct PostgREST table mutations. The staging frontend only
+ // creates classes/assignments and adjusts guardian links directly; all other
+ // writes must use audited, role-checked RPCs. This does not replace table RLS.
+ // Legacy Floot uses its own backend and is not routed through this gateway.
+ if(method!=='GET'&&!pathname.startsWith('/rest/v1/rpc/')){
+  const directWrites={
+   '/rest/v1/academy_classes':['POST'],
+   '/rest/v1/academy_assignments':['POST'],
+   '/rest/v1/academy_guardian_students':['PATCH']
+  };
+  if(!directWrites[pathname]?.includes(method))return false;
+ }
  if(pathname.startsWith('/rest/v1/rpc/academy_bootstrap_')||pathname==='/rest/v1/rpc/academy_claim_staff_invite_service')return false;
  return true;
 }
@@ -1333,6 +1335,12 @@ Deno.serve(async(req:Request)=>{
   if(b.action==='proxy'){
    const path=String(b.path||''),method=String(b.method||'GET').toUpperCase(),token=bt(req);
    if(!allowedProxy(path,method,token))throw gatewayHttpError(token?403:401,token?'مسیر یا روش غیرمجاز است':'AUTH_REQUIRED');
+   // Guardian visibility is restricted to management even if a legacy RLS
+   // policy also grants registrar writes. Check the active role on each request.
+   if(method==='PATCH'&&path.split('?')[0]==='/rest/v1/academy_guardian_students'){
+    const user=await currentUser(token),staffRole=await currentRole(token,user.id);
+    if(!['owner','manager'].includes(String(staffRole||'')))throw gatewayHttpError(403,'Not authorized');
+   }
    const authToken=path.startsWith('/auth/v1/token?')?'':token;
    const r=await supa(path,method,b.body??null,authToken,String(b.prefer||'return=representation'));
    const t=await r.text();let d:any;try{d=t?JSON.parse(t):null}catch{d=t}

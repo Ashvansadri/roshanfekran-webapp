@@ -20,3 +20,13 @@ await check('installment INSERT','/rest/v1/academy_installments','POST');
 await check('installment UPDATE','/rest/v1/academy_installments?id=eq.11111111-1111-4111-8111-111111111111','PATCH');
 await check('enrollment INSERT','/rest/v1/academy_enrollments','POST');
 await check('enrollment UPDATE','/rest/v1/academy_enrollments?id=eq.11111111-1111-4111-8111-111111111111','PATCH');
+
+await check('student profile UPDATE','/rest/v1/academy_students?id=eq.11111111-1111-4111-8111-111111111111','PATCH');
+await check('student document INSERT','/rest/v1/academy_student_documents','POST');
+await check('student request UPDATE','/rest/v1/academy_student_requests?id=eq.11111111-1111-4111-8111-111111111111','PATCH');
+await check('staff role UPDATE','/rest/v1/academy_staff?id=eq.11111111-1111-4111-8111-111111111111','PATCH');
+await check('course UPDATE','/rest/v1/academy_courses?id=eq.11111111-1111-4111-8111-111111111111','PATCH');
+await check('assignment submission INSERT','/rest/v1/academy_assignment_submissions','POST');
+await check('guardian link INSERT','/rest/v1/academy_guardian_students','POST');
+await check('class UPDATE','/rest/v1/academy_classes?id=eq.11111111-1111-4111-8111-111111111111','PATCH');
+await check('assignment UPDATE','/rest/v1/academy_assignments?id=eq.11111111-1111-4111-8111-111111111111','PATCH');
