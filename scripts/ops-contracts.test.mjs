@@ -46,6 +46,34 @@ await check("registrar",["academy_student_contracts"],true,false);
 await check("finance",[],false,false);
 await check("viewer",[],false,false);
 
+// Archived student contracts must never appear in the independent staff desk,
+// even when an old database policy returns them in the authorized projection.
+data.academy_students.push({id:"archived-student",full_name:"ARCHIVED_PRIVATE",status:"archived",archived_at:"2026-10-01"});
+data.academy_student_contracts.push({id:"archived-contract",student_id:"archived-student",course_id:"c1",contract_no:"ARCHIVED_CONTRACT_SECRET"});
+await check("owner",["academy_staff_contracts","academy_student_contracts"],true,true);
+await check("registrar",["academy_student_contracts"],true,false);
+
+async function renderWithFailure(tableName){
+ ops.reset();
+ await ops.load({kind:"staff",role:"owner"},async(_,{path})=>{
+  if(path.startsWith("/rest/v1/"+tableName+"?"))throw Error("SYNTHETIC_RLS_FAILURE");
+  const table=Object.keys(data).find(k=>path.startsWith("/rest/v1/"+k+"?"));
+  return table?data[table]:[];
+ });
+ listeners.click({target:{closest(selector){return selector==="[data-rfops-tab]"?{dataset:{rfopsTab:"contracts"}}:null}},preventDefault(){}});
+ return ops.render({kind:"staff",role:"owner"});
+}
+let failureHtml=await renderWithFailure("academy_students");
+assert(!failureHtml.includes("SC-001")&&!failureHtml.includes("ARCHIVED_CONTRACT_SECRET"),"student lookup failure must conceal student contracts");
+assert(failureHtml.includes("برای حفظ محرمانگی")&&failureHtml.includes(">—</strong>"),"student lookup failure must show unknown, not zero");
+failureHtml=await renderWithFailure("academy_student_contracts");
+assert(!failureHtml.includes("SC-001")&&!failureHtml.includes("ARCHIVED_CONTRACT_SECRET"),"contract projection failure must conceal student contracts");
+assert(failureHtml.includes("برای حفظ محرمانگی"),"contract failure warning missing");
+failureHtml=await renderWithFailure("academy_staff_contracts");
+assert(!failureHtml.includes("STAFF-PRIVATE-001")&&failureHtml.includes("وضعیت آن‌ها نامشخص است"),"staff contract failure must not imply an empty ledger");
+assert(failureHtml.includes("SC-001"),"independent student projection should remain available");
+console.log("PASS: archived student contracts hidden; partial RLS failures fail closed and counts remain unknown");
+
 const contractId="11111111-1111-4111-8111-111111111111",staffContractId="22222222-2222-4222-8222-222222222222";
 data.academy_student_contracts[0].id=contractId;
 data.academy_staff_contracts[0].id=staffContractId;
