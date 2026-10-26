@@ -46,12 +46,12 @@ let role=null, request=null, datasets={},failures={},inflight=null,selected="stu
 let sessionEpoch=0;
 let attendanceClassId="",attendanceSnapshot=null;
 let riskRows=[],riskFailure="";
-let documentLink=null;
+let documentLink=null,contractLink=null;
 // Clear every private projection and invitation link on logout or account switch.
 function reset(){
  sessionEpoch++;role=null;request=null;datasets={};failures={};inflight=null;
  selected="students";working=false;info="";warning="";generated="";attendanceClassId="";attendanceSnapshot=null;
- riskRows=[];riskFailure="";documentLink=null;window.RFDAILY?.reset?.();
+ riskRows=[];riskFailure="";documentLink=null;contractLink=null;window.RFDAILY?.reset?.();
 }
 const meRole=()=>String(role?.role||"");
 const manage=()=>["owner","manager"].includes(meRole());
@@ -126,7 +126,7 @@ async function loadTeacher(generation){
 }
 async function load(nextRole,apiFn){
  role=nextRole;request=apiFn;if(inflight)return inflight;
- documentLink=null;
+ documentLink=null;contractLink=null;
  const generation=sessionEpoch;
  let job;
  job=(async()=>{
@@ -380,18 +380,26 @@ function courses(){
  }).join("")+'</div>':empty("courses","دوره‌ای ثبت نشده است."))+(enrollmentManager()&&failures.courseOps?'<p class="rfops-warn">ویرایش دوره فعلاً در دسترس نیست: '+esc(failures.courseOps)+'</p>':""));
 }
 function contracts(){
- // Read-only summary; the authenticated user's RLS is enforced by Supabase.
- // Do not expose file paths, private notes, or contract attachments here.
+ // Attachment URLs are never fetched in list projections. The gateway checks the
+ // current staff role and Supabase RLS again before issuing a short-lived link.
  const studentItems=row("studentContracts"),staffItems=manage()?row("staffContracts"):[];
- const studentRows=studentItems.map(c=>'<tr><td>'+esc(c.contract_no||"ثبت نشده")+'</td><td>'+esc(name("students",c.student_id))+'</td><td>'+esc(name("courses",c.course_id))+'</td><td>'+when(c.start_date)+'</td><td>'+when(c.end_date)+'</td><td>'+esc(c.status||"—")+'</td><td>'+(c.delivered_copy?"تحویل‌شده":"ثبت نشده")+'</td></tr>').join("");
- const staffRows=staffItems.map(c=>'<tr><td>'+esc(c.contract_no||"ثبت نشده")+'</td><td>'+esc(c.contract_type||"—")+'</td><td>'+when(c.start_date)+'</td><td>'+when(c.end_date)+'</td><td>'+esc(c.status||"—")+'</td></tr>').join("");
- const studentTable=studentRows?'<div class="rfops-table-wrap"><table><thead><tr><th>شماره قرارداد</th><th>هنرجو</th><th>دوره</th><th>شروع</th><th>پایان</th><th>وضعیت</th><th>نسخه تحویلی</th></tr></thead><tbody>'+studentRows+'</tbody></table></div>':empty("studentContracts","قرارداد هنرجویی قابل مشاهده‌ای وجود ندارد.");
- const staffTable=staffRows?'<div class="rfops-table-wrap"><table><thead><tr><th>شماره قرارداد</th><th>نوع</th><th>شروع</th><th>پایان</th><th>وضعیت</th></tr></thead><tbody>'+staffRows+'</tbody></table></div>':empty("staffContracts","قرارداد کارکنان قابل مشاهده‌ای وجود ندارد.");
- return section("قراردادها و وضعیت تحویل",'<p>این نما صرفاً خواندنی و محدود به مجوزهای سرور است. امضای الکترونیکی، دانلود فایل قرارداد و ثبت تعهد مالی در این نسخه فعال نیست.</p>'+
+ const activeStudents=new Set(row("students").filter(s=>s.status!=="archived"&&s.archived_at==null).map(s=>String(s.id)));
+ const linkButton=(kind,c)=>{
+  const eligible=kind==="staff"?manage():activeStudents.has(String(c.student_id));
+  if(!eligible||!uuid(c.id))return "";
+  const ready=contractLink?.id===c.id&&contractLink.kind===kind&&contractLink.expires>Date.now();
+  return '<div class="rfops-actions"><button type="button" data-rfops="contract-link" data-kind="'+kind+'" data-id="'+esc(c.id)+'" '+(working?"disabled":"")+'>دریافت لینک امن قرارداد</button>'+
+   (ready?'<a class="btn btn-outline" href="'+esc(contractLink.url)+'" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">بازکردن نسخه خصوصی ↗</a>':"")+'</div>';
+ };
+ const studentRows=studentItems.map(c=>'<tr><td>'+esc(c.contract_no||"ثبت نشده")+'</td><td>'+esc(name("students",c.student_id))+'</td><td>'+esc(name("courses",c.course_id))+'</td><td>'+when(c.start_date)+'</td><td>'+when(c.end_date)+'</td><td>'+esc(c.status||"—")+'</td><td>'+(c.delivered_copy?"تحویل‌شده":"ثبت نشده")+'</td><td>'+linkButton("student",c)+'</td></tr>').join("");
+ const staffRows=staffItems.map(c=>'<tr><td>'+esc(c.contract_no||"ثبت نشده")+'</td><td>'+esc(c.contract_type||"—")+'</td><td>'+when(c.start_date)+'</td><td>'+when(c.end_date)+'</td><td>'+esc(c.status||"—")+'</td><td>'+linkButton("staff",c)+'</td></tr>').join("");
+ const studentTable=studentRows?'<div class="rfops-table-wrap"><table><thead><tr><th>شماره قرارداد</th><th>هنرجو</th><th>دوره</th><th>شروع</th><th>پایان</th><th>وضعیت</th><th>نسخه تحویلی</th><th>فایل خصوصی</th></tr></thead><tbody>'+studentRows+'</tbody></table></div>':empty("studentContracts","قرارداد هنرجویی قابل مشاهده‌ای وجود ندارد.");
+ const staffTable=staffRows?'<div class="rfops-table-wrap"><table><thead><tr><th>شماره قرارداد</th><th>نوع</th><th>شروع</th><th>پایان</th><th>وضعیت</th><th>فایل خصوصی</th></tr></thead><tbody>'+staffRows+'</tbody></table></div>':empty("staffContracts","قرارداد کارکنان قابل مشاهده‌ای وجود ندارد.");
+ return section("قراردادها و وضعیت تحویل",'<p>خلاصه قراردادها فقط‌خواندنی است. فایل خصوصی صرفاً پس از درخواست صریح کارمند مجاز و تأیید مجدد سرور، با لینک موقت باز می‌شود. امضای الکترونیکی و ثبت تعهد مالی فعال نیست.</p>'+
  '<div class="rfops-summary"><div><strong>'+fa(studentItems.length)+'</strong><span>قرارداد هنرجویی قابل مشاهده</span></div>'+(manage()?'<div><strong>'+fa(staffItems.length)+'</strong><span>قرارداد کارکنان قابل مشاهده</span></div>':"")+'</div>'+
  '<h4>قراردادهای هنرجویان</h4>'+studentTable+
- (manage()?'<h4>قراردادهای کارکنان</h4>'+staffTable:"")+
- '<p class="rf-caption">حداکثر ۱۵۰ رکورد اخیر در هر بخش نمایش داده می‌شود. وضعیت حقوقی قرارداد باید با نسخه امضاشده تطبیق داده شود.</p>');
+ (manage()?'<h4>قرارداد کارکنان</h4>'+staffTable:"")+
+ '<p class="rf-caption">فایل‌ها تنها در فضای خصوصی Supabase نگهداری می‌شوند؛ لینک دریافت‌شده کوتاه‌مدت است و نباید برای اشخاص دیگر ارسال شود. قراردادهای فاقد فایل قابل بازکردن نیستند.</p>');
 }
 function finance(){
  const items=row("payments"),ledger=row("ledgerPayments"),inst=row("installments"),enrollments=row("enrollments");
@@ -558,6 +566,24 @@ async function act(action,element){
      throw Error("لینک فایل از دامنه امن آموزشگاه دریافت نشد.");
     documentLink={id,url:url.href,expires:Date.now()+9*60*1000};
     info="لینک موقت آماده است؛ روی «بازکردن فایل خصوصی» بزنید.";
+  }else if(action==="contract-link"){
+    const kind=String(element.dataset.kind||"");
+    if(!enrollmentManager()||!uuid(id)||!["student","staff"].includes(kind))throw Error("مجوز دریافت قرارداد معتبر نیست.");
+    if(kind==="staff"&&!manage())throw Error("فایل قرارداد کارکنان فقط برای مدیریت مجاز است.");
+    const record=row(kind==="staff"?"staffContracts":"studentContracts").find(c=>c.id===id);
+    if(!record)throw Error("قرارداد در فهرست مجاز حساب موجود نیست.");
+    if(kind==="student"&&!row("students").some(s=>s.id===record.student_id&&s.status!=="archived"&&s.archived_at==null))
+     throw Error("فایل قرارداد پرونده غیرفعال از این پنل قابل دریافت نیست.");
+    const result=await request("contract_file_url",{kind,id},true);
+    if(generation!==sessionEpoch)return;
+    let url;try{url=new URL(String(result?.url||""))}catch{throw Error("لینک فایل قرارداد معتبر نیست.");}
+    const bucket=kind==="staff"?"academy-staff-contracts":"academy-student-contracts";
+    if(!result?.ok||url.protocol!=="https:"||url.origin!=="https://sdsdzktsqpahpdrgmzuo.supabase.co"||
+       !url.pathname.startsWith("/storage/v1/object/sign/"+bucket+"/")||
+       !url.searchParams.get("token")||url.username||url.password||url.port||url.hash)
+     throw Error("سرور لینک امضاشده معتبر برای قرارداد صادر نکرد.");
+    contractLink={id,kind,url:url.href,expires:Date.now()+9*60*1000};
+    info="لینک موقت قرارداد صادر شد؛ روی «بازکردن نسخه خصوصی» بزنید.";
   }else if(action==="family-switch"){
    if(!familyManager())throw Error("فقط مدیر مجاز به تغییر دسترسی سرپرست است.");
    const rowValue=row("links").find(x=>x.id===link);if(!rowValue)throw Error("پیوند سرپرست یافت نشد.");

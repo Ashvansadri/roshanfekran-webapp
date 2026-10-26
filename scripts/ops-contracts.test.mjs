@@ -1,4 +1,4 @@
-// Offline contract QA: least-privilege RLS projections, role tabs, and no document links.
+// Offline contract QA: least-privilege RLS projections, role tabs, and explicit, short-lived attachment links.
 import {readFileSync} from "node:fs";
 import {join} from "node:path";
 import assert from "node:assert/strict";
@@ -45,4 +45,44 @@ await check("owner",["academy_staff_contracts","academy_student_contracts"],true
 await check("registrar",["academy_student_contracts"],true,false);
 await check("finance",[],false,false);
 await check("viewer",[],false,false);
+
+const contractId="11111111-1111-4111-8111-111111111111",staffContractId="22222222-2222-4222-8222-222222222222";
+data.academy_student_contracts[0].id=contractId;
+data.academy_staff_contracts[0].id=staffContractId;
+const signed="https://sdsdzktsqpahpdrgmzuo.supabase.co/storage/v1/object/sign/academy-student-contracts/contract.pdf?token=synthetic-signed-token";
+let nextSigned=signed;
+const requests=[];
+async function loadWithContract(role){
+ ops.reset();requests.length=0;
+ await ops.load({kind:"staff",role},async(action,payload)=>{
+  if(action==="contract_file_url"){requests.push({action,...payload});return {ok:true,url:nextSigned};}
+  const table=Object.keys(data).find(k=>String(payload.path||"").startsWith("/rest/v1/"+k+"?"));
+  return table?data[table]:[];
+ });
+ listeners.click({target:{closest(selector){return selector==="[data-rfops-tab]"?{dataset:{rfopsTab:"contracts"}}:null}},preventDefault(){}});
+}
+const clickContract=(id,kind)=>listeners.click({target:{closest(selector){return selector==="[data-rfops]"?{dataset:{rfops:"contract-link",id,kind}}:null}},preventDefault(){}});
+const flush=()=>new Promise(r=>setTimeout(r,25));
+await loadWithContract("owner");
+let html=ops.render({kind:"staff",role:"owner"});
+assert(html.includes('data-rfops="contract-link"'),"authorized contract button missing");
+assert(!html.includes("synthetic-signed-token"),"signed URL must not be preloaded");
+clickContract(contractId,"student");await flush();
+assert.equal(requests.length,1,"exactly one gateway request expected");
+assert.deepEqual(requests[0],{action:"contract_file_url",kind:"student",id:contractId});
+html=ops.render({kind:"staff",role:"owner"});
+assert(html.includes("synthetic-signed-token")&&html.includes('referrerpolicy="no-referrer"'),"valid short-lived signed link missing");
+ops.reset();html=ops.render({kind:"staff",role:"owner"});
+assert(!html.includes("synthetic-signed-token"),"reset must erase contract link");
+nextSigned="https://attacker.example/storage/v1/object/sign/academy-student-contracts/contract.pdf?token=synthetic-signed-token";
+await loadWithContract("owner");clickContract(contractId,"student");await flush();
+html=ops.render({kind:"staff",role:"owner"});
+assert(!html.includes("attacker.example")&&!html.includes("بازکردن نسخه خصوصی"),"external link must fail closed");
+nextSigned=signed;
+await loadWithContract("registrar");requests.length=0;clickContract(staffContractId,"staff");await flush();
+assert(!requests.some(x=>x.action==="contract_file_url"),"registrar must not request staff contract");
+await loadWithContract("finance");requests.length=0;clickContract(contractId,"student");await flush();
+assert(!requests.some(x=>x.action==="contract_file_url"),"finance must not request contract");
+console.log("PASS: signed contract links are role-scoped, on-demand, origin-checked and erased on logout");
+
 console.log("PASS: RLS-scoped contract summaries, owner/registrar separation, finance/viewer privacy");
