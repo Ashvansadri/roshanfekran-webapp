@@ -531,7 +531,7 @@ function finance(){
  '<div><strong>'+summaryMoney("remaining_installments")+'</strong><span>مانده اقساط ثبت‌شده</span></div>'+
  '<div><strong>'+summaryMoney("posted_total")+'</strong><span>جمع پرداخت‌های ثبت‌شده در دفتر</span></div>'+
  '<div><strong>'+(financeSnapshot?summaryNumber("missing_schedule_count"):"—")+'</strong><span>ثبت‌نام بدون برنامه اقساط</span></div></div>'+
- (financeExportReady()?'<div class="rfops-actions"><button type="button" class="rfops-export" data-rfops="finance-reconciliation-export">دریافت CSV مغایرت‌های مالی</button></div><p class="rf-caption">خروجی فقط شامل شناسه‌ها و ارقام مغایرتِ تأییدشده از سرور است؛ حاوی اطلاعات شخصی هنرجو نیست. فایل را محرمانه نگهداری کنید.</p>':"")+
+ (financeExportReady()?'<div class="rfops-actions"><button type="button" class="rfops-export" data-rfops="finance-reconciliation-export">دریافت CSV مغایرت‌های مالی</button></div><p class="rf-caption">خروجی فقط شامل شناسه‌های پرونده و ارقام تأییدشده سرور است؛ نام و شماره تماس ندارد، اما شناسه‌ها نیز محرمانه‌اند. فایل را فقط در اختیار مسئول مجاز قرار دهید.</p>':"")+
  ((financeSnapshot&&(financeSnapshot.overpaid_enrollment_count>20||financeSnapshot.installment_mismatch_count>20))?
  '<div class="rfops-warn" role="status">بیش از ۲۰ مورد مغایرت وجود دارد؛ خروجی CSV ناقص مجاز نیست. برای گزارش کامل از مسئول فنی درخواست خروجی سروری کنید.</div>':"")+
  ((financeSnapshot||ready("enrollments")&&ready("installments"))&&missingCount?
