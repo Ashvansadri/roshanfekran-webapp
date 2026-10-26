@@ -224,9 +224,16 @@ function allowedProxy(path:string,method:string,token:string){
  }catch{return false}
  if(!/^\/rest\/v1\/(?:academy_[a-z0-9_]+|rpc\/academy_[a-z0-9_]+)$/.test(pathname))return false;
  if(['/rest/v1/academy_staff_invites','/rest/v1/academy_student_invites','/rest/v1/academy_guardian_invites'].includes(pathname))return false;
- // New staging uses audited RPCs for contract creation. Keep legacy Floot untouched,
- // but never permit untracked contract-table mutations through this gateway.
- if(method!=='GET'&&['/rest/v1/academy_student_contracts','/rest/v1/academy_staff_contracts'].includes(pathname))return false;
+ // Financial ledger, installment and enrollment mutations must use role-checked,
+ // audited server RPCs. Legacy Floot talks to Supabase separately; this staging
+ // gateway must not expose direct table writes even to a valid bearer token.
+ // Read-only projections remain available subject to the underlying RLS.
+ // Contracts follow the same rule to prevent unaudited draft/status changes.
+ if(method!=='GET'&&[
+  '/rest/v1/academy_student_contracts','/rest/v1/academy_staff_contracts',
+  '/rest/v1/academy_payments','/rest/v1/academy_installments',
+  '/rest/v1/academy_enrollments'
+ ].includes(pathname))return false;
  if(pathname.startsWith('/rest/v1/rpc/academy_bootstrap_')||pathname==='/rest/v1/rpc/academy_claim_staff_invite_service')return false;
  return true;
 }
