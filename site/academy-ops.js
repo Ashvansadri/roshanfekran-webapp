@@ -382,8 +382,14 @@ function courses(){
 function contracts(){
  // Attachment URLs are never fetched in list projections. The gateway checks the
  // current staff role and Supabase RLS again before issuing a short-lived link.
- const studentItems=row("studentContracts"),staffItems=manage()?row("staffContracts"):[];
- const activeStudents=new Set(row("students").filter(s=>s.status!=="archived"&&s.archived_at==null).map(s=>String(s.id)));
+ // Never treat a failed or incomplete RLS projection as an empty contract ledger.
+ // Student contracts are hidden until the active-student projection is available.
+ const studentsReady=Array.isArray(datasets.students)&&!failures.students;
+ const studentContractsReady=Array.isArray(datasets.studentContracts)&&!failures.studentContracts;
+ const staffContractsReady=Array.isArray(datasets.staffContracts)&&!failures.staffContracts;
+ const activeStudents=new Set(studentsReady?row("students").filter(s=>s.status!=="archived"&&s.archived_at==null).map(s=>String(s.id)):[]);
+ const studentItems=studentsReady&&studentContractsReady?row("studentContracts").filter(c=>activeStudents.has(String(c.student_id))):[];
+ const staffItems=manage()&&staffContractsReady?row("staffContracts"):[];
  const linkButton=(kind,c)=>{
   const eligible=kind==="staff"?manage():activeStudents.has(String(c.student_id));
   if(!eligible||!uuid(c.id))return "";
@@ -393,10 +399,14 @@ function contracts(){
  };
  const studentRows=studentItems.map(c=>'<tr><td>'+esc(c.contract_no||"ثبت نشده")+'</td><td>'+esc(name("students",c.student_id))+'</td><td>'+esc(name("courses",c.course_id))+'</td><td>'+when(c.start_date)+'</td><td>'+when(c.end_date)+'</td><td>'+esc(c.status||"—")+'</td><td>'+(c.delivered_copy?"تحویل‌شده":"ثبت نشده")+'</td><td>'+linkButton("student",c)+'</td></tr>').join("");
  const staffRows=staffItems.map(c=>'<tr><td>'+esc(c.contract_no||"ثبت نشده")+'</td><td>'+esc(c.contract_type||"—")+'</td><td>'+when(c.start_date)+'</td><td>'+when(c.end_date)+'</td><td>'+esc(c.status||"—")+'</td><td>'+linkButton("staff",c)+'</td></tr>').join("");
- const studentTable=studentRows?'<div class="rfops-table-wrap"><table><thead><tr><th>شماره قرارداد</th><th>هنرجو</th><th>دوره</th><th>شروع</th><th>پایان</th><th>وضعیت</th><th>نسخه تحویلی</th><th>فایل خصوصی</th></tr></thead><tbody>'+studentRows+'</tbody></table></div>':empty("studentContracts","قرارداد هنرجویی قابل مشاهده‌ای وجود ندارد.");
- const staffTable=staffRows?'<div class="rfops-table-wrap"><table><thead><tr><th>شماره قرارداد</th><th>نوع</th><th>شروع</th><th>پایان</th><th>وضعیت</th><th>فایل خصوصی</th></tr></thead><tbody>'+staffRows+'</tbody></table></div>':empty("staffContracts","قرارداد کارکنان قابل مشاهده‌ای وجود ندارد.");
+ const studentTable=!studentsReady||!studentContractsReady?
+  '<div class="rfops-warn" role="alert">فهرست قراردادها یا وضعیت فعال هنرجویان دریافت نشد؛ برای حفظ محرمانگی، قراردادهای هنرجویی نمایش داده نمی‌شوند. دوباره تلاش کنید.</div>':
+  studentRows?'<div class="rfops-table-wrap"><table><thead><tr><th>شماره قرارداد</th><th>هنرجو</th><th>دوره</th><th>شروع</th><th>پایان</th><th>وضعیت</th><th>نسخه تحویلی</th><th>فایل خصوصی</th></tr></thead><tbody>'+studentRows+'</tbody></table></div>':empty("studentContracts","قرارداد هنرجویی قابل مشاهده‌ای وجود ندارد.");
+ const staffTable=!staffContractsReady?
+  '<div class="rfops-warn" role="alert">فهرست قراردادهای کارکنان دریافت نشد؛ وضعیت آن‌ها نامشخص است. دوباره تلاش کنید.</div>':
+  staffRows?'<div class="rfops-table-wrap"><table><thead><tr><th>شماره قرارداد</th><th>نوع</th><th>شروع</th><th>پایان</th><th>وضعیت</th><th>فایل خصوصی</th></tr></thead><tbody>'+staffRows+'</tbody></table></div>':empty("staffContracts","قرارداد کارکنان قابل مشاهده‌ای وجود ندارد.");
  return section("قراردادها و وضعیت تحویل",'<p>خلاصه قراردادها فقط‌خواندنی است. فایل خصوصی صرفاً پس از درخواست صریح کارمند مجاز و تأیید مجدد سرور، با لینک موقت باز می‌شود. امضای الکترونیکی و ثبت تعهد مالی فعال نیست.</p>'+
- '<div class="rfops-summary"><div><strong>'+fa(studentItems.length)+'</strong><span>قرارداد هنرجویی قابل مشاهده</span></div>'+(manage()?'<div><strong>'+fa(staffItems.length)+'</strong><span>قرارداد کارکنان قابل مشاهده</span></div>':"")+'</div>'+
+ '<div class="rfops-summary"><div><strong>'+(studentsReady&&studentContractsReady?fa(studentItems.length):"—")+'</strong><span>قرارداد هنرجویی قابل مشاهده</span></div>'+(manage()?'<div><strong>'+(staffContractsReady?fa(staffItems.length):"—")+'</strong><span>قرارداد کارکنان قابل مشاهده</span></div>':"")+'</div>'+
  '<h4>قراردادهای هنرجویان</h4>'+studentTable+
  (manage()?'<h4>قرارداد کارکنان</h4>'+staffTable:"")+
  '<p class="rf-caption">فایل‌ها تنها در فضای خصوصی Supabase نگهداری می‌شوند؛ لینک دریافت‌شده کوتاه‌مدت است و نباید برای اشخاص دیگر ارسال شود. قراردادهای فاقد فایل قابل بازکردن نیستند.</p>');
