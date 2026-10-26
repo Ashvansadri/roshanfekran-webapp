@@ -12,7 +12,8 @@ async function gateway(action,body={},timeout=18000){
  const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),timeout);
  try{const r=await fetch(END,{method:"POST",headers:{"Content-Type":"application/json"},signal:ac.signal,body:JSON.stringify({action,...body})});
  const j=await r.json().catch(()=>({error:"پاسخ نامعتبر"}));if(!r.ok||j.error)throw Error(j.error||"ثبت درخواست ناموفق بود");return j
- }finally{clearTimeout(tm)}
+ }catch(e){if(e?.name==="AbortError")throw Error(action==="submit_public_registration"?"زمان پاسخ ثبت‌نام تمام شد. ممکن است درخواست در سامانه ثبت شده باشد؛ قبل از ارسال دوباره، با آموزشگاه تماس بگیرید تا ثبت‌نام تکراری نشود.":"دریافت اطلاعات دوره طولانی شد؛ اتصال را بررسی و دوباره تلاش کنید.");throw e}
+ finally{clearTimeout(tm)}
 }
 function render(){window.RFCORE?.render?.()}
 async function load(slug){pending.add(slug);
@@ -20,13 +21,16 @@ async function load(slug){pending.add(slug);
  catch(e){cache.set(slug,{error:e.message||"مشخصات دوره در دسترس نیست"})}
  finally{pending.delete(slug);render()}}
 async function toBase64(file){return new Promise((res,rej)=>{const reader=new FileReader();reader.onerror=()=>rej(Error("فایل قابل خواندن نیست"));reader.onload=()=>res(String(reader.result||"").split(",")[1]||"");reader.readAsDataURL(file)})}
+function invalidLink(){return '<main class="shell section"><div class="portal-alert" role="alert">لینک ثبت‌نام معتبر نیست.</div><a href="#/courses" class="btn btn-outline">بازگشت به دوره‌ها</a></main>'}
 function route(parts){
  if(parts[0]!=="enroll")return null;
- const slug=decodeURIComponent(parts[1]||"");if(slug.length<3||slug.length>60||!valid.test(slug))return '<main class="shell section"><div class="portal-alert">لینک ثبت‌نام معتبر نیست.</div></main>';
+ let slug="";
+ try{slug=decodeURIComponent(parts[1]||"")}catch{return invalidLink()}
+ if(slug.length<3||slug.length>60||!valid.test(slug))return invalidLink();
  if(!cache.has(slug)&&!pending.has(slug)){load(slug)}
  if(!cache.has(slug))return '<main class="shell section"><div class="skeleton"></div></main>';
  const d=cache.get(slug);
- if(d.error)return '<main class="shell section"><div class="portal-alert">'+esc(d.error)+'</div><a href="#/courses" class="btn btn-outline">بازگشت</a></main>';
+ if(d.error)return '<main class="shell section"><div class="portal-alert" role="alert">'+esc(d.error)+'</div><button type="button" class="btn btn-primary" data-rf-enroll-retry="'+esc(slug)+'">تلاش دوباره برای دریافت اطلاعات</button><a href="#/courses" class="btn btn-outline">بازگشت به دوره‌ها</a></main>';
  const c=d.data?.course||{},s=d.data?.settings||{},l=d.data?.link||{},p=d.data?.pricing||{};
  const finished=result.get(slug);
  if(finished)return '<main class="shell rf-enroll-success"><div class="rf-panel"><div class="rf-auth-symbol">✓</div><div class="rf-overline">REGISTRATION SUBMITTED</div><h1>درخواست ثبت‌نام ارسال شد</h1><p>درخواست شما در سامانه روشنفکران ثبت شده و در انتظار بررسی مدیریت است. ثبت درخواست به معنی تأیید نهایی یا دریافت گواهی نیست.</p><div class="rf-success-code">کد رهگیری: <b>'+esc(finished.tracking_code||"در سامانه ثبت شد")+'</b></div><a href="#/courses" class="btn btn-primary">مشاهده سایر دوره‌ها</a></div></main>';
@@ -49,6 +53,13 @@ function route(parts){
  (s.payment_instructions?'<p class="rf-caption">'+esc(s.payment_instructions)+'</p>':"")+
  '<a href="tel:09164880996" class="btn btn-outline">پشتیبانی ثبت‌نام ↗</a></aside></section></main>';
 }
+document.getElementById("app").addEventListener("click",e=>{
+ const button=e.target instanceof Element?e.target.closest("[data-rf-enroll-retry]"):null;
+ if(!button)return;
+ const slug=button.getAttribute("data-rf-enroll-retry")||"";
+ if(slug.length<3||slug.length>60||!valid.test(slug)||pending.has(slug))return;
+ cache.delete(slug);load(slug);render();
+});
 document.getElementById("app").addEventListener("input",e=>{
  const field=e.target;
  if(!(field instanceof HTMLInputElement)||!["mobile","national_id"].includes(field.name)||!field.closest("#rf-enroll-submit"))return;

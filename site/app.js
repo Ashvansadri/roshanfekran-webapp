@@ -1,7 +1,6 @@
 "use strict";
 (function(){
 const ENDPOINT="https://sdsdzktsqpahpdrgmzuo.supabase.co/functions/v1/academy-gateway";
-const OLD="https://roshanfekran-academy-control.floot.app";
 const state={courses:[],news:{ai:[],markets:[],world:[]},daily:null,settings:{},loading:true,error:"",detail:{},pending:{}};
 const root=document.getElementById("app");
 const menu=document.getElementById("mainNav"),toggle=document.getElementById("mobileMenu"),helper=document.getElementById("helperPanel"),helperBtn=document.getElementById("helperButton");
@@ -118,7 +117,7 @@ function render(){
  else if(privateRoute!==null&&privateRoute!==undefined)html=privateRoute;
  else if(!parts.length)html=home();
  else if(parts[0]==="courses")html=courses();
- else if(parts[0]==="course")html=course(decodeURIComponent(parts[1]||""));
+ else if(parts[0]==="course"){let slug="";try{slug=decodeURIComponent(parts[1]||"")}catch{}html=course(slug)}
  else if(parts[0]==="updates")html=updates();
  else if(parts[0]==="portals")html=portals();
  else if(parts[0]==="about")html=about();
