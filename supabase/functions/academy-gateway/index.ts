@@ -246,6 +246,7 @@ function allowedProxy(path:string,method:string,token:string){
    'academy_consent_showcase',
    'academy_create_student_contract_draft',
    'academy_family_tip_today',
+   'academy_finance_reconciliation_snapshot',
    'academy_grade_assignment',
    'academy_grade_showcase_quiz',
    'academy_guardian_phone_invite',
