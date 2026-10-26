@@ -35,6 +35,11 @@ async function renew(){
    }
    if(!d?.access_token||!d?.refresh_token)throw Error("پاسخ سرور احراز هویت ناقص بود؛ با «تلاش مجدد» ادامه دهید.");
    requireCurrent(generation);setSession(d);return token();
+  }catch(e){
+   if(e?.authPermanent)throw e;
+   if(e?.name==="AbortError")throw Error("پاسخ سرویس ورود طولانی شد؛ دوباره تلاش کنید.");
+   if(e instanceof TypeError)throw Error("ارتباط با سرویس ورود برقرار نشد؛ اتصال اینترنت را بررسی کنید و دوباره تلاش کنید.");
+   throw e;
   }finally{clearTimeout(id);activeRequests.delete(abort)}
  })().finally(()=>{renewing=null});
  return renewing;
