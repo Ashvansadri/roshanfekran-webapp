@@ -57,6 +57,17 @@ function reset(){
 const meRole=()=>String(role?.role||"");
 const manage=()=>["owner","manager"].includes(meRole());
 const financial=()=>["owner","manager","finance"].includes(meRole());
+// Export is permitted only when the server-authoritative reconciliation is complete,
+// bounded, and internally consistent. Never export capped table projections as a ledger.
+function financeExportReady(){
+ if(!financial()||!financeSnapshot||!Array.isArray(financeCases)||!Array.isArray(financeInstallmentCases))return false;
+ const s=financeSnapshot;
+ return s.overpaid_enrollment_count<=20&&s.installment_mismatch_count<=20&&
+  financeCases.length===s.overpaid_enrollment_count&&financeInstallmentCases.length===s.installment_mismatch_count&&
+  financeCases.reduce((sum,c)=>sum+c.excess,0)===s.overpaid_excess_total&&
+  financeInstallmentCases.reduce((sum,c)=>sum+c.difference,0)===s.installment_mismatch_amount&&
+  (financeCases.length>0||financeInstallmentCases.length>0);
+}
 const enrollmentManager=()=>["owner","manager","registrar"].includes(meRole());
 const teacher=()=>role?.kind==="teacher"||manage();
 const familyManager=()=>manage();
@@ -165,7 +176,9 @@ async function load(nextRole,apiFn){
    new Set(cases.map(c=>String(c?.enrollment_id))).size===cases.length&&cases.every(c=>
     uuid(c?.enrollment_id)&&uuid(c?.student_id)&&uuid(c?.course_id)&&
     [c.final_fee,c.posted_total,c.excess].every(n=>Number.isSafeInteger(n)&&n>=0)&&
-    c.excess>0&&c.posted_total-c.final_fee===c.excess)?cases:null;
+    c.excess>0&&c.posted_total-c.final_fee===c.excess)&&
+   (financeSnapshot.overpaid_enrollment_count>20||
+    cases.reduce((sum,c)=>sum+c.excess,0)===financeSnapshot.overpaid_excess_total)?cases:null;
   // Do not infer full-ledger consistency from capped detail rows.
   const installmentCases=financeSnapshot?.installment_mismatch_cases;
   financeInstallmentCases=financeSnapshot&&
@@ -518,6 +531,9 @@ function finance(){
  '<div><strong>'+summaryMoney("remaining_installments")+'</strong><span>مانده اقساط ثبت‌شده</span></div>'+
  '<div><strong>'+summaryMoney("posted_total")+'</strong><span>جمع پرداخت‌های ثبت‌شده در دفتر</span></div>'+
  '<div><strong>'+(financeSnapshot?summaryNumber("missing_schedule_count"):"—")+'</strong><span>ثبت‌نام بدون برنامه اقساط</span></div></div>'+
+ (financeExportReady()?'<div class="rfops-actions"><button type="button" class="rfops-export" data-rfops="finance-reconciliation-export">دریافت CSV مغایرت‌های مالی</button></div><p class="rf-caption">خروجی فقط شامل شناسه‌ها و ارقام مغایرتِ تأییدشده از سرور است؛ حاوی اطلاعات شخصی هنرجو نیست. فایل را محرمانه نگهداری کنید.</p>':"")+
+ ((financeSnapshot&&(financeSnapshot.overpaid_enrollment_count>20||financeSnapshot.installment_mismatch_count>20))?
+ '<div class="rfops-warn" role="status">بیش از ۲۰ مورد مغایرت وجود دارد؛ خروجی CSV ناقص مجاز نیست. برای گزارش کامل از مسئول فنی درخواست خروجی سروری کنید.</div>':"")+
  ((financeSnapshot||ready("enrollments")&&ready("installments"))&&missingCount?
   '<div class="rfops-warn" role="status">'+fa(missingCount)+' ثبت‌نام برنامه اقساط ندارد؛ این موضوع لزوماً بدهی یا نقص پرونده نیست (ممکن است نقدی باشد). برای تعیین مانده واقعی، دفتر پرداخت و قرارداد بررسی شود.</div>':"")+
  (financeSnapshot&&financeSnapshot.overpaid_enrollment_count>0?
@@ -612,6 +628,23 @@ async function act(action,element){
  const id=String(element.dataset.id||""),link=String(element.dataset.link||"");
  try{
   if(action==="reload"){await load(role,request);return}
+  if(action==="finance-reconciliation-export"){
+   if(selected!=="finance"||!financeExportReady())throw Error("گزارش مغایرت مالی معتبر یا کامل نیست؛ ابتدا اطلاعات را تازه‌سازی کنید.");
+   if(!confirm("این فایل شامل شناسه پرونده و اطلاعات مالی محرمانه است. خروجی CSV برای بررسی داخلی دانلود شود؟"))return;
+   const generatedAt=new Date().toISOString();
+   const rows=[["نوع مغایرت","شناسه ثبت‌نام","شناسه قسط","شناسه هنرجو","شناسه دوره","شهریه نهایی (تومان)","پرداخت قطعی (تومان)","مبلغ قسط (تومان)","پرداخت ثبت‌شده قسط (تومان)","پرداخت تخصیص‌یافته (تومان)","اختلاف (تومان)","زمان تهیه (UTC)"],
+    ...financeCases.map(c=>["اضافه‌پرداخت",c.enrollment_id,"",c.student_id,c.course_id,c.final_fee,c.posted_total,"","", "",c.excess,generatedAt]),
+    ...financeInstallmentCases.map(c=>["مغایرت قسط",c.enrollment_id,c.installment_id,"","","","",c.scheduled_amount,c.recorded_paid,c.ledger_paid,c.difference,generatedAt])
+   ];
+   const csv="\uFEFF"+rows.map(columns=>columns.map(csvCell).join(",")).join("\r\n");
+   const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+   try{
+    const a=document.createElement("a");
+    a.href=url;a.download="roshanfekran-finance-reconciliation-"+generatedAt.slice(0,10)+".csv";a.style.display="none";
+    document.body.appendChild(a);try{a.click()}finally{a.remove()}
+   }finally{setTimeout(()=>URL.revokeObjectURL(url),1000)}
+   info="گزارش مغایرت مالی برای بررسی داخلی آماده دانلود شد.";return;
+  }
   if(action==="copy-link"||action==="copy-course"){
    const value=action==="copy-link"?generated:element.dataset.url;
    if(!value)throw Error("لینک هنوز موجود نیست.");await navigator.clipboard.writeText(value);
