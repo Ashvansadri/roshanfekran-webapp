@@ -390,6 +390,20 @@ function contracts(){
  const activeStudents=new Set(studentsReady?row("students").filter(s=>s.status!=="archived"&&s.archived_at==null).map(s=>String(s.id)):[]);
  const studentItems=studentsReady&&studentContractsReady?row("studentContracts").filter(c=>activeStudents.has(String(c.student_id))):[];
  const staffItems=manage()&&staffContractsReady?row("staffContracts"):[];
+
+ const draftStudentOptions=studentsReady?row("students").filter(s=>s.status!=="archived"&&s.archived_at==null&&uuid(s.id)).map(s=>'<option value="'+esc(s.id)+'">'+esc(s.full_name||"هنرجو")+'</option>').join(""):"";
+ const draftCourseOptions=Array.isArray(datasets.courses)&&!failures.courses?row("courses").filter(c=>c.status!=="archived"&&uuid(c.id)).map(c=>'<option value="'+esc(c.id)+'">'+esc(c.title||"دوره")+'</option>').join(""):"";
+ const draftForm=enrollmentManager()&&studentsReady&&studentContractsReady&&draftStudentOptions?
+  '<details class="rfops-course-editor"><summary>ثبت پیش‌نویس قرارداد هنرجویی</summary><form id="rfops-contract-draft" class="rfops-form">'+
+  '<label>هنرجو<select name="student_id" required><option value="">انتخاب هنرجو</option>'+draftStudentOptions+'</select></label>'+
+  '<label>دوره (اختیاری)<select name="course_id"><option value="">بدون اتصال به دوره</option>'+draftCourseOptions+'</select></label>'+
+  '<label>شماره قرارداد<input name="contract_no" maxlength="60" minlength="4" required autocomplete="off" placeholder="RF-2026-001"/></label>'+
+  '<label>تاریخ شروع (میلادی)<input type="date" name="start_date"/></label>'+
+  '<label>تاریخ پایان (میلادی)<input type="date" name="end_date"/></label>'+
+  '<button class="btn btn-primary" type="submit" '+(working?"disabled":"")+'>ثبت پیش‌نویس امن</button>'+
+  '<p class="rfops-wide rf-caption">این عملیات فقط پیش‌نویس بدون امضا، فایل یا تعهد مالی می‌سازد و در حسابرسی سرور ثبت می‌شود. قرارداد قطعی یا پرداخت ایجاد نمی‌کند.</p>'+
+  '</form></details>':"";
+
  const linkButton=(kind,c)=>{
   const eligible=kind==="staff"?manage():activeStudents.has(String(c.student_id));
   if(!eligible||!uuid(c.id))return "";
@@ -405,7 +419,7 @@ function contracts(){
  const staffTable=!staffContractsReady?
   '<div class="rfops-warn" role="alert">فهرست قراردادهای کارکنان دریافت نشد؛ وضعیت آن‌ها نامشخص است. دوباره تلاش کنید.</div>':
   staffRows?'<div class="rfops-table-wrap"><table><thead><tr><th>شماره قرارداد</th><th>نوع</th><th>شروع</th><th>پایان</th><th>وضعیت</th><th>فایل خصوصی</th></tr></thead><tbody>'+staffRows+'</tbody></table></div>':empty("staffContracts","قرارداد کارکنان قابل مشاهده‌ای وجود ندارد.");
- return section("قراردادها و وضعیت تحویل",'<p>خلاصه قراردادها فقط‌خواندنی است. فایل خصوصی صرفاً پس از درخواست صریح کارمند مجاز و تأیید مجدد سرور، با لینک موقت باز می‌شود. امضای الکترونیکی و ثبت تعهد مالی فعال نیست.</p>'+
+ return section("قراردادها و وضعیت تحویل",'<p>فهرست قراردادها فقط‌خواندنی است و ثبت پیش‌نویس صرفاً از مسیر کنترل‌شده و حسابرسی‌شده انجام می‌شود. فایل خصوصی پس از بررسی مجدد مجوز با لینک موقت باز می‌شود. امضای الکترونیکی و ثبت تعهد مالی فعال نیست.</p>'+draftForm+
  '<div class="rfops-summary"><div><strong>'+(studentsReady&&studentContractsReady?fa(studentItems.length):"—")+'</strong><span>قرارداد هنرجویی قابل مشاهده</span></div>'+(manage()?'<div><strong>'+(staffContractsReady?fa(staffItems.length):"—")+'</strong><span>قرارداد کارکنان قابل مشاهده</span></div>':"")+'</div>'+
  '<h4>قراردادهای هنرجویان</h4>'+studentTable+
  (manage()?'<h4>قرارداد کارکنان</h4>'+staffTable:"")+
@@ -646,7 +660,37 @@ async function formSubmit(form){
  if(working)return;const generation=sessionEpoch;warning="";info="";generated="";
  const data=new FormData(form);
  try{
-  if(form.dataset?.rfopsForm==="document-review"){
+  if(form.id==="rfops-contract-draft"){
+    if(!enrollmentManager()||!Array.isArray(datasets.students)||failures.students||
+       !Array.isArray(datasets.studentContracts)||failures.studentContracts)
+      throw Error("فهرست امن هنرجویان و قراردادها در دسترس نیست؛ ثبت انجام نشد.");
+    const studentId=String(data.get("student_id")||"");
+    const courseId=String(data.get("course_id")||"");
+    const contractNo=String(data.get("contract_no")||"").trim();
+    const startDate=String(data.get("start_date")||"");
+    const endDate=String(data.get("end_date")||"");
+    const validDate=v=>!v||(/^\d{4}-\d{2}-\d{2}$/.test(v)&&!Number.isNaN(Date.parse(v))&&new Date(v).toISOString().slice(0,10)===v);
+    if(!uuid(studentId)||!row("students").some(x=>x.id===studentId&&x.status!=="archived"&&x.archived_at==null))
+      throw Error("پرونده هنرجوی فعال معتبر نیست.");
+    if(courseId&&(!Array.isArray(datasets.courses)||failures.courses||!uuid(courseId)||
+       !row("courses").some(x=>x.id===courseId&&x.status!=="archived")))
+      throw Error("دوره انتخاب‌شده معتبر نیست.");
+    if(contractNo.length<4||contractNo.length>60||/[\x00-\x1f\x7f]/.test(contractNo)||
+       row("studentContracts").some(x=>x.student_id===studentId&&x.contract_no===contractNo))
+      throw Error("شماره قرارداد نامعتبر یا تکراری است.");
+    if(!validDate(startDate)||!validDate(endDate)||(endDate&&(!startDate||endDate<startDate)))
+      throw Error("تاریخ‌های قرارداد معتبر نیستند.");
+    if(!confirm("پیش‌نویس این قرارداد بدون تعهد مالی یا امضای الکترونیکی ثبت شود؟"))return;
+    working=true;
+    const created=await rpc("academy_create_student_contract_draft",{
+      p_student_id:studentId,p_course_id:courseId||null,p_contract_no:contractNo,
+      p_start_date:startDate||null,p_end_date:endDate||null
+    });
+    if(!created?.ok||!uuid(created.id)||created.status!=="draft"||
+       String(created.student_id)!==studentId||String(created.course_id||"")!==courseId)
+      throw Error("ثبت پیش‌نویس در سرور تأیید نشد؛ قبل از تلاش دوباره فهرست را تازه‌سازی کنید.");
+    info="پیش‌نویس قرارداد با ثبت حسابرسی سرور ایجاد شد؛ هنوز امضا یا تعهد مالی ندارد.";
+   }else if(form.dataset?.rfopsForm==="document-review"){
     if(!enrollmentManager()||!Array.isArray(datasets.students)||!Array.isArray(datasets.documents))throw Error("مجوز بررسی مدارک فعال نیست.");
     const docId=String(form.dataset.id||""),doc=row("documents").find(x=>x.id===docId);
     if(!uuid(docId)||!doc||!row("students").some(x=>x.id===doc.student_id&&x.status!=="archived"&&x.archived_at==null))
@@ -775,7 +819,7 @@ root?.addEventListener("click",event=>{
 });
 root?.addEventListener("submit",event=>{
  const form=event.target;
- if(!["attendance","service-reply","document-review"].includes(form?.dataset?.rfopsForm)&&form?.id!=="rfops-invite-guardian"&&form?.id!=="rfops-assignment"&&form?.id!=="rfops-course-ops"&&form?.id!=="rfops-class")return;
+ if(!["attendance","service-reply","document-review"].includes(form?.dataset?.rfopsForm)&&form?.id!=="rfops-invite-guardian"&&form?.id!=="rfops-assignment"&&form?.id!=="rfops-course-ops"&&form?.id!=="rfops-class"&&form?.id!=="rfops-contract-draft")return;
  event.preventDefault();formSubmit(form);
 });
 window.RFOPS={load,render,reset,showOverview(){selected="overview"}};
