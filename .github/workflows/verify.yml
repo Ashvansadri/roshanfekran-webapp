@@ -67,6 +67,8 @@ jobs:
           done
       - name: Read-only smoke test against live Supabase public gateway
         run: node scripts/api-smoke.mjs
+      - name: Verify live gateway blocks direct contract writes (forged token only)
+        run: node scripts/gateway-contract-write-live.test.mjs
       - name: Safe live guardian onboarding status (never sends SMS)
         run: node scripts/guardian-live-safe-smoke.mjs
   browser-smoke:
