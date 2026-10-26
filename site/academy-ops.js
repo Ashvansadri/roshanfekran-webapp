@@ -155,7 +155,7 @@ async function load(nextRole,apiFn){
   const financeIndex=keys.length+(canSeeRisk?1:0)+(manage()?1:0);
   const financeResult=financial()?results[financeIndex]:null;
   const snap=financeResult?.status==="fulfilled"?financeResult.value:null;
-  const totals=["posted_count","posted_total","voided_count","open_installment_count","remaining_installments","missing_schedule_count","enrollment_count"];
+  const totals=["posted_count","posted_total","voided_count","open_installment_count","remaining_installments","missing_schedule_count","enrollment_count","overpaid_enrollment_count","overpaid_excess_total"];
   financeSnapshot=snap&&typeof snap==="object"&&totals.every(k=>Number.isSafeInteger(snap[k])&&snap[k]>=0)?snap:null;
   financeSnapshotError=financial()&&!financeSnapshot?(financeResult?.status==="rejected"?String(financeResult.reason?.message||financeResult.reason):"پاسخ جمع‌بندی مالی معتبر نیست."):"";
   const activeIds=new Set((nextData.students||[]).filter(s=>s.status!=="archived"&&s.archived_at==null).map(s=>String(s.id)));
@@ -481,8 +481,10 @@ function finance(){
  '<div><strong>'+(financeSnapshot?summaryNumber("missing_schedule_count"):"—")+'</strong><span>ثبت‌نام بدون برنامه اقساط</span></div></div>'+
  ((financeSnapshot||ready("enrollments")&&ready("installments"))&&missingCount?
   '<div class="rfops-warn" role="status">'+fa(missingCount)+' ثبت‌نام برنامه اقساط ندارد؛ این موضوع لزوماً بدهی یا نقص پرونده نیست (ممکن است نقدی باشد). برای تعیین مانده واقعی، دفتر پرداخت و قرارداد بررسی شود.</div>':"")+
- (ready("enrollments")&&ready("ledgerPayments")&&overpaid.length?
-  '<div class="rfops-warn" role="alert">'+fa(overpaid.length)+' پرونده با پرداخت ثبت‌شده بیش از شهریه نهایی شناسایی شد (اختلاف مجموع: '+money(overpaidExcess)+'). پیش از اصلاح، قرارداد و دفتر مالی را تطبیق دهید. هشدار بر اساس رکوردهای بارگذاری‌شده است.</div>':"")+
+ (financeSnapshot&&financeSnapshot.overpaid_enrollment_count>0?
+  '<div class="rfops-warn" role="alert">'+fa(financeSnapshot.overpaid_enrollment_count)+' پرونده با پرداخت ثبت‌شده بیش از شهریه نهایی شناسایی شد (اختلاف مجموع: '+money(financeSnapshot.overpaid_excess_total)+'). این هشدار از کل دفتر مالی سرور محاسبه شده است؛ پیش از اصلاح، قرارداد و دفتر مالی را تطبیق دهید.</div>':
+  !financeSnapshot&&ready("enrollments")&&ready("ledgerPayments")&&overpaid.length?
+  '<div class="rfops-warn" role="alert">'+fa(overpaid.length)+' پرونده در جزئیات بارگذاری‌شده دارای پرداخت بیشتر از شهریه نهایی است (حداقل اختلاف مشاهده‌شده: '+money(overpaidExcess)+'). جمع‌بندی سرور در دسترس نیست؛ این هشدار کامل نیست و نباید مبنای تسویه قرار گیرد.</div>':"")+
  '<h4>سررسید و وضعیت اقساط</h4>'+
  (schedule.length?'<div class="rfops-table-wrap"><table><thead><tr><th>هنرجو / دوره</th><th>قسط</th><th>سررسید</th><th>مبلغ</th><th>پرداخت‌شده</th><th>مانده</th><th>وضعیت</th></tr></thead><tbody>'+schedule.map(i=>{
   const e=enrollmentMap.get(String(i.enrollment_id));
