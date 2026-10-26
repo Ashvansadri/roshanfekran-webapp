@@ -73,6 +73,11 @@ await deny("forbidden proxy route","proxy",{path:"/auth/v1/admin/users",method:"
 await deny("normalized traversal to Auth admin","proxy",{path:"/rest/v1/../../auth/v1/admin/users",method:"GET"},403,{"authorization":"Bearer synthetic-test-only-not-a-session"});
 await deny("percent-encoded traversal to Auth admin","proxy",{path:"/rest/v1/%2e%2e/%2e%2e/auth/v1/admin/users",method:"GET"},403,{"authorization":"Bearer synthetic-test-only-not-a-session"});
 await deny("encoded private invitation table","proxy",{path:"/rest/v1/academy_staff%5Finvites?select=id",method:"GET"},403,{"authorization":"Bearer synthetic-test-only-not-a-session"});
+// The live gateway must reject RPCs outside the explicit staging allowlist,
+// even before an invalid bearer token reaches PostgREST. These calls never write.
+await deny("unlisted privileged automation RPC blocked","proxy",{path:"/rest/v1/rpc/academy_build_automation_queue",method:"POST",body:{}},403,{"authorization":"Bearer synthetic-test-only-not-a-session"});
+await deny("unlisted staff archive RPC blocked","proxy",{path:"/rest/v1/rpc/academy_archive_staff",method:"POST",body:{}},403,{"authorization":"Bearer synthetic-test-only-not-a-session"});
+await deny("write RPC over GET blocked","proxy",{path:"/rest/v1/rpc/academy_review_payment",method:"GET"},403,{"authorization":"Bearer synthetic-test-only-not-a-session"});
 // Credentialless live auth regression: synthetic strings must never grant access.
 // No real account, password, SMS, or user data is used.
 await deny("synthetic bearer portal resolution","resolve_portal",{},401,{"authorization":"Bearer synthetic-test-only-not-a-session"});
