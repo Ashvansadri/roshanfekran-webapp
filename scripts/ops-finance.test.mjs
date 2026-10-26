@@ -22,6 +22,10 @@ const data={
 };
 const api=async(_,{path})=>{
  requests.push(path);
+ if(path==="/rest/v1/rpc/academy_finance_reconciliation_snapshot")return {
+  posted_count:1,posted_total:300,voided_count:1,open_installment_count:1,
+  remaining_installments:700,missing_schedule_count:1,enrollment_count:2
+ };
  const table=Object.keys(data).find(k=>path.startsWith("/rest/v1/"+k+"?"));
  return table?data[table]:[];
 };
@@ -36,6 +40,17 @@ assert(finance.includes("دفتر پرداخت‌های ثبت‌شده"),"Poste
 assert(finance.includes("۱ پرونده با پرداخت ثبت‌شده بیش از شهریه نهایی"),"Overpaid enrollment should trigger a reconciliation warning");
 assert(finance.includes("۱۰۰ تومان"),"Overpayment discrepancy must use posted payments minus final fee");
 assert(finance.includes("جمع پرداخت‌های ثبت‌شده در دفتر"),"Posted payment summary missing");
+assert(finance.includes("جمع‌بندی مالی از محاسبه کامل و کنترل‌شده سرور"),"Finance totals must be uncapped server-side");
+assert(finance.includes("پرداخت‌های ابطال‌شده: ۱ مورد"),"Voided payments must be excluded and disclosed");
+assert(requests.includes("/rest/v1/rpc/academy_finance_reconciliation_snapshot"),"Finance role must request RLS-scoped aggregate");
+ops.reset();
+const failingApi=async(action,body)=>{
+ if(body.path==="/rest/v1/rpc/academy_finance_reconciliation_snapshot")throw Error("temporarily unavailable");
+ return api(action,body);
+};
+await ops.load({kind:"staff",role:"finance"},failingApi);
+assert(ops.render({kind:"staff",role:"finance"}).includes("جمع‌بندی قطعی مالی از سرور دریافت نشد"),"Unavailable aggregate must fail closed");
+
 assert(finance.includes("ثبت‌نام بدون برنامه اقساط"),"Unscheduled enrollment warning missing");
 assert(finance.includes("۱ ثبت‌نام برنامه اقساط ندارد"),"Do not infer settlement from missing schedule");
 assert(requests.some(x=>x.startsWith("/rest/v1/academy_payments?select=id,enrollment_id,installment_id,amount,paid_at,status")),"Use minimal RLS-scoped payment projection");
