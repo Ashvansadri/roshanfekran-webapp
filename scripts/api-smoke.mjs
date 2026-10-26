@@ -62,6 +62,7 @@ await deny("anonymous Push registration","push_save",{subscription:{endpoint:"ht
 await deny("anonymous Push removal","push_delete",{identity:"https://example.test/push"},401);
 await deny("anonymous private student snapshot","proxy",{path:"/rest/v1/rpc/academy_student_journey_snapshot",method:"POST",body:{}},401);
 await deny("anonymous private financial table","proxy",{path:"/rest/v1/academy_payments?select=id,amount&limit=1",method:"GET"},401);
+await deny("anonymous student contract draft","proxy",{path:"/rest/v1/rpc/academy_create_student_contract_draft",method:"POST",body:{p_student_id:"00000000-0000-4000-8000-000000000000",p_contract_no:"SYNTHETIC-DENY"}},401);
 // No authenticated session means no signed private files or profile mutations.
 // All IDs are synthetic; these requests must fail before storage access or writes.
 await deny("anonymous private assignment file","assignment_file_url",{submission_id:"00000000-0000-4000-8000-000000000000"},401);
@@ -76,9 +77,10 @@ await deny("encoded private invitation table","proxy",{path:"/rest/v1/academy_st
 // No real account, password, SMS, or user data is used.
 await deny("synthetic bearer portal resolution","resolve_portal",{},401,{"authorization":"Bearer synthetic-test-only-not-a-session"});
 await deny("synthetic bearer private finance","proxy",{path:"/rest/v1/academy_payments?select=id,amount&limit=1",method:"GET"},401,{"authorization":"Bearer synthetic-test-only-not-a-session"});
+await deny("synthetic bearer student contract draft","proxy",{path:"/rest/v1/rpc/academy_create_student_contract_draft",method:"POST",body:{p_student_id:"00000000-0000-4000-8000-000000000000",p_contract_no:"SYNTHETIC-DENY"}},401,{"authorization":"Bearer synthetic-test-only-not-a-session"});
 const expired=await request("proxy",{path:"/auth/v1/token?grant_type=refresh_token",method:"POST",body:{refresh_token:"synthetic-invalid-refresh-token"}});
 assert([400,401].includes(expired.r.status),"Synthetic refresh must be rejected as invalid credentials");
 assert.equal(expired.d?.access_token,undefined,"Invalid refresh must never return an access token");
 assert.equal(expired.d?.refresh_token,undefined,"Invalid refresh must never return a refresh token");
 await deny("invalid public resume token","public_showcase",{token:"00000000-0000-4000-8000-000000000000"},404);
-console.log("PASS: live credentialless Auth reachability, public catalog ("+catalog.courses.length+" course(s)), news, daily content and registration info; eighteen real anonymous/invalid-access denial checks; no writes.");
+console.log("PASS: live credentialless Auth reachability, public catalog ("+catalog.courses.length+" course(s)), news, daily content and registration info; twenty real anonymous/invalid-access denial checks; no writes.");
