@@ -51,6 +51,7 @@ jobs:
             scripts/ops-attendance-export.test.mjs \
             scripts/ops-finance.test.mjs \
             scripts/ops-contracts.test.mjs \
+            scripts/ops-contract-draft.test.mjs \
             scripts/ops-risk.test.mjs \
             scripts/ops-student-services.test.mjs \
             scripts/ops-service-reply.test.mjs \

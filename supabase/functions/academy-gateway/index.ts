@@ -224,6 +224,9 @@ function allowedProxy(path:string,method:string,token:string){
  }catch{return false}
  if(!/^\/rest\/v1\/(?:academy_[a-z0-9_]+|rpc\/academy_[a-z0-9_]+)$/.test(pathname))return false;
  if(['/rest/v1/academy_staff_invites','/rest/v1/academy_student_invites','/rest/v1/academy_guardian_invites'].includes(pathname))return false;
+ // New staging uses audited RPCs for contract creation. Keep legacy Floot untouched,
+ // but never permit untracked contract-table mutations through this gateway.
+ if(method!=='GET'&&['/rest/v1/academy_student_contracts','/rest/v1/academy_staff_contracts'].includes(pathname))return false;
  if(pathname.startsWith('/rest/v1/rpc/academy_bootstrap_')||pathname==='/rest/v1/rpc/academy_claim_staff_invite_service')return false;
  return true;
 }
