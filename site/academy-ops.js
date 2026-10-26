@@ -43,6 +43,7 @@ const grants={
  viewer:["courses"],
 };
 let role=null, request=null, datasets={},failures={},inflight=null,selected="students",working=false,info="",warning="",generated="";
+let financeSnapshot=null,financeSnapshotError="";
 let sessionEpoch=0;
 let attendanceClassId="",attendanceSnapshot=null;
 let riskRows=[],riskFailure="";
@@ -51,7 +52,7 @@ let documentLink=null,contractLink=null;
 function reset(){
  sessionEpoch++;role=null;request=null;datasets={};failures={};inflight=null;
  selected="students";working=false;info="";warning="";generated="";attendanceClassId="";attendanceSnapshot=null;
- riskRows=[];riskFailure="";documentLink=null;contractLink=null;window.RFDAILY?.reset?.();
+ riskRows=[];riskFailure="";documentLink=null;contractLink=null;financeSnapshot=null;financeSnapshotError="";window.RFDAILY?.reset?.();
 }
 const meRole=()=>String(role?.role||"");
 const manage=()=>["owner","manager"].includes(meRole());
@@ -142,12 +143,21 @@ async function load(nextRole,apiFn){
   if(canSeeRisk)jobs.push(proxy(riskPath,"POST",{}));
   if(["owner","manager"].includes(String(nextRole?.role||"")))jobs.push(window.RFDAILY?.load?.(nextRole,request));
   else window.RFDAILY?.reset?.();
+  // Exact finance totals come from a role-checked, SECURITY INVOKER/RLS RPC.
+  // Never compute financial summary totals from the capped 150-row detail projections.
+  if(financial())jobs.push(rpc("academy_finance_reconciliation_snapshot"));
   const results=await Promise.allSettled(jobs);
   if(generation!==sessionEpoch)return false;
   const nextData={},nextFailures={};
   keys.forEach((key,i)=>{const r=results[i];if(r.status==="fulfilled"&&Array.isArray(r.value))nextData[key]=r.value;else nextFailures[key]=r.status==="rejected"?String(r.reason?.message||r.reason):"داده معتبر دریافت نشد";});
   datasets=nextData;failures=nextFailures;
   const riskResult=canSeeRisk?results[keys.length]:null;
+  const financeIndex=keys.length+(canSeeRisk?1:0)+(manage()?1:0);
+  const financeResult=financial()?results[financeIndex]:null;
+  const snap=financeResult?.status==="fulfilled"?financeResult.value:null;
+  const totals=["posted_count","posted_total","voided_count","open_installment_count","remaining_installments","missing_schedule_count","enrollment_count"];
+  financeSnapshot=snap&&typeof snap==="object"&&totals.every(k=>Number.isSafeInteger(snap[k])&&snap[k]>=0)?snap:null;
+  financeSnapshotError=financial()&&!financeSnapshot?(financeResult?.status==="rejected"?String(financeResult.reason?.message||financeResult.reason):"پاسخ جمع‌بندی مالی معتبر نیست."):"";
   const activeIds=new Set((nextData.students||[]).filter(s=>s.status!=="archived"&&s.archived_at==null).map(s=>String(s.id)));
   riskRows=canSeeRisk&&riskResult?.status==="fulfilled"&&Array.isArray(riskResult.value)?
    riskResult.value.filter(s=>activeIds.has(String(s.student_id))&&s.status!=="archived")
@@ -447,6 +457,9 @@ function finance(){
  const overpaidExcess=overpaid.reduce((sum,e)=>sum+
   (postedByEnrollment.get(String(e.id))||0)-Number(e.final_fee),0);
  const schedule=inst.slice().sort((a,b)=>String(a.due_date||"").localeCompare(String(b.due_date||"")));
+ const missingCount=financeSnapshot?financeSnapshot.missing_schedule_count:missingSchedules.length;
+ const summaryNumber=k=>financeSnapshot?fa(financeSnapshot[k]):"—";
+ const summaryMoney=k=>financeSnapshot?money(financeSnapshot[k]):"—";
  const ready=key=>Array.isArray(datasets[key]);
  const figure=(key,value)=>ready(key)?fa(value):"—";
  const currency=(key,value)=>ready(key)?money(value):"—";
@@ -459,14 +472,15 @@ function finance(){
   '<div class="rf-empty">در دفتر مالی پرداخت قابل مشاهده‌ای ثبت نشده است.</div>'):
   '<div class="rfops-warn" role="alert">دفتر پرداخت‌ها بارگذاری نشد؛ مجموع پرداخت‌ها نامشخص است. '+esc(failures.ledgerPayments||"")+'</div>';
  return section("کنترل پرداخت‌ها، فیش‌ها و اقساط",
- '<p>دفتر پرداخت‌های ثبت‌شده از فیش‌های ارسالی برای بررسی جداست. مبلغ مانده فقط مربوط به اقساط ثبت‌شده است و به معنی کل بدهی هنرجویان نیست. گزارش حداکثر ۱۵۰ رکورد مجاز در هر جدول را پوشش می‌دهد.</p>'+
- '<div class="rfops-summary"><div><strong>'+figure("installments",open.length)+'</strong><span>اقساط بازِ ثبت‌شده</span></div>'+
+ '<p>دفتر پرداخت‌های ثبت‌شده از فیش‌های ارسالی برای بررسی جداست. مبلغ مانده فقط مربوط به اقساط ثبت‌شده است و به معنی کل بدهی هنرجویان نیست. جدول‌های جزئیات حداکثر ۱۵۰ رکورد مجاز را نمایش می‌دهند.</p>'+ 
+ (financeSnapshot?'<p class="rf-caption">جمع‌بندی مالی از محاسبه کامل و کنترل‌شده سرور دریافت شده است؛ محدودیت ۱۵۰ رکورد فقط مربوط به جزئیات است. پرداخت‌های ابطال‌شده: '+fa(financeSnapshot.voided_count)+' مورد.</p>':'<div class="rfops-warn" role="alert">جمع‌بندی قطعی مالی از سرور دریافت نشد؛ مبلغ و تعداد کل به‌جای حدس‌زدن خالی می‌مانند. '+esc(financeSnapshotError)+'</div>')+
+ '<div class="rfops-summary"><div><strong>'+summaryNumber("open_installment_count")+'</strong><span>اقساط بازِ ثبت‌شده</span></div>'+
  '<div><strong>'+figure("payments",items.filter(i=>i.status==="pending").length)+'</strong><span>فیش در انتظار بررسی</span></div>'+
- '<div><strong>'+currency("installments",remaining)+'</strong><span>مانده اقساط ثبت‌شده</span></div>'+
- '<div><strong>'+currency("ledgerPayments",postedTotal)+'</strong><span>جمع پرداخت‌های ثبت‌شده در دفتر</span></div>'+
- '<div><strong>'+(ready("enrollments")&&ready("installments")?fa(missingSchedules.length):"—")+'</strong><span>ثبت‌نام بدون برنامه اقساط</span></div></div>'+
- (ready("enrollments")&&ready("installments")&&missingSchedules.length?
-  '<div class="rfops-warn" role="status">'+fa(missingSchedules.length)+' ثبت‌نام برنامه اقساط ندارد؛ این موضوع لزوماً بدهی یا نقص پرونده نیست (ممکن است نقدی باشد). برای تعیین مانده واقعی، دفتر پرداخت و قرارداد بررسی شود.</div>':"")+
+ '<div><strong>'+summaryMoney("remaining_installments")+'</strong><span>مانده اقساط ثبت‌شده</span></div>'+
+ '<div><strong>'+summaryMoney("posted_total")+'</strong><span>جمع پرداخت‌های ثبت‌شده در دفتر</span></div>'+
+ '<div><strong>'+(financeSnapshot?summaryNumber("missing_schedule_count"):"—")+'</strong><span>ثبت‌نام بدون برنامه اقساط</span></div></div>'+
+ ((financeSnapshot||ready("enrollments")&&ready("installments"))&&missingCount?
+  '<div class="rfops-warn" role="status">'+fa(missingCount)+' ثبت‌نام برنامه اقساط ندارد؛ این موضوع لزوماً بدهی یا نقص پرونده نیست (ممکن است نقدی باشد). برای تعیین مانده واقعی، دفتر پرداخت و قرارداد بررسی شود.</div>':"")+
  (ready("enrollments")&&ready("ledgerPayments")&&overpaid.length?
   '<div class="rfops-warn" role="alert">'+fa(overpaid.length)+' پرونده با پرداخت ثبت‌شده بیش از شهریه نهایی شناسایی شد (اختلاف مجموع: '+money(overpaidExcess)+'). پیش از اصلاح، قرارداد و دفتر مالی را تطبیق دهید. هشدار بر اساس رکوردهای بارگذاری‌شده است.</div>':"")+
  '<h4>سررسید و وضعیت اقساط</h4>'+
