@@ -57,6 +57,7 @@ jobs:
             scripts/ops-documents.test.mjs \
             scripts/document-review-migration.test.mjs \
             scripts/service-request-audit-migration.test.mjs \
+            scripts/service-request-create-guards.test.mjs \
             scripts/enrollment-financial-integrity.test.mjs \
             scripts/payment-amount-integrity.test.mjs \
             scripts/gateway-archive.test.mjs; do

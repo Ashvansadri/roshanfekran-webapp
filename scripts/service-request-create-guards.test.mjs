@@ -1,0 +1,11 @@
+import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+const load=p=>readFileSync(new URL("../migrations/"+p,import.meta.url),"utf8");
+const sql=load("20261026_audited_service_request_intake.sql");
+const verify=load("20261026_audited_service_request_intake.verify.sql");
+const rollback=load("20261026_audited_service_request_intake.rollback.sql");
+for(const guard of ["private.academy_current_student_id()","v_actor IS NULL","p_enrollment_id IS NOT NULL","e.student_id=v_student","char_length(v_subject) NOT BETWEEN 3 AND 120","char_length(v_body) NOT BETWEEN 3 AND 1200","academy_audit_log","REVOKE ALL ON FUNCTION"])assert(sql.includes(guard),"Missing intake guard: "+guard);
+assert(!/jsonb_build_object\([^)]*(?:v_subject|v_body)/.test(sql),"Audit must not contain private request text");
+for(const guard of ["direct_insert_blocked","anonymous_rpc_blocked","active_student_guard","subject_bound","body_bound","enrollment_ownership_guard","creation_audit_present"])assert(verify.includes(guard),"Missing live verification: "+guard);
+assert(rollback.includes("CREATE OR REPLACE FUNCTION public.academy_submit_service_request"),"Missing reversible function definition");
+console.log("PASS: bounded, audited, student-scoped service intake migration and read-only verification");
