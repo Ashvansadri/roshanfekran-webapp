@@ -307,6 +307,23 @@ function studentServicesPanel(){
  '<p>درخواست مالی، گواهی، برنامه کلاس یا مدارک را ثبت کنید و پاسخ آموزشگاه را همین‌جا ببینید.</p>'+
  '<div class="rf-grid-two"><div>'+form+'</div><div><h3>پیگیری درخواست‌ها</h3>'+records+'</div></div></section>';
 }
+function studentCoachPanel(){
+ if(role?.kind!=="student"||!journey)return "";
+ const labels=["پرونده و عکس را تکمیل کن","معرفی و هدف حرفه‌ای را دقیق بنویس","یک نمونه‌کار واقعی بساز و ثبت کن","برای آزمون مهارتی آماده شو","رزومه‌ات را تکمیل کن"];
+ const stages=Array.isArray(journey.stages)?journey.stages:[];
+ const next=stages.findIndex(x=>!x.done),idx=Math.max(0,Math.min(4,next<0?4:next));
+ // Only RLS-authorized, published assignments already loaded for this student are considered.
+ const pending=studentAssignments.find(x=>x?.published===true&&!studentSubmissions.some(y=>String(y.assignment_id)===String(x.id)&&["submitted","graded","approved","reviewed"].includes(String(y.status||"").toLowerCase())));
+ const headline=pending?String(pending.title||"تکلیف جدید"):labels[idx];
+ const detail=pending?"تکلیف منتشرشده مربوط به دوره شماست. توضیحات را در بخش تکالیف همین صفحه ببین و به‌موقع تحویل بده.":"گام بعدی از وضعیت فعلی پرونده مهارتی شما پیشنهاد شده است؛ این تمرین رسمی و نمره‌دار نیست.";
+ return '<section class="rf-student-coach rf-panel" aria-label="راهنمای شخصی مسیر یادگیری">'+
+ '<div class="rf-student-coach-head"><span>✦ همراه یادگیری</span><small>بر اساس پیشرفت همین هنرجو · بدون ارسال داده به سرویس هوش مصنوعی</small></div>'+
+ '<h3>'+esc(headline)+'</h3><p>'+esc(detail)+'</p>'+
+ '<div class="rf-student-coach-steps"><span><b>۱</b> هدف امروز را مشخص کن</span><span><b>۲</b> ۲۰ دقیقه تمرین کن</span><span><b>۳</b> نتیجه را ثبت کن</span></div>'+
+ (pending?'<p class="rf-caption">این پیشنهاد، محتوای تکلیف اصلی را تغییر نمی‌دهد و تکلیف جدیدی ایجاد نمی‌کند.</p>':
+ '<button type="button" class="portal-secondary" data-rf="stage" data-step="'+idx+'">بازکردن مرحله پیشنهادی ↗</button>')+
+ '</section>';
+}
 function studentPage(){
  const steps=Array.isArray(journey?.stages)?journey.stages:[],progress=Number(journey?.percentage||0);
  const headingText=journey?.student_name||"هنرجوی روشنفکران";
@@ -335,7 +352,7 @@ function studentPage(){
  return '<main class="shell rf-dashboard">'+heading("STUDENT JOURNEY","پرونده مهارتی "+esc(headingText),"از نخستین پروفایل تا نمونه‌کار تأییدشده و رزومه قابل ارائه؛ همه چیز قدم‌به‌قدم.")+
  actions()+toast()+'<div class="rf-progress-wrap"><div><span class="rf-overline">YOUR PROGRESS</span><h2>'+num(progress)+'٪ <small>تکمیل پرونده</small></h2></div><div class="rf-track"><span style="width:'+Math.max(0,Math.min(100,progress))+'%"></span></div><p>'+esc(journey.message||"مسیر رشد شما آغاز شده است.")+'</p></div>'+
  '<div class="rf-stages">'+steps.map((s,i)=>'<button class="rf-stage '+(i===stageIndex?"is-selected":"")+'" data-rf="stage" data-step="'+i+'"><span>'+(s.done?"✓":num(i+1))+'</span><b>'+esc(s.title)+'</b><small>'+(s.done?"تکمیل‌شده":i===stageIndex?"مرحله جاری":"آماده تکمیل")+'</small></button>').join("")+'</div>'+
- '<section class="rf-grid-two">'+right+
+ studentCoachPanel()+'<section class="rf-grid-two">'+right+
  '<div class="rf-panel"><div class="rf-panel-title"><span>✧</span><h3>مأموریت‌های ۹۰روزه</h3></div><p>۲۴ پروژه در سه مرحله، با تحویل و تأیید واقعی مدرس یا مدیر.</p><div class="rf-meters"><span>مأموریت‌های پذیرفته‌شده</span><strong>'+num(journey.missions_approved||0)+' / ۲۴</strong></div><div class="rf-mini-missions">'+missions.slice(0,6).map(m=>'<div><span>'+num(m.mission_no)+'</span><b>'+esc(m.title)+'</b></div>').join("")+'</div><a class="btn btn-outline" href="#/missions">مشاهده مسیر پروژه‌ها ↗</a></div></section>'+dailyPanel()+pushPanel()+financePanel()+studentServicesPanel()+(window.RFFAMILY?.student?.(studentAssignments,studentSubmissions,studentNotifications)||'')+'</main>';
 }
 function missionsPage(){
