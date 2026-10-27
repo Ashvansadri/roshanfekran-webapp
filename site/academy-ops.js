@@ -47,13 +47,13 @@ let financeSnapshot=null,financeSnapshotError="",financeCases=null,financeInstal
 let sessionEpoch=0;
 let attendanceClassId="",attendanceSnapshot=null;
 let riskRows=[],riskFailure="";
-let dailyAudit=null,dailyAuditError="";
+let dailyAudit=null,dailyAuditError="",dailyReports=null,dailyReportsError="";
 let documentLink=null,contractLink=null;
 // Clear every private projection and invitation link on logout or account switch.
 function reset(){
  sessionEpoch++;role=null;request=null;datasets={};failures={};inflight=null;
  selected="students";working=false;info="";warning="";generated="";attendanceClassId="";attendanceSnapshot=null;
- riskRows=[];riskFailure="";dailyAudit=null;dailyAuditError="";documentLink=null;contractLink=null;financeSnapshot=null;financeSnapshotError="";financeCases=null;financeInstallmentCases=null;window.RFDAILY?.reset?.();
+ riskRows=[];riskFailure="";dailyAudit=null;dailyAuditError="";dailyReports=null;dailyReportsError="";documentLink=null;contractLink=null;financeSnapshot=null;financeSnapshotError="";financeCases=null;financeInstallmentCases=null;window.RFDAILY?.reset?.();
 }
 const meRole=()=>String(role?.role||"");
 const manage=()=>["owner","manager"].includes(meRole());
@@ -639,7 +639,10 @@ function reportDashboard(){
  (rows.length?'<ol class="rf-report-rows">'+lines+'</ol>':'<div class="rf-empty">برای امروز رویدادی در جدول حسابرسی قابل مشاهده نیست.</div>')+
  '<p class="rf-caption">'+(rows.length>200?"بیش از ۲۰۰ رکورد وجود دارد؛ گزارش جزئی است و آمار کامل محسوب نمی‌شود.":"گزارش تا زمان آخرین دریافت به‌روز است.")+' آخرین بررسی: '+esc(new Intl.DateTimeFormat("fa-IR",{timeZone:"Asia/Tehran",hour:"2-digit",minute:"2-digit"}).format(new Date(dailyAudit.at)))+'</p>':
  '<div class="rf-empty">برای تهیه گزارش، دکمه بالا را بزنید. ارسال خودکار روزانه هنوز فعال نشده است.</div>')+
- '<p class="rf-caption">این خلاصه فقط رویدادهای جدول حسابرسی را نشان می‌دهد؛ تمام بازدیدها، پیام‌ها و عملیات خارج از حسابرسی را شامل نمی‌شود. ارسال خودکار گزارش به تنظیم امن کانال مقصد و زمان‌بندی نیاز دارد.</p>');
+ '<div class="rf-report-history"><h4>گزارش‌های روزانه خودکار (۰۰:۳۰ بامداد تهران)</h4>'+
+ (dailyReportsError?'<div class="rfops-warn">'+esc(dailyReportsError)+'</div>':"")+
+ (Array.isArray(dailyReports)?(dailyReports.length?'<div class="rfops-table-wrap"><table><thead><tr><th>روز</th><th>درخواست ثبت‌نام</th><th>ثبت‌نام</th><th>تکلیف</th><th>تحویل پروژه</th><th>خدمات هنرجویی</th><th>پرداخت ثبت‌شده</th><th>ارتباط خانواده</th></tr></thead><tbody>'+dailyReports.map(x=>'<tr><td>'+esc(x.report_date)+'</td>'+["applications_created","enrollments_created","assignments_created","submissions_created","student_requests_created","payments_recorded","guardian_links_created"].map(k=>'<td>'+fa(x[k])+'</td>').join("")+'</tr>').join("")+'</tbody></table></div>':'<div class="rf-empty">گزارش بایگانی‌شده‌ای هنوز ثبت نشده است.</div>'):'<p class="rf-caption">برای دریافت آخرین خلاصه‌های روزانه روی دکمه تازه‌سازی بزنید.</p>')+'</div>'+
+ '<p class="rf-caption">جمع‌بندی‌های بایگانی‌شده به‌صورت خودکار از شمار رکوردهای ثبت‌شده تهیه می‌شوند و پیام یا اطلاعات فردی ارسال نمی‌کنند. حسابرسی زنده ممکن است فعالیت‌های ثبت‌نشده در جدول audit را پوشش ندهد.</p>');
 }
 
 function render(nextRole){
@@ -667,7 +670,14 @@ async function act(action,element){
       if(generation!==sessionEpoch)return;
       if(!Array.isArray(values)||!values.every(x=>typeof x.action==="string"&&typeof x.entity_type==="string"&&typeof x.created_at==="string"))throw Error("پاسخ حسابرسی معتبر نیست.");
       dailyAudit={start:range.start,at:new Date().toISOString(),rows:values};info="گزارش روز با داده‌های مجاز حسابرسی دریافت شد.";
-    }catch(e){dailyAuditError="گزارش ایمن دریافت نشد: "+String(e?.message||"خطای نامشخص");}
+    }catch(e){dailyAuditError="گزارش لحظه‌ای حسابرسی دریافت نشد: "+String(e?.message||"خطای نامشخص");}
+    try{
+      const path="/rest/v1/academy_daily_activity_reports?select=report_date,generated_at,applications_created,enrollments_created,assignments_created,submissions_created,student_requests_created,payments_recorded,guardian_links_created&order=report_date.desc&limit=7";
+      const archived=await proxy(path,"GET");
+      if(generation!==sessionEpoch)return;
+      if(!Array.isArray(archived)||!archived.every(x=>/^\\d{4}-\\d{2}-\\d{2}$/.test(String(x.report_date||""))))throw Error("پاسخ گزارش بایگانی معتبر نیست");
+      dailyReports=archived;dailyReportsError="";
+    }catch(e){dailyReports=null;dailyReportsError="گزارش‌های بایگانی‌شده در دسترس نیستند: "+String(e?.message||"");}
     return;
    }
   if(action==="finance-reconciliation-export"){
