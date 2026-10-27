@@ -675,7 +675,7 @@ async function act(action,element){
       const path="/rest/v1/academy_daily_activity_reports?select=report_date,generated_at,applications_created,enrollments_created,assignments_created,submissions_created,student_requests_created,payments_recorded,guardian_links_created&order=report_date.desc&limit=7";
       const archived=await proxy(path,"GET");
       if(generation!==sessionEpoch)return;
-      if(!Array.isArray(archived)||!archived.every(x=>/^\\d{4}-\\d{2}-\\d{2}$/.test(String(x.report_date||""))))throw Error("پاسخ گزارش بایگانی معتبر نیست");
+      if(!Array.isArray(archived)||!archived.every(x=>/^\d{4}-\d{2}-\d{2}$/.test(String(x.report_date||""))))throw Error("پاسخ گزارش بایگانی معتبر نیست");
       dailyReports=archived;dailyReportsError="";
     }catch(e){dailyReports=null;dailyReportsError="گزارش‌های بایگانی‌شده در دسترس نیستند: "+String(e?.message||"");}
     return;
