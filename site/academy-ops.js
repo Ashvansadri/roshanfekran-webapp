@@ -47,12 +47,13 @@ let financeSnapshot=null,financeSnapshotError="",financeCases=null,financeInstal
 let sessionEpoch=0;
 let attendanceClassId="",attendanceSnapshot=null;
 let riskRows=[],riskFailure="";
+let dailyAudit=null,dailyAuditError="";
 let documentLink=null,contractLink=null;
 // Clear every private projection and invitation link on logout or account switch.
 function reset(){
  sessionEpoch++;role=null;request=null;datasets={};failures={};inflight=null;
  selected="students";working=false;info="";warning="";generated="";attendanceClassId="";attendanceSnapshot=null;
- riskRows=[];riskFailure="";documentLink=null;contractLink=null;financeSnapshot=null;financeSnapshotError="";financeCases=null;financeInstallmentCases=null;window.RFDAILY?.reset?.();
+ riskRows=[];riskFailure="";dailyAudit=null;dailyAuditError="";documentLink=null;contractLink=null;financeSnapshot=null;financeSnapshotError="";financeCases=null;financeInstallmentCases=null;window.RFDAILY?.reset?.();
 }
 const meRole=()=>String(role?.role||"");
 const manage=()=>["owner","manager"].includes(meRole());
@@ -225,7 +226,8 @@ function allowedTabs(){
  ["tasks","تکالیف و کلاس‌ها",teacher()],
  ["family","نظارت خانواده",familyManager()],
  ["risk","پایش هنرجویان",["owner","manager","registrar","finance"].includes(meRole())],
- ["daily","انتشار نکته روز",manage()]
+ ["daily","انتشار نکته روز",manage()],
+ ["report","گزارش رویدادهای امروز",manage()]
  ].filter(x=>x[2]);
 }
 function tabs(){
@@ -245,7 +247,8 @@ const ovIcons={
  tasks:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v5M16 3v5M8 15h3m-3 3h7"/>',
  family:'<circle cx="8" cy="8" r="3"/><circle cx="17" cy="9" r="2"/><path d="M2 21v-3a6 6 0 0 1 12 0v3M15 15a5 5 0 0 1 7 5v1"/>',
  risk:'<path d="M12 3 2 21h20L12 3zM12 9v5M12 18h.01"/>',
- daily:'<path d="M9 18h6M10 22h4M8 14c-3-3-2-8 1-10 2-2 6-2 8 0 3 2 4 7 1 10-1 1-2 2-2 4H9c0-2-1-3-1-4z"/>'
+ daily:'<path d="M9 18h6M10 22h4M8 14c-3-3-2-8 1-10 2-2 6-2 8 0 3 2 4 7 1 10-1 1-2 2-2 4H9c0-2-1-3-1-4z"/>',
+ report:'<path d="M5 3h14v18H5zM9 8h6M9 12h6M9 16h4"/>'
 };
 function ovIcon(name){
  return '<svg viewBox="0 0 24 24" width="32" height="32" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round">'+(ovIcons[name]||ovIcons.overview)+'</svg>';
@@ -272,7 +275,8 @@ function overviewDashboard(){
   tasks:"تکالیف، جلسات و ارزیابی مدرس",
   family:"ارتباط مجاز با خانواده و رضایت‌ها",
   risk:"پیگیری وضعیت آموزشی و اقساط",
-  daily:"تولید، زمان‌بندی و انتشار محتوای آموزشی"
+  daily:"تولید، زمان‌بندی و انتشار محتوای آموزشی",
+  report:"خلاصه امن رویدادهای ثبت‌شده امروز"
  };
  const dateNow=new Intl.DateTimeFormat("fa-IR-u-ca-persian",{timeZone:"Asia/Tehran",weekday:"long",month:"long",day:"numeric",year:"numeric"}).format(new Date());
  const cardsHTML=keys.map(([k,title])=>
@@ -296,7 +300,7 @@ function overviewDashboard(){
  '<section class="rfov-bottom-panel rfov-notices"><header><span class="rfov-panel-symbol">'+ovIcon("daily")+'</span><h3>راهنمای مدیریت امن</h3></header>'+
  '<div class="rfov-note"><span class="rfov-dot"></span><div><strong>آمار این صفحه واقعی و محدود به مجوز شماست</strong><small>علامت «—» یعنی اطلاعات آن بخش دریافت نشده است.</small></div></div>'+
  '<div class="rfov-note"><span class="rfov-dot rfov-dot-gold"></span><div><strong>امور مالی نیازمند تأیید مسئول مربوط است</strong><small>پیش از اصلاح مبالغ، قرارداد و دفتر پرداخت را مطابقت دهید.</small></div></div>'+
- '<div class="rfov-note"><span class="rfov-dot rfov-dot-blue"></span><div><strong>نظارت خانواده با مجوز انجام می‌شود</strong><small>اطلاعات خصوصی فقط برای حساب‌های دارای دسترسی معتبر نمایش داده می‌شود.</small></div></div></section>'+
+ '<div class="rfov-note"><span class="rfov-dot rfov-dot-blue"></span><div><strong>نظارت خانواده با مجوز انجام می‌شود</strong><small>اطلاعات خصوصی فقط برای حساب‌های دارای دسترسی معتبر نمایش داده می‌شود.</small></div></div>'+(manage()?'<button class="rf-report-link" data-rfops-tab="report" type="button">مشاهده گزارش رویدادهای امروز ↗</button>':"")+'</section>'+
  '<section class="rfov-bottom-panel rfov-shortcuts"><header><span class="rfov-panel-symbol">'+ovIcon("overview")+'</span><h3>دسترسی سریع</h3></header><div class="rfov-quick-grid">'+quickHTML+'</div></section>'+
  '</div></section>';
 }
@@ -605,7 +609,7 @@ function tasks(){
   }
  }
  return section("کلاس‌ها، تکالیف و ارزیابی",'<p>می‌توانید تکلیف منتشر کنید و وضعیت تحویل آن را از همین سامانه بررسی کنید. اگر گزینه اعلان سرپرست فعال باشد، تکالیف جدید و تکالیف عقب‌افتاده برای سرپرست دارای مجوز در مرکز اعلان ثبت می‌شوند.</p>'+
- classEditor+'<h4>تقویم جلسات ثبت‌شده</h4>'+classTimeline+'<h4>حضور و غیاب جلسات</h4>'+attendanceSelector+attendancePanel+'<h4>تعریف تکلیف</h4>'+'<form id="rfops-assignment" class="rfops-form"><label>دوره<select name="course_id" required>'+assigned.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.title)+'</option>').join("")+'</select></label><label>عنوان تکلیف<input name="title" minlength="4" maxlength="150" required/></label><label>مهلت تکلیف<input name="due_at" type="datetime-local" required/></label><label class="rfops-wide">شرح تمرین<textarea name="instructions" rows="3" required minlength="8"></textarea></label><label class="rfops-consent"><input type="checkbox" name="notify_guardians" checked/> در صورت فعال بودن نظارت، خانواده هم تکلیف و تأخیر را ببیند.</label><button class="btn btn-primary" '+(!assigned.length||working?"disabled":"")+' type="submit">انتشار تکلیف و آگاه‌سازی</button></form>'+
+ classEditor+'<h4>تقویم جلسات ثبت‌شده</h4>'+classTimeline+'<h4>حضور و غیاب جلسات</h4>'+attendanceSelector+attendancePanel+'<h4>تعریف تکلیف</h4>'+'<p class="rf-caption">کمک‌یار تکلیف فقط پیش‌نویس می‌سازد؛ مدرس باید آن را بررسی و با دکمه انتشار تأیید کند. هنوز تکلیف اختصاصی خودکار برای هر هنرجو نیست.</p>'+'<form id="rfops-assignment" class="rfops-form"><div class="rf-assignment-agent"><div><strong>✦ کمک‌یار طراحی تکلیف</strong><small>متناسب با عنوان دوره؛ بدون ارسال اطلاعات هنرجو و بدون انتشار خودکار</small></div><label>مهارت مورد نظر<input name="draft_skill" maxlength="100" placeholder="مثلاً پرامپت‌نویسی" /></label><label>سطح تمرین<select name="draft_level"><option value="beginner">مقدماتی</option><option value="intermediate">متوسط</option><option value="advanced">پیشرفته</option></select></label><button type="button" data-rf-draft-assignment>ساخت پیش‌نویس و بازبینی ←</button><p class="rf-agent-feedback" aria-live="polite"></p></div><label>دوره<select name="course_id" required>'+assigned.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.title)+'</option>').join("")+'</select></label><label>عنوان تکلیف<input name="title" minlength="4" maxlength="150" required/></label><label>مهلت تکلیف<input name="due_at" type="datetime-local" required/></label><label class="rfops-wide">شرح تمرین<textarea name="instructions" rows="3" required minlength="8"></textarea></label><label class="rfops-consent"><input type="checkbox" name="notify_guardians" checked/> در صورت فعال بودن نظارت، خانواده هم تکلیف و تأخیر را ببیند.</label><button class="btn btn-primary" '+(!assigned.length||working?"disabled":"")+' type="submit">انتشار تکلیف و آگاه‌سازی</button></form>'+
  '<div class="rfops-summary"><div><strong>'+fa(classes.length)+'</strong><span>جلسه ثبت‌شده</span></div><div><strong>'+fa(items.length)+'</strong><span>تکلیف</span></div><div><strong>'+fa(submissions.length)+'</strong><span>تحویل انجام‌شده</span></div></div>'+
  (items.length?'<div class="rfops-cards">'+items.map(x=>{
  const subs=submissions.filter(s=>s.assignment_id===x.id);
@@ -613,12 +617,37 @@ function tasks(){
  subs.map(s=>'<div class="rfops-mark"><span>'+esc(name("students",s.student_id))+' · '+esc(s.status)+'</span><button type="button" data-rfops="grade" data-id="'+esc(s.id)+'" '+(working?"disabled":"")+'>ثبت ارزیابی</button></div>').join("")+'</article>';
  }).join("")+'</div>':empty("assignments","تکلیفی تعریف نشده است.")));
 }
+
+function reportDateRange(){
+ const fields=new Intl.DateTimeFormat("en-US",{timeZone:"Asia/Tehran",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());
+ const val=type=>Number(fields.find(x=>x.type===type)?.value);
+ const start=new Date(Date.UTC(val("year"),val("month")-1,val("day"))-210*60000);
+ return {start:start.toISOString(),end:new Date(start.getTime()+86400000).toISOString(),label:new Intl.DateTimeFormat("fa-IR-u-ca-persian",{timeZone:"Asia/Tehran",day:"numeric",month:"long",year:"numeric"}).format(new Date())};
+}
+function reportDashboard(){
+ if(!manage())return "";
+ const range=reportDateRange();
+ const matching=dailyAudit?.start===range.start;
+ const rows=matching&&Array.isArray(dailyAudit.rows)?dailyAudit.rows:null;
+ const counts={};
+ if(rows)rows.forEach(x=>{const key=String(x.entity_type||"سایر")+" / "+String(x.action||"ثبت رویداد");counts[key]=(counts[key]||0)+1});
+ const lines=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,18).map(([name,n])=>'<li><span>'+esc(name)+'</span><strong>'+fa(n)+'</strong></li>').join("");
+ return section("گزارش رویدادهای امروز در آموزشگاه",'<p>گزارش فقط‌خواندنی از جدول حسابرسی واقعی، با مجوز مدیر و بر اساس تاریخ ایران تهیه می‌شود؛ هیچ داده خصوصی یا متن پرونده‌ای دریافت نمی‌کند.</p>'+
+ '<div class="rf-report-head"><strong>'+esc(range.label)+'</strong><button type="button" data-rfops="report-refresh" '+(working?"disabled":"")+'>تولید یا تازه‌سازی گزارش امروز ↻</button></div>'+
+ (dailyAuditError?'<div class="rfops-warn" role="alert">'+esc(dailyAuditError)+'</div>':"")+
+ (rows?'<div class="rf-report-summary"><strong>'+fa(Math.min(rows.length,200))+(rows.length>200?"+":"")+'</strong><span>رویداد قابل مشاهده در بازه امروز</span></div>'+
+ (rows.length?'<ol class="rf-report-rows">'+lines+'</ol>':'<div class="rf-empty">برای امروز رویدادی در جدول حسابرسی قابل مشاهده نیست.</div>')+
+ '<p class="rf-caption">'+(rows.length>200?"بیش از ۲۰۰ رکورد وجود دارد؛ گزارش جزئی است و آمار کامل محسوب نمی‌شود.":"گزارش تا زمان آخرین دریافت به‌روز است.")+' آخرین بررسی: '+esc(new Intl.DateTimeFormat("fa-IR",{timeZone:"Asia/Tehran",hour:"2-digit",minute:"2-digit"}).format(new Date(dailyAudit.at)))+'</p>':
+ '<div class="rf-empty">برای تهیه گزارش، دکمه بالا را بزنید. ارسال خودکار روزانه هنوز فعال نشده است.</div>')+
+ '<p class="rf-caption">این خلاصه فقط رویدادهای جدول حسابرسی را نشان می‌دهد؛ تمام بازدیدها، پیام‌ها و عملیات خارج از حسابرسی را شامل نمی‌شود. ارسال خودکار گزارش به تنظیم امن کانال مقصد و زمان‌بندی نیاز دارد.</p>');
+}
+
 function render(nextRole){
  if(!nextRole||!["staff","teacher"].includes(nextRole.kind))return "";
  role=nextRole;
  const nav=tabs();
  let content="";
- switch(selected){case"overview":content=overviewDashboard();break;case"family":content=family();break;case"risk":content=riskDashboard();break;case"applications":content=applications();break;case"serviceDesk":content=serviceDesk();break;case"documents":content=documentsDesk();break;case"courses":content=courses();break;case"finance":content=finance();break;case"contracts":content=contracts();break;case"tasks":content=tasks();break;case"daily":content=window.RFDAILY?.render?.(nextRole)||"";break;default:content=students();}
+ switch(selected){case"overview":content=overviewDashboard();break;case"family":content=family();break;case"risk":content=riskDashboard();break;case"applications":content=applications();break;case"serviceDesk":content=serviceDesk();break;case"documents":content=documentsDesk();break;case"courses":content=courses();break;case"finance":content=finance();break;case"contracts":content=contracts();break;case"tasks":content=tasks();break;case"daily":content=window.RFDAILY?.render?.(nextRole)||"";break;case"report":content=reportDashboard();break;default:content=students();}
  const header=selected==="overview"?"":'<header class="rfops-top"><div><span>ACADEMY OPERATIONS / SECURE WORKSPACE</span><h2>'+esc(allowedTabs().find(x=>x[0]===selected)?.[1]||"مدیریت آموزشگاه")+'</h2><p>این بخش از داده‌ها و مجوزهای فعلی حساب شما استفاده می‌کند.</p></div><button data-rfops="reload" type="button">تازه‌سازی ↻</button></header>';
  return '<div class="rfops rfops-view-'+selected+'" id="rfops-main">'+alert()+(selected==="overview"?content+(meRole()==="viewer"?'<div class="rfov-all-sections"><span>همه بخش‌های مجاز</span>'+nav+'</div>':""):header+nav+content)+(inflight?'<div class="rfops-loading">در حال دریافت اطلاعات مجاز…</div>':"")+'</div>';
 }
@@ -628,6 +657,19 @@ async function act(action,element){
  const id=String(element.dataset.id||""),link=String(element.dataset.link||"");
  try{
   if(action==="reload"){await load(role,request);return}
+   if(action==="report-refresh"){
+    if(!manage()||selected!=="report")throw Error("فقط مدیر می‌تواند گزارش حسابرسی امروز را ببیند.");
+    working=true;dailyAuditError="";dailyAudit=null;
+    const range=reportDateRange();
+    try{
+      const query="/rest/v1/academy_audit_log?select=entity_type,action,created_at&created_at=gte."+encodeURIComponent(range.start)+"&created_at=lt."+encodeURIComponent(range.end)+"&order=created_at.desc&limit=201";
+      const values=await proxy(query,"GET");
+      if(generation!==sessionEpoch)return;
+      if(!Array.isArray(values)||!values.every(x=>typeof x.action==="string"&&typeof x.entity_type==="string"&&typeof x.created_at==="string"))throw Error("پاسخ حسابرسی معتبر نیست.");
+      dailyAudit={start:range.start,at:new Date().toISOString(),rows:values};info="گزارش روز با داده‌های مجاز حسابرسی دریافت شد.";
+    }catch(e){dailyAuditError="گزارش ایمن دریافت نشد: "+String(e?.message||"خطای نامشخص");}
+    return;
+   }
   if(action==="finance-reconciliation-export"){
    if(selected!=="finance"||!financeExportReady())throw Error("گزارش مغایرت مالی معتبر یا کامل نیست؛ ابتدا اطلاعات را تازه‌سازی کنید.");
    if(!confirm("این فایل شامل شناسه پرونده و اطلاعات مالی محرمانه است. خروجی CSV برای بررسی داخلی دانلود شود؟"))return;
