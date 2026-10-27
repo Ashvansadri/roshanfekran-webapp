@@ -1,5 +1,5 @@
 /* Public offline shell only. Private data and authentication responses are never cached. */
-const CACHE="rf-academy-public-v32";
+const CACHE="rf-academy-public-v33";
 const SHELL=[
  "/",
  "/index.html",
@@ -31,6 +31,7 @@ const SHELL=[
  "/atelier-noir.css",
  "/reference-cinema.css",
  "/academy-studio-os.css",
+ "/academy-companion.css",
  "/app.js",
  "/portal.js",
  "/enroll.js",
@@ -40,6 +41,7 @@ const SHELL=[
  "/motion.js",
  "/homepage.js",
  "/cinematic.js",
+ "/academy-companion.js",
  "/academy-ops.js",
   "/daily-admin.js",
  "/family-monitor.js"

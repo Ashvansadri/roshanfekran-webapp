@@ -202,7 +202,7 @@ function loginPage(){
  '<div class="rf-tick">◈ حریم خصوصی و دسترسی مجاز</div></section><div class="rf-auth-card">'+
  '<div class="rf-auth-symbol">✧</div><span class="rf-overline">ACCOUNT ACCESS</span><h2>ورود به پورتال</h2>'+toast()+
  '<div class="rf-phone-auth"><div class="rf-phone-heading"><span class="rf-phone-signal">◈</span><div><strong>ورود خانواده با موبایل</strong><small>بدون ایمیل یا رمز · فقط برای سرپرست مورد تأیید</small></div></div>'+
- phoneUI+'<p class="rf-caption">ابتدا مدیر شماره سرپرست را تأیید می‌کند؛ دریافت کد نیازمند سرویس پیامک فعال است.</p></div>'+
+ phoneUI+'<div class="rf-phone-onboarding"><b>راهنمای اولین ورود سرپرست</b><p>۱. مدیر شماره شما را به پرونده هنرجو متصل می‌کند.<br>۲. شماره خود را وارد کنید و کد پیامکی را دریافت و تأیید کنید.<br>۳. پس از تأیید کد، حساب فعال می‌شود و وضعیت «منتظر فعال‌سازی» تغییر می‌کند.</p><small>اگر پیامک نمی‌رسد، ثبت سرپرست را تکرار نکنید؛ اتصال سرویس پیامک باید بررسی شود.</small></div></div>'+
  '<details class="rf-email-login" open><summary>ورود هنرجو، مدرس و کارکنان با ایمیل</summary>'+
  '<form id="rf-login" class="rf-form"><label class="portal-field"><span>ایمیل</span><input name="email" type="email" required autocomplete="username" placeholder="name@example.com" dir="ltr"/></label>'+
  '<label class="portal-field"><span>رمز عبور</span><input name="password" type="password" required autocomplete="current-password" placeholder="رمز حساب فعال شما" dir="ltr"/></label>'+
