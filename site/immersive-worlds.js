@@ -63,6 +63,23 @@ function startScene(THREE,node,idx){
   const torso=mesh(new THREE.SphereGeometry(1,32,22),dark,hero,0,-2.20,-.20);torso.scale.set(1.30,.66,.65);
   const chest=mesh(new THREE.SphereGeometry(1,32,22),steel,hero,0,-2.10,.28);chest.scale.set(.93,.47,.35);
   const neck=mesh(new THREE.CylinderGeometry(.30,.38,.75,24),gold,hero,0,-1.29,0);
+  // Articulated shoulder assemblies, forearm armor and luminous actuator joints.
+  for(const side of [-1,1]){
+   const shoulder=mesh(new THREE.SphereGeometry(.43,24,18),steel,hero,side*1.02,-1.84,-.15);
+   shoulder.scale.set(1.06,.85,.86);
+   const upper=mesh(new THREE.CylinderGeometry(.19,.31,.97,16),steel,hero,side*1.29,-2.30,.03);
+   upper.rotation.z=side*.24;
+   const elbow=sphere(hero,side*1.40,-2.73,.12,.19,gold);
+   const wrist=mesh(new THREE.CylinderGeometry(.17,.21,.56,16),dark,hero,side*1.49,-3.05,.24);
+   wrist.rotation.z=-side*.20;
+   const cuff=ring(hero,.175,.024,glow,[Math.PI/2,0,0]);
+   cuff.position.set(side*1.49,-3.04,.24);
+  }
+  // Fine light seams read as assembled machinery rather than one smooth primitive.
+  for(let j=0;j<4;j++){
+    const fin=mesh(new THREE.BoxGeometry(.46,.026,.08),j%2?glow:amber,hero,0,-2.05+j*.18,.60);
+    fin.rotation.z=.025*j;
+  }
   const head=mesh(new THREE.SphereGeometry(1,46,32),steel,hero,0,.20,.02);head.scale.set(.83,1.12,.66);
   const face=mesh(new THREE.SphereGeometry(1,32,22),dark,hero,0,.03,.56);face.scale.set(.59,.64,.19);
   for(const side of [-1,1]){

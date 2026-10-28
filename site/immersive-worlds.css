@@ -4,7 +4,7 @@
 .rf-cinema-scene{scroll-margin-top:94px;overflow:hidden;perspective:1000px;background:radial-gradient(circle at 25% 35%,#1d5056 0%,#081923 35%,#030b13 79%)!important}
 .rf-cinema-ai{min-height:clamp(710px,92vh,940px)!important}
 .rf-cinema-chain,.rf-cinema-markets{min-height:clamp(600px,75vh,840px)!important;border-top:1px solid #b1f5eb4d}
-.rf-cinema-scene.rf-webgl-ready .rf-cinema-photo{opacity:0!important;transition:opacity .65s ease}
+.rf-cinema-scene.rf-webgl-ready .rf-cinema-photo{opacity:.37!important;filter:brightness(.49) saturate(.92) blur(1px)!important;transition:opacity .65s ease,filter .65s ease;transform:scale(1.035)!important}
 .rf-live-3d{position:absolute;inset:0;display:block;width:100%;height:100%;z-index:-2;pointer-events:none}
 .rf-cinema-scene.rf-webgl-ready .rf-cinema-shade{background:linear-gradient(270deg,rgba(1,10,18,.97),rgba(3,17,27,.87) 24%,rgba(3,14,24,.50) 42%,transparent 73%),linear-gradient(0deg,#030b12e8,transparent 20%,transparent 80%,#071b2499)!important}
 .rf-cinema-scene:before{background:radial-gradient(circle at 50% 20%,#34cddf23,transparent 45%)!important}
@@ -40,3 +40,19 @@
 }
 @media(max-width:390px){.rf-cinema-ai{min-height:790px!important}.rf-cinema-content{padding-inline:18px!important}.rf-cinema-world-nav button{font-size:10px}}
 @media(prefers-reduced-motion:reduce){.rf-cinema-scene.rf-webgl-ready .rf-cinema-photo,.rf-cinema-world-nav button{transition:none!important}.rf-live-3d{animation:none!important}}
+
+/* Luxurious architectural depth behind interactive meshes. The photographic room
+   is scenery only; the robot, cube lattice and trading station are real 3D. */
+.rf-cinema-scene.rf-webgl-ready .rf-cinema-photo{mix-blend-mode:screen!important}
+.rf-cinema-scene.rf-webgl-ready .rf-cinema-shade{background:linear-gradient(270deg,rgba(1,10,18,.94),rgba(3,17,27,.83) 25%,rgba(3,14,24,.26) 47%,transparent 80%),linear-gradient(0deg,#030b12dd,transparent 22%,transparent 75%,#071b2469)!important}
+.rf-cinema-ai.rf-webgl-ready .rf-cinema-photo{opacity:.29!important;object-position:45% 50%!important}
+.rf-cinema-chain.rf-webgl-ready .rf-cinema-photo{opacity:.38!important}
+.rf-cinema-markets.rf-webgl-ready .rf-cinema-photo{opacity:.35!important}
+.rf-cinema-landing #rf26-main-title{font-weight:900!important;letter-spacing:-2px!important}
+.rf-cinema-story h2{max-width:620px}
+.rf-cinema-world-nav{background:linear-gradient(105deg,#021d28ec,#071c27e6);box-shadow:inset 0 1px #c2f9e13a,0 18px 45px #0009!important}
+@media(max-width:780px){
+ .rf-cinema-scene.rf-webgl-ready .rf-cinema-photo{opacity:.22!important;filter:brightness(.32) saturate(.75) blur(1px)!important}
+ .rf-cinema-scene.rf-webgl-ready .rf-cinema-shade{background:linear-gradient(0deg,#030d16f9,#03121bea 26%,#03172371 60%,#03121bb5)!important}
+}
+@media(prefers-reduced-motion:reduce){.rf-cinema-scene.rf-webgl-ready .rf-cinema-photo{transition:none!important}}
