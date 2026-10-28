@@ -232,6 +232,8 @@ function allowedProxy(path:string,method:string,token:string){
   const directWrites={
    '/rest/v1/academy_classes':['POST'],
    '/rest/v1/academy_assignments':['POST'],
+   '/rest/v1/academy_personal_tasks':['POST'],
+   '/rest/v1/academy_personal_task_submissions':['POST','PATCH'],
    '/rest/v1/academy_guardian_students':['PATCH']
   };
   if(!directWrites[pathname]?.includes(method))return false;
