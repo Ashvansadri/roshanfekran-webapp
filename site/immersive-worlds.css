@@ -1,0 +1,42 @@
+/* REAL WEBGL SCENE EXPERIENCE — photographic images are now fallbacks only. */
+.rf26-home .rf-cinema-landing{background:#030b12!important}
+.rf-cinema-panels{gap:0!important;background:#061621!important}
+.rf-cinema-scene{scroll-margin-top:94px;overflow:hidden;perspective:1000px;background:radial-gradient(circle at 25% 35%,#1d5056 0%,#081923 35%,#030b13 79%)!important}
+.rf-cinema-ai{min-height:clamp(710px,92vh,940px)!important}
+.rf-cinema-chain,.rf-cinema-markets{min-height:clamp(600px,75vh,840px)!important;border-top:1px solid #b1f5eb4d}
+.rf-cinema-scene.rf-webgl-ready .rf-cinema-photo{opacity:0!important;transition:opacity .65s ease}
+.rf-live-3d{position:absolute;inset:0;display:block;width:100%;height:100%;z-index:-2;pointer-events:none}
+.rf-cinema-scene.rf-webgl-ready .rf-cinema-shade{background:linear-gradient(270deg,rgba(1,10,18,.97),rgba(3,17,27,.87) 24%,rgba(3,14,24,.50) 42%,transparent 73%),linear-gradient(0deg,#030b12e8,transparent 20%,transparent 80%,#071b2499)!important}
+.rf-cinema-scene:before{background:radial-gradient(circle at 50% 20%,#34cddf23,transparent 45%)!important}
+.rf-cinema-content{padding-top:clamp(90px,10vw,148px)!important;padding-bottom:95px!important}
+.rf-cinema-landing #rf26-main-title{font-size:clamp(48px,5.5vw,92px)!important;line-height:1.48!important;font-weight:900!important;letter-spacing:-3.5px!important;text-shadow:0 9px 50px #010609f2}
+.rf-cinema-landing #rf26-main-title em{color:#84f3ee!important;text-shadow:0 0 42px #37cfcf77}
+.rf-cinema-landing .rf26-hero-copy>p{font-size:clamp(15px,1.35vw,19px)!important;max-width:490px!important}
+.rf-cinema-kicker{color:#efc18f!important}
+.rf-cinema-world-nav{position:absolute;z-index:4;right:50%;transform:translateX(50%);bottom:24px;display:flex;gap:5px;border:1px solid #b4f8dd59;border-radius:14px;background:#021521c9;padding:7px;backdrop-filter:blur(24px);box-shadow:0 20px 48px #0008}
+.rf-cinema-world-nav button{border:0;background:transparent;color:#d8eee9;border-radius:10px;padding:13px 18px;font:800 12px "Segoe UI",Arial,sans-serif;cursor:pointer;transition:background .25s}
+.rf-cinema-world-nav button span{margin-left:9px;color:#e9c18d;letter-spacing:1px}
+.rf-cinema-world-nav button:first-child{background:#18515d}
+.rf-cinema-world-nav button:hover,.rf-cinema-world-nav button:focus-visible{background:#1d5264;outline:2px solid #8df8e5;outline-offset:1px}
+.rf-3d-live-label{display:block;width:max-content;color:#b4e9e6;letter-spacing:.2px;background:#14444c85;border:1px solid #81d6d44a;border-radius:100px;padding:5px 14px;font-size:10px}
+.rf-cinema-ai .rf-cinema-edge{bottom:27px}
+.rf-cinema-steps,.rf-cinema-infographic{backdrop-filter:blur(10px)}
+.rf-cinema-steps div,.rf-cinema-infographic span{border:1px solid #95e9df6b!important;background:#08232bca!important}
+.rf-cinema-scene .rf-cinema-story h2{font-size:clamp(51px,4.9vw,83px)!important;letter-spacing:-2.5px!important}
+.rf-cinema-scene .rf-cinema-story p{font-size:clamp(15px,1.3vw,18px)!important}
+.rf-cinema-content .rf26-btn-glow,.rf-cinema-link{box-shadow:0 10px 40px #e1ae6b43!important}
+.rf-cinema-disclaimer{color:#9fccc8!important;max-width:1180px!important;text-align:center!important;margin:0 auto!important;padding:13px 12px 23px!important}
+.rf-cinema-photo{opacity:.76;filter:saturate(.85) brightness(.8)!important}
+@media(max-width:780px){
+ .rf-cinema-ai{min-height:740px!important}.rf-cinema-chain,.rf-cinema-markets{min-height:580px!important}
+ .rf-cinema-content{padding:45px 24px 108px!important}
+ .rf-cinema-landing #rf26-main-title{font-size:clamp(40px,8.7vw,64px)!important;letter-spacing:-1.8px!important}
+ .rf-cinema-scene.rf-webgl-ready .rf-cinema-shade{background:linear-gradient(0deg,#03121afa,rgba(4,18,26,.93) 28%,rgba(4,20,29,.46) 68%,#02111ca8)!important}
+ .rf-cinema-world-nav{bottom:14px;width:calc(100% - 30px);max-width:390px;justify-content:space-between}
+ .rf-cinema-world-nav button{padding:12px 11px;font-size:11px}
+ .rf-cinema-world-nav button span{margin-left:4px}
+ .rf-cinema-ai .rf-cinema-edge{display:none}
+ .rf-3d-live-label{font-size:9px}
+}
+@media(max-width:390px){.rf-cinema-ai{min-height:790px!important}.rf-cinema-content{padding-inline:18px!important}.rf-cinema-world-nav button{font-size:10px}}
+@media(prefers-reduced-motion:reduce){.rf-cinema-scene.rf-webgl-ready .rf-cinema-photo,.rf-cinema-world-nav button{transition:none!important}.rf-live-3d{animation:none!important}}
