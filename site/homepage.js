@@ -99,7 +99,7 @@ function render(state){
  '<div class="rf-cinema-panels" data-rf-immersive-worlds="true">'+
  '<article class="rf-cinema-scene rf-cinema-ai"><img class="rf-cinema-photo" src="/assets/rf_ai_real3d.webp" alt="" width="1600" height="900" fetchpriority="high" decoding="async"/><div class="rf-cinema-shade" aria-hidden="true"></div>'+
  '<div class="rf-cinema-content shell"><div class="rf26-hero-copy"><div class="rf26-eyebrow rf-cinema-eyebrow"><span class="rf26-eyebrow-glow"></span><span>آموزشگاه روشنفکران · اقلید</span><i></i><span class="rf26-latin">ROSHANFEKRAN / FUTURE ACADEMY</span></div>'+
- '<span class="rf-cinema-kicker"><i></i> 01 / ARTIFICIAL INTELLIGENCE</span><span class="rf-3d-live-label">◌ جهان تعاملی سه‌بعدی · حرکت موس برای کاوش</span>'+
+ '<span class="rf-cinema-kicker"><i></i> 01 / ARTIFICIAL INTELLIGENCE</span><span class="rf-3d-live-label">◌ در حال بررسی قابلیت سه‌بعدی دستگاه…</span>'+
  '<h1 id="rf26-main-title">فقط تماشا نکن.<br/><em>آینده را بساز.</em></h1>'+
  '<p>از اولین ایده تا پروژه و رزومه. وارد دنیایی شو که یادگیری در آن یک تجربه تعاملی است، نه فقط تماشای آموزش.</p>'+
  '<div class="rf26-hero-actions"><button type="button" class="rf26-btn rf26-btn-glow" data-rf26-scroll="rf26-discover">کشف مسیر یادگیری <span aria-hidden="true">↗</span></button><a href="#/courses" class="rf26-btn rf26-btn-ghost">دوره‌های ثبت‌نام باز <span aria-hidden="true">←</span></a></div>'+

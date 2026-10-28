@@ -10,6 +10,11 @@ const LIB="/vendor/three/three.module.min.js";
 let threePromise=null, watchers=null, entries=new Map(), mutationQueued=false, dynamicCount=0;
 const info={loaded:false,active:0,contexts:0,fallbacks:0,version:"immersive-v1"};
 window.RFIMMERSIVE=info;
+function setStatus(node,value){
+ node.dataset.rf3dStatus=value;
+ const label=node.querySelector(".rf-3d-live-label");
+ if(label)label.textContent=value==="live"?"◉ صحنه سه‌بعدی فعال · موس را حرکت بده":"◌ نسخه تصویری سبک؛ سه‌بعدی در این دستگاه در دسترس نیست";
+}
 function loadThree(){if(!threePromise)threePromise=import(LIB);return threePromise}
 const rand=(a,b)=>a+Math.random()*(b-a);
 function startScene(THREE,node,idx){
@@ -179,10 +184,10 @@ function scan(){
    if(entries.has(el)){entries.get(el).setVisible(true);continue}
    if(el.dataset.rf3dAttempted)return;
    el.dataset.rf3dAttempted="true";
-   let THREE;try{THREE=await loadThree()}catch{el.dataset.rf3dStatus="fallback";info.fallbacks++;continue}
+   let THREE;try{THREE=await loadThree()}catch{setStatus(el,"fallback");info.fallbacks++;continue}
    if(!el.isConnected)continue;
-   try{const state=startScene(THREE,el,idx);entries.set(el,state);state.setVisible(true);el.dataset.rf3dStatus="live"}
-   catch(err){el.dataset.rf3dStatus="fallback";info.fallbacks++;console.warn("3D fallback enabled",err)}
+   try{const state=startScene(THREE,el,idx);entries.set(el,state);state.setVisible(true);setStatus(el,"live")}
+   catch(err){setStatus(el,"fallback");info.fallbacks++;console.warn("3D fallback enabled",err)}
   }
  },{rootMargin:"120px 0px",threshold:.05});
  nodes.forEach(el=>watchers.observe(el));
