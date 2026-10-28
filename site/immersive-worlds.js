@@ -215,7 +215,16 @@ if(ROOT)observer.observe(ROOT,{childList:true,subtree:true});
 document.addEventListener("click",e=>{
  const b=e.target.closest("[data-rf-jump-scene]");if(!b)return;
  const n=Number(b.dataset.rfJumpScene);if(!Number.isInteger(n)||n<0||n>2)return;
- const el=document.querySelectorAll(".rf-cinema-scene")[n];if(el)el.scrollIntoView({behavior:prefersReduced.matches?"instant":"smooth",block:"start"})
+ const container=document.querySelector(".rf-cinema-panels");
+ if(!container)return;
+ container.dataset.rfWorld=String(n);
+ container.querySelectorAll("[data-rf-jump-scene]").forEach(btn=>{
+  const active=Number(btn.dataset.rfJumpScene)===n;
+  btn.setAttribute("aria-pressed",String(active));
+ });
+ const el=container.querySelectorAll(":scope > .rf-cinema-scene")[n];
+ if(el)el.scrollIntoView({behavior:prefersReduced.matches?"instant":"smooth",block:"start"});
+
 });
 document.addEventListener("visibilitychange",()=>{for(const [el,s] of entries) s.setVisible(!document.hidden&&el.getBoundingClientRect().bottom>0&&el.getBoundingClientRect().top<innerHeight)});
 window.addEventListener("pagehide",()=>{for(const s of entries.values())s.stop();entries.clear()});

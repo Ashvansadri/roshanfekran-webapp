@@ -56,3 +56,21 @@
  .rf-cinema-scene.rf-webgl-ready .rf-cinema-shade{background:linear-gradient(0deg,#030d16f9,#03121bea 26%,#03172371 60%,#03121bb5)!important}
 }
 @media(prefers-reduced-motion:reduce){.rf-cinema-scene.rf-webgl-ready .rf-cinema-photo{transition:none!important}}
+
+/* Compact world-switcher: three actual 3D scenes, one cinematic viewport. */
+.rf-cinema-panels[data-rf-immersive-worlds]{display:block!important;position:relative!important;isolation:isolate}
+.rf-cinema-panels[data-rf-immersive-worlds]>.rf-cinema-scene{display:none!important;min-height:clamp(690px,92vh,930px)!important}
+.rf-cinema-panels[data-rf-immersive-worlds][data-rf-world="0"]>.rf-cinema-ai,
+.rf-cinema-panels[data-rf-immersive-worlds][data-rf-world="1"]>.rf-cinema-chain,
+.rf-cinema-panels[data-rf-immersive-worlds][data-rf-world="2"]>.rf-cinema-markets{display:flex!important}
+.rf-cinema-panels[data-rf-immersive-worlds]>.rf-cinema-world-nav{bottom:26px!important;z-index:9}
+.rf-cinema-panels[data-rf-immersive-worlds]>.rf-cinema-world-nav button[aria-pressed=true]{background:#205565!important;color:#fff!important;box-shadow:inset 0 1px #b6fce365,0 5px 18px #0005}
+.rf-cinema-panels[data-rf-immersive-worlds]>.rf-cinema-world-nav button[aria-pressed=true] span{color:#f9ce90!important}
+.rf-cinema-panels[data-rf-immersive-worlds]>.rf-cinema-scene .rf-cinema-content{padding-bottom:155px!important}
+.rf-cinema-panels[data-rf-immersive-worlds]>.rf-cinema-scene .rf-cinema-edge{display:none!important}
+@media(max-width:780px){
+ .rf-cinema-panels[data-rf-immersive-worlds]>.rf-cinema-scene{min-height:760px!important}
+ .rf-cinema-panels[data-rf-immersive-worlds]>.rf-cinema-scene .rf-cinema-content{padding-bottom:130px!important}
+ .rf-cinema-panels[data-rf-immersive-worlds]>.rf-cinema-world-nav{bottom:12px!important}
+}
+@media(max-width:420px){.rf-cinema-panels[data-rf-immersive-worlds]>.rf-cinema-scene{min-height:790px!important}}

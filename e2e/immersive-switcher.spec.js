@@ -1,0 +1,20 @@
+const {test,expect}=require('@playwright/test');
+test('three live worlds switch within one viewport without creating three stacked hero sections',async({page})=>{
+ await page.goto('/',{waitUntil:'domcontentloaded'});
+ const worlds=page.locator('.rf-cinema-panels');
+ await expect(worlds).toHaveAttribute('data-rf-world','0');
+ await expect(page.locator('.rf-cinema-ai')).toBeVisible();
+ await expect(page.locator('.rf-cinema-chain')).toBeHidden();
+ await page.locator('[data-rf-jump-scene="1"]').click();
+ await expect(worlds).toHaveAttribute('data-rf-world','1');
+ await expect(page.locator('.rf-cinema-chain')).toBeVisible();
+ await expect(page.locator('.rf-cinema-ai')).toBeHidden();
+ await expect(page.locator('[data-rf-jump-scene="1"]')).toHaveAttribute('aria-pressed','true');
+ await page.locator('[data-rf-jump-scene="2"]').click();
+ await expect(worlds).toHaveAttribute('data-rf-world','2');
+ await expect(page.locator('.rf-cinema-markets')).toBeVisible();
+ await expect(page.locator('.rf-cinema-chain')).toBeHidden();
+ await page.locator('[data-rf-jump-scene="0"]').click();
+ await expect(worlds).toHaveAttribute('data-rf-world','0');
+ await expect(page.locator('#rf26-main-title')).toBeVisible();
+});
