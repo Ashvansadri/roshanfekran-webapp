@@ -25,6 +25,8 @@ const configs={
  installments:["academy_installments","id,enrollment_id,installment_no,amount,paid_amount,due_date,status"],
  classes:["academy_classes","id,course_id,title,session_no,starts_at,ends_at,room,mode,status,published"],
  assignments:["academy_assignments","id,course_id,title,instructions,due_at,published,notify_guardians,created_at"],
+ personalTasks:["academy_personal_tasks","id,student_id,course_id,title,instructions,due_at,published,created_at"],
+ personalTaskSubmissions:["academy_personal_task_submissions","id,task_id,student_id,submitted_at,submission_text,submission_url,status,score,feedback"],
  submissions:["academy_assignment_submissions","id,assignment_id,student_id,status,score,submitted_at,feedback"],
  guardians:["academy_guardians","id,full_name,email,mobile,user_id,active"],
  links:["academy_guardian_students","id,guardian_id,student_id,can_view_academic,can_view_attendance,can_view_finance,can_receive_notifications"],
@@ -38,7 +40,7 @@ const grants={
  owner:Object.keys(configs),
  manager:Object.keys(configs),
  finance:["courses","enrollments","payments","ledgerPayments","installments","students"],
- teacher:["courses","classes","assignments","submissions"],
+ teacher:["courses","classes","assignments","submissions","personalTasks","personalTaskSubmissions"],
  registrar:["courses","courseOps","students","enrollments","applications","guardians","links","studentContracts","serviceRequests","documents"],
  viewer:["courses"],
 };
@@ -101,14 +103,14 @@ async function loadTeacher(generation){
  const students=core.students.filter(s=>uuid(s.id)).map(s=>({
   id:s.id,full_name:String(s.full_name||"هنرجو")
  }));
- const next={courses,students,classes:[],assignments:[],submissions:[]};
+ const next={courses,students,classes:[],assignments:[],submissions:[],personalTasks:[],personalTaskSubmissions:[]};
  const failuresNext={};
  if(!courseIds.size){
   if(generation!==sessionEpoch)return false;
   datasets=next;failures=failuresNext;return true;
  }
  const courseFilter="&course_id=in.("+[...courseIds].map(encodeURIComponent).join(",")+")";
- const firstKeys=["classes","assignments"];
+ const firstKeys=["classes","assignments","personalTasks"];
  const first=await Promise.allSettled(firstKeys.map(key=>{
   const [table,cols]=configs[key];
   return proxy("/rest/v1/"+table+"?select="+cols+courseFilter+"&limit=150");
@@ -134,6 +136,15 @@ async function loadTeacher(generation){
   }catch(e){if(generation!==sessionEpoch)return false;failuresNext.submissions=String(e?.message||e)}
  }
  if(generation!==sessionEpoch)return false;
+ const targeted=next.personalTasks.map(x=>x.id).filter(uuid);
+ if(targeted.length){
+  try{
+   const received=await proxy("/rest/v1/academy_personal_task_submissions?select="+configs.personalTaskSubmissions[1]+"&task_id=in.("+targeted.map(encodeURIComponent).join(",")+")&limit=150");
+   if(generation!==sessionEpoch)return false;
+   if(!Array.isArray(received))throw Error("پاسخ ارزیابی اختصاصی معتبر نیست");
+   const set=new Set(targeted);next.personalTaskSubmissions=received.filter(x=>set.has(x.task_id));
+  }catch(e){if(generation!==sessionEpoch)return false;failuresNext.personalTaskSubmissions=String(e.message||e)}
+ }
  datasets=next;failures=failuresNext;
  return true;
 }
@@ -566,6 +577,7 @@ function finance(){
 }
 function tasks(){
  const items=row("assignments"),classes=row("classes"),courses=row("courses"),students=row("students"),submissions=row("submissions");
+ const personal=row("personalTasks"),personalSub=row("personalTaskSubmissions");
  const assigned=courses.filter(c=>c.status==="active"||c.status==="planned");
  const classEditor=assigned.length?'<details class="rfops-course-editor rfops-session-editor"><summary>برنامه‌ریزی جلسه جدید</summary><form id="rfops-class" class="rfops-form"><label>دوره<select name="course_id" required>'+assigned.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.title)+'</option>').join("")+'</select></label><label>عنوان جلسه<input name="title" minlength="3" maxlength="120" required placeholder="مثلاً کارگاه پروژه عملی"/></label><label>شماره جلسه<input name="session_no" type="number" min="1" max="200" step="1" required/></label><label>شروع جلسه<input name="starts_at" type="datetime-local" required/></label><label>پایان جلسه<input name="ends_at" type="datetime-local" required/></label><label>شیوه برگزاری<select name="mode"><option value="in_person">حضوری</option><option value="online">آنلاین</option><option value="hybrid">ترکیبی</option></select></label><label>اتاق یا محل برگزاری<input name="room" maxlength="100" placeholder="اختیاری"/></label><label class="rfops-consent"><input type="checkbox" name="published"/> جلسه همین حالا منتشر شود و برای هنرجویان ثبت‌نام‌شده اعلان داخلی ایجاد شود.</label><button class="btn btn-primary" type="submit" '+(working?"disabled":"")+'>ثبت جلسه در تقویم</button><small>به‌صورت پیش‌فرض پیش‌نویس است و اعلانی ارسال نمی‌شود. زمان‌ها براساس ساعت دستگاه شما وارد می‌شوند.</small></form></details>':'<p class="rf-caption">برای برنامه‌ریزی جلسه، ابتدا یک دوره فعال یا برنامه‌ریزی‌شده لازم است.</p>';
  const classTimeline=classes.length?'<div class="rfops-table-wrap"><table><thead><tr><th>دوره و جلسه</th><th>زمان شروع و پایان</th><th>نوع و مکان</th><th>وضعیت</th></tr></thead><tbody>'+classes.slice().sort((a,b)=>String(a.starts_at||"").localeCompare(String(b.starts_at||""))).map(c=>'<tr><td><strong>'+esc(c.title||"جلسه "+fa(c.session_no||0))+'</strong><small>'+esc(name("courses",c.course_id))+' · جلسه '+fa(c.session_no||0)+'</small></td><td>'+dateTime(c.starts_at)+'<small>تا '+dateTime(c.ends_at)+'</small></td><td>'+esc(({"in_person":"حضوری","online":"آنلاین","hybrid":"ترکیبی"})[c.mode]||"—")+'<small>'+esc(c.room||"—")+'</small></td><td>'+esc(c.status||"—")+'<small>'+(c.published?"منتشرشده":"پیش‌نویس")+'</small></td></tr>').join("")+'</tbody></table></div>':empty("classes","هنوز جلسه‌ای برای دوره‌های مجاز ثبت نشده است.");
@@ -608,8 +620,25 @@ function tasks(){
     '</p>'+summaryHTML+(forms||'<div class="rf-empty">هنرجوی فعال ثبت‌نام‌شده‌ای برای این جلسه وجود ندارد.</div>')+'</div>';
   }
  }
+ const personalEditor='<section class="rf-personal-editor"><h4>✦ تکلیف اختصاصی برای یک هنرجو</h4><p>مدرس ابتدا هنرجو و دوره او را انتخاب می‌کند؛ سرور ارتباط ثبت‌نام را تأیید می‌کند. این تکلیف برای سایر هنرجویان نمایش داده نمی‌شود.</p>'+
+ '<form id="rfops-personal-task" class="rfops-form"><label>دوره<select name="course_id" required>'+assigned.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.title)+'</option>').join("")+'</select></label>'+
+ '<label>هنرجو<select name="student_id" required>'+students.map(st=>'<option value="'+esc(st.id)+'">'+esc(st.full_name)+'</option>').join("")+'</select></label>'+
+ '<label>عنوان تکلیف<input name="title" minlength="4" maxlength="150" required/></label>'+
+ '<label>مهلت تکلیف<input name="due_at" type="datetime-local" required/></label>'+
+ '<label class="rfops-wide">شرح تمرین<textarea name="instructions" minlength="8" maxlength="4000" rows="3" required></textarea></label>'+
+ '<button type="submit" '+(working||!assigned.length||!students.length?"disabled":"")+'>تأیید و انتشار فقط برای این هنرجو</button></form>'+
+ '<h4>تحویل و ارزیابی تکالیف اختصاصی</h4>'+
+ (personal.length?'<div class="rfops-cards">'+personal.map(t=>{
+  const sub=personalSub.find(s=>s.task_id===t.id);
+  return '<article class="rfops-card"><strong>'+esc(t.title)+'</strong><p>'+esc(name("students",t.student_id))+' · '+esc(name("courses",t.course_id))+' · مهلت '+esc(dateTime(t.due_at))+'</p>'+
+  (sub?'<p>تحویل هنرجو: '+esc(sub.submission_text||"")+'</p>'+
+   (String(sub.submission_url||"").startsWith("https://")?'<a href="'+esc(sub.submission_url)+'" target="_blank" rel="noopener noreferrer">لینک پروژه ↗</a>':"")+
+   (sub.status==="reviewed"?'<p>نمره: '+fa(sub.score)+' / ۱۰۰ · '+esc(sub.feedback||"")+'</p>':
+   '<form class="rfops-form" data-rfops-form="personal-grade" data-sub="'+esc(sub.id)+'" data-task="'+esc(t.id)+'"><label>نمره<input type="number" name="score" min="0" max="100" step="0.5" required/></label><label class="rfops-wide">بازخورد<input name="feedback" minlength="3" maxlength="2000" required/></label><button type="submit">ثبت ارزیابی فردی</button></form>'):
+   '<p class="rf-caption">هنوز تحویل داده نشده است.</p>')+'</article>';
+ }).join("")+'</div>':'<p class="rf-caption">هنوز تکلیف اختصاصی در فهرست مجاز ثبت نشده است.</p>')+'</section>';
  return section("کلاس‌ها، تکالیف و ارزیابی",'<p>می‌توانید تکلیف منتشر کنید و وضعیت تحویل آن را از همین سامانه بررسی کنید. اگر گزینه اعلان سرپرست فعال باشد، تکالیف جدید و تکالیف عقب‌افتاده برای سرپرست دارای مجوز در مرکز اعلان ثبت می‌شوند.</p>'+
- classEditor+'<h4>تقویم جلسات ثبت‌شده</h4>'+classTimeline+'<h4>حضور و غیاب جلسات</h4>'+attendanceSelector+attendancePanel+'<h4>تعریف تکلیف</h4>'+'<p class="rf-caption">کمک‌یار تکلیف فقط پیش‌نویس می‌سازد؛ مدرس باید آن را بررسی و با دکمه انتشار تأیید کند. هنوز تکلیف اختصاصی خودکار برای هر هنرجو نیست.</p>'+'<form id="rfops-assignment" class="rfops-form"><div class="rf-assignment-agent"><div><strong>✦ کمک‌یار طراحی تکلیف</strong><small>متناسب با عنوان دوره؛ بدون ارسال اطلاعات هنرجو و بدون انتشار خودکار</small></div><label>مهارت مورد نظر<input name="draft_skill" maxlength="100" placeholder="مثلاً پرامپت‌نویسی" /></label><label>سطح تمرین<select name="draft_level"><option value="beginner">مقدماتی</option><option value="intermediate">متوسط</option><option value="advanced">پیشرفته</option></select></label><button type="button" data-rf-draft-assignment>ساخت پیش‌نویس و بازبینی ←</button><p class="rf-agent-feedback" aria-live="polite"></p></div><label>دوره<select name="course_id" required>'+assigned.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.title)+'</option>').join("")+'</select></label><label>عنوان تکلیف<input name="title" minlength="4" maxlength="150" required/></label><label>مهلت تکلیف<input name="due_at" type="datetime-local" required/></label><label class="rfops-wide">شرح تمرین<textarea name="instructions" rows="3" required minlength="8"></textarea></label><label class="rfops-consent"><input type="checkbox" name="notify_guardians" checked/> در صورت فعال بودن نظارت، خانواده هم تکلیف و تأخیر را ببیند.</label><button class="btn btn-primary" '+(!assigned.length||working?"disabled":"")+' type="submit">انتشار تکلیف و آگاه‌سازی</button></form>'+
+ personalEditor+classEditor+'<h4>تقویم جلسات ثبت‌شده</h4>'+classTimeline+'<h4>حضور و غیاب جلسات</h4>'+attendanceSelector+attendancePanel+'<h4>تعریف تکلیف</h4>'+'<p class="rf-caption">کمک‌یار تکلیف فقط پیش‌نویس می‌سازد؛ مدرس باید آن را بررسی و با دکمه انتشار تأیید کند. هنوز تکلیف اختصاصی خودکار برای هر هنرجو نیست.</p>'+'<form id="rfops-assignment" class="rfops-form"><div class="rf-assignment-agent"><div><strong>✦ کمک‌یار طراحی تکلیف</strong><small>متناسب با عنوان دوره؛ بدون ارسال اطلاعات هنرجو و بدون انتشار خودکار</small></div><label>مهارت مورد نظر<input name="draft_skill" maxlength="100" placeholder="مثلاً پرامپت‌نویسی" /></label><label>سطح تمرین<select name="draft_level"><option value="beginner">مقدماتی</option><option value="intermediate">متوسط</option><option value="advanced">پیشرفته</option></select></label><button type="button" data-rf-draft-assignment>ساخت پیش‌نویس و بازبینی ←</button><p class="rf-agent-feedback" aria-live="polite"></p></div><label>دوره<select name="course_id" required>'+assigned.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.title)+'</option>').join("")+'</select></label><label>عنوان تکلیف<input name="title" minlength="4" maxlength="150" required/></label><label>مهلت تکلیف<input name="due_at" type="datetime-local" required/></label><label class="rfops-wide">شرح تمرین<textarea name="instructions" rows="3" required minlength="8"></textarea></label><label class="rfops-consent"><input type="checkbox" name="notify_guardians" checked/> در صورت فعال بودن نظارت، خانواده هم تکلیف و تأخیر را ببیند.</label><button class="btn btn-primary" '+(!assigned.length||working?"disabled":"")+' type="submit">انتشار تکلیف و آگاه‌سازی</button></form>'+
  '<div class="rfops-summary"><div><strong>'+fa(classes.length)+'</strong><span>جلسه ثبت‌شده</span></div><div><strong>'+fa(items.length)+'</strong><span>تکلیف</span></div><div><strong>'+fa(submissions.length)+'</strong><span>تحویل انجام‌شده</span></div></div>'+
  (items.length?'<div class="rfops-cards">'+items.map(x=>{
  const subs=submissions.filter(s=>s.assignment_id===x.id);
@@ -946,7 +975,36 @@ async function formSubmit(form){
       created[0].published!==published||created[0].status!=="scheduled")
     throw Error("ثبت جلسه در سرور تأیید نشد؛ پیش از تلاش دوباره فهرست جلسات را تازه‌سازی کنید.");
    info=published?"جلسه منتشر شد؛ اعلان داخلی برای هنرجویان واجد شرایط ایجاد می‌شود.":"جلسه به‌صورت پیش‌نویس و بدون اعلان ثبت شد.";
-  }else if(form.id==="rfops-assignment"){
+  }else if(form.id==="rfops-personal-task"){
+  if(!teacher())throw Error("فقط مدرس یا مدیر می‌تواند تکلیف اختصاصی ثبت کند.");
+  const course_id=String(data.get("course_id")||""),student_id=String(data.get("student_id")||""),
+   title=String(data.get("title")||"").trim(),instructions=String(data.get("instructions")||"").trim(),
+   due_at=String(data.get("due_at")||""),due=Date.parse(due_at);
+  if(!uuid(course_id)||!uuid(student_id)||!row("courses").some(x=>x.id===course_id)||
+   !row("students").some(x=>x.id===student_id)||title.length<4||title.length>150||
+   instructions.length<8||instructions.length>4000||!Number.isFinite(due)||due<Date.now()+60000)
+   throw Error("هنرجو، دوره، شرح یا مهلت معتبر نیست.");
+  if(!confirm("تکلیف تنها برای هنرجوی انتخاب‌شده منتشر شود؟"))return;
+  working=true;
+  const saved=await proxy("/rest/v1/academy_personal_tasks","POST",{course_id,student_id,title,instructions,due_at:new Date(due).toISOString(),published:true},"return=representation");
+  if(!Array.isArray(saved)||saved.length!==1||!uuid(saved[0].id)||saved[0].student_id!==student_id)
+   throw Error("سرور ثبت تکلیف را تأیید نکرد. پیش از ارسال دوباره فهرست را بررسی کنید.");
+  info="تکلیف اختصاصی با مجوز مدرس ثبت شد.";
+ }else if(form.dataset?.rfopsForm==="personal-grade"){
+  if(!teacher())throw Error("ارزیابی اختصاصی فقط برای مدرس یا مدیر است.");
+  const id=String(form.dataset.sub||""),task=String(form.dataset.task||"");
+  const score=Number(data.get("score")),feedback=String(data.get("feedback")||"").trim();
+  if(!uuid(id)||!uuid(task)||!row("personalTaskSubmissions").some(x=>x.id===id&&x.task_id===task)||
+   !Number.isFinite(score)||score<0||score>100||feedback.length<3||feedback.length>2000)
+   throw Error("نمره یا تکلیف نامعتبر است.");
+  if(!confirm("نمره و بازخورد این هنرجو ثبت شود؟"))return;
+  working=true;
+  const saved=await proxy("/rest/v1/academy_personal_task_submissions?id=eq."+encodeURIComponent(id),"PATCH",
+   {status:"reviewed",score,feedback,reviewed_at:new Date().toISOString()},"return=representation");
+  if(!Array.isArray(saved)||saved.length!==1||saved[0].id!==id||saved[0].status!=="reviewed")
+   throw Error("تأیید ارزیابی اختصاصی از سرور دریافت نشد.");
+  info="ارزیابی فردی ثبت شد.";
+ }else if(form.id==="rfops-assignment"){
    if(!teacher())throw Error("فقط مدرس یا مدیر می‌تواند تکلیف بسازد.");
    const course_id=String(data.get("course_id")||""),title=String(data.get("title")||"").trim(),instructions=String(data.get("instructions")||"").trim(),due=String(data.get("due_at")||"");
    if(!uuid(course_id)||title.length<4||instructions.length<8||!due)throw Error("دوره، عنوان، توضیح و مهلت معتبر لازم است.");
@@ -969,7 +1027,7 @@ root?.addEventListener("click",event=>{
 });
 root?.addEventListener("submit",event=>{
  const form=event.target;
- if(!["attendance","service-reply","document-review"].includes(form?.dataset?.rfopsForm)&&form?.id!=="rfops-invite-guardian"&&form?.id!=="rfops-assignment"&&form?.id!=="rfops-course-ops"&&form?.id!=="rfops-class"&&form?.id!=="rfops-contract-draft")return;
+ if(!["attendance","service-reply","document-review"].includes(form?.dataset?.rfopsForm)&&form?.id!=="rfops-invite-guardian"&&form?.id!=="rfops-assignment"&&form?.id!=="rfops-personal-task"&&form?.dataset?.rfopsForm!=="personal-grade"&&form?.id!=="rfops-course-ops"&&form?.id!=="rfops-class"&&form?.id!=="rfops-contract-draft")return;
  event.preventDefault();formSubmit(form);
 });
 window.RFOPS={load,render,reset,showOverview(){selected="overview"}};
