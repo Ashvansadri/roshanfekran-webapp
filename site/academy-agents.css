@@ -11,3 +11,15 @@
 .rf-student-coach h3{font-size:clamp(19px,2.6vw,29px)!important;color:#effff8!important;margin:14px 0}.rf-student-coach p{line-height:2.1!important;color:#c5e1da!important}
 .rf-student-coach-steps{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}.rf-student-coach-steps span{display:flex;align-items:center;gap:8px;padding:10px 12px;background:#0a2832;border:1px solid #8acfc250;border-radius:10px;font-size:11px;color:#e5f6ed}.rf-student-coach-steps b{color:#eed09c}
 @media(max-width:600px){.rf-student-coach{padding:17px!important}.rf-student-coach-steps span{flex:1 1 100%}}
+
+.rf-personal-tasks{margin:20px 0!important}
+.rf-personal-task-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,325px),1fr));gap:15px}
+.rf-personal-task{padding:20px;border-radius:18px;background:linear-gradient(130deg,#173e4a,#092430);border:1px solid #96e5d678}
+.rf-personal-task h4{color:#f3d6a2;font-size:20px;margin:10px 0}
+.rf-personal-task p{line-height:2;white-space:pre-wrap;overflow-wrap:anywhere;color:#d7e9e3;font-size:12px}
+.rf-personal-task>small{display:block;color:#a7ddd0;margin-bottom:14px}
+.rf-personal-task-status{background:#16443d;color:#c9f5df;padding:13px;border-radius:10px}
+.rf-personal-tasks :is(textarea,input){width:100%;min-width:0}
+.rf-personal-editor{border:1px solid #9addcf83;border-radius:17px;padding:18px;margin:22px 0;background:#0f3038}
+.rf-personal-editor h4{color:#f3d6a2;font-size:20px}.rf-personal-editor p{color:#beddd9;line-height:2;font-size:12px}
+@media(max-width:600px){.rf-personal-editor,.rf-personal-task{padding:14px}}

@@ -6,7 +6,7 @@ const safeURL=v=>{try{let u=new URL(String(v));return u.protocol==="https:"?u.hr
 const date=v=>{try{return new Intl.DateTimeFormat("fa-IR-u-ca-persian",{dateStyle:"medium"}).format(new Date(v))}catch{return "—"}};
 const num=v=>new Intl.NumberFormat("fa-IR").format(Number(v||0));
 let pushConfig=null,pushStatus=null,pushLocalEndpoint="",pushError="";
-let session=null,role=null,journey=null,parent=null,parentDetails=null,familyTip=null,resume=null,works=[],missions=[],campaigns=[],studentAssignments=[],studentSubmissions=[],studentNotifications=[],studentServiceRequests=[],studentServiceReady=false,staffData=null,finance=null,dailyFeed=null,dailyFeedError="",profileFormOpen=false,workFormOpen=false,stage=0,busy=false,error="",notice="",loading=false,quizQuestions=null,quizLoading=false;
+let session=null,role=null,journey=null,parent=null,parentDetails=null,familyTip=null,resume=null,works=[],missions=[],campaigns=[],studentAssignments=[],studentSubmissions=[],personalTasks=[],personalSubmissions=[],studentNotifications=[],studentServiceRequests=[],studentServiceReady=false,staffData=null,finance=null,dailyFeed=null,dailyFeedError="",profileFormOpen=false,workFormOpen=false,stage=0,busy=false,error="",notice="",loading=false,quizQuestions=null,quizLoading=false;
 try{const saved=sessionStorage.getItem("rf_safe_session_v1");if(saved)session=JSON.parse(saved)}catch{sessionStorage.removeItem("rf_safe_session_v1")}
 const token=()=>session?.access_token||"";
 const setSession=x=>{if(!x?.access_token||!x?.refresh_token)throw Error("پاسخ ورود ناقص است");session={access_token:x.access_token,refresh_token:x.refresh_token,expires_at:Date.now()+Math.max(1,Number(x.expires_in||3600))*1000};sessionStorage.setItem("rf_safe_session_v1",JSON.stringify(session))};
@@ -60,7 +60,7 @@ const clear=()=>{
  for(const ctl of activeRequests)ctl.abort();
  activeRequests.clear();renewing=null;
  session=null;role=null;journey=null;parent=null;parentDetails=null;familyTip=null;resume=null;
- works=[];missions=[];campaigns=[];studentAssignments=[];studentSubmissions=[];studentNotifications=[];studentServiceRequests=[];studentServiceReady=false;staffData=null;finance=null;dailyFeed=null;dailyFeedError="";pushConfig=null;pushStatus=null;pushLocalEndpoint="";pushError="";quizQuestions=null;
+ works=[];missions=[];campaigns=[];studentAssignments=[];studentSubmissions=[];personalTasks=[];personalSubmissions=[];studentNotifications=[];studentServiceRequests=[];studentServiceReady=false;staffData=null;finance=null;dailyFeed=null;dailyFeedError="";pushConfig=null;pushStatus=null;pushLocalEndpoint="";pushError="";quizQuestions=null;
  profileFormOpen=false;workFormOpen=false;loading=false;busy=false;
  sessionStorage.removeItem("rf_safe_session_v1");
  const print=document.getElementById("rf-print-content");if(print)print.replaceChildren();
@@ -145,6 +145,8 @@ async function loadStudentExtras(){
   api("push_status",{},true),
   // RLS-scoped read: only the signed-in student can see these requests.
   proxy("/rest/v1/academy_student_requests?select=id,category,subject,body,status,staff_note,created_at&order=created_at.desc&limit=30"),
+  proxy("/rest/v1/academy_personal_tasks?select=id,course_id,title,instructions,due_at,published&published=eq.true&limit=50"),
+  proxy("/rest/v1/academy_personal_task_submissions?select=id,task_id,status,score,feedback,submitted_at&limit=50"),
  ]);
  requireCurrent(generation);
  works=items[0].status==="fulfilled"&&Array.isArray(items[0].value)?items[0].value:[];
@@ -162,6 +164,8 @@ async function loadStudentExtras(){
  pushLocalEndpoint="";
  studentServiceReady=items[12].status==="fulfilled"&&Array.isArray(items[12].value);
  studentServiceRequests=studentServiceReady?items[12].value:[];
+ personalTasks=items[13].status==="fulfilled"&&Array.isArray(items[13].value)?items[13].value:[];
+ personalSubmissions=items[14].status==="fulfilled"&&Array.isArray(items[14].value)?items[14].value:[];
  if(navigator.serviceWorker?.getRegistration){
   try{const reg=await navigator.serviceWorker.getRegistration();const sub=await reg?.pushManager?.getSubscription();requireCurrent(generation);pushLocalEndpoint=String(sub?.endpoint||"")}catch{pushLocalEndpoint=""}
  }
@@ -324,6 +328,16 @@ function studentCoachPanel(){
  '<button type="button" class="portal-secondary" data-rf="stage" data-step="'+idx+'">بازکردن مرحله پیشنهادی ↗</button>')+
  '</section>';
 }
+function personalTasksPanel(){
+ if(role?.kind!=="student")return "";
+ const cards=personalTasks.map(t=>{
+  const sub=personalSubmissions.find(s=>s.task_id===t.id);
+  return '<article class="rf-personal-task"><span class="rf-overline">PERSONAL PROJECT</span><h4>'+esc(t.title)+'</h4><p>'+esc(t.instructions)+'</p><small>مهلت: '+esc(t.due_at?new Intl.DateTimeFormat("fa-IR-u-ca-persian",{dateStyle:"medium",timeStyle:"short"}).format(new Date(t.due_at)):"—")+'</small>'+
+  (sub?'<div class="rf-personal-task-status">✓ '+esc(sub.status==="reviewed"?"ارزیابی شده":"تحویل ثبت شده")+(sub.status==="reviewed"?'<p>نمره '+num(sub.score)+' / ۱۰۰ · '+esc(sub.feedback||"")+'</p>':"")+'</div>':
+  '<form class="rf-form rf-personal-submit"><input type="hidden" name="task_id" value="'+esc(t.id)+'"/><label class="portal-field"><span>شرح اجرای پروژه</span><textarea name="submission_text" required minlength="10" maxlength="4000"></textarea></label><label class="portal-field"><span>لینک HTTPS اختیاری</span><input name="submission_url" type="url" placeholder="https://"/></label><button class="btn btn-primary" type="submit">تحویل برای مدرس ←</button></form>')+'</article>';
+ }).join("");
+ return '<section class="rf-panel rf-personal-tasks"><div class="rf-panel-title"><span>✦</span><h3>تکالیف اختصاصی من</h3></div><p>فقط تکالیف مربوط به خود شما نمایش داده می‌شوند.</p>'+(cards?'<div class="rf-personal-task-grid">'+cards+'</div>':'<div class="rf-empty">هنوز تکلیف اختصاصی منتشر نشده است.</div>')+'</section>';
+}
 function studentPage(){
  const steps=Array.isArray(journey?.stages)?journey.stages:[],progress=Number(journey?.percentage||0);
  const headingText=journey?.student_name||"هنرجوی روشنفکران";
@@ -352,7 +366,7 @@ function studentPage(){
  return '<main class="shell rf-dashboard">'+heading("STUDENT JOURNEY","پرونده مهارتی "+esc(headingText),"از نخستین پروفایل تا نمونه‌کار تأییدشده و رزومه قابل ارائه؛ همه چیز قدم‌به‌قدم.")+
  actions()+toast()+'<div class="rf-progress-wrap"><div><span class="rf-overline">YOUR PROGRESS</span><h2>'+num(progress)+'٪ <small>تکمیل پرونده</small></h2></div><div class="rf-track"><span style="width:'+Math.max(0,Math.min(100,progress))+'%"></span></div><p>'+esc(journey.message||"مسیر رشد شما آغاز شده است.")+'</p></div>'+
  '<div class="rf-stages">'+steps.map((s,i)=>'<button class="rf-stage '+(i===stageIndex?"is-selected":"")+'" data-rf="stage" data-step="'+i+'"><span>'+(s.done?"✓":num(i+1))+'</span><b>'+esc(s.title)+'</b><small>'+(s.done?"تکمیل‌شده":i===stageIndex?"مرحله جاری":"آماده تکمیل")+'</small></button>').join("")+'</div>'+
- studentCoachPanel()+'<section class="rf-grid-two">'+right+
+ studentCoachPanel()+personalTasksPanel()+'<section class="rf-grid-two">'+right+
  '<div class="rf-panel"><div class="rf-panel-title"><span>✧</span><h3>مأموریت‌های ۹۰روزه</h3></div><p>۲۴ پروژه در سه مرحله، با تحویل و تأیید واقعی مدرس یا مدیر.</p><div class="rf-meters"><span>مأموریت‌های پذیرفته‌شده</span><strong>'+num(journey.missions_approved||0)+' / ۲۴</strong></div><div class="rf-mini-missions">'+missions.slice(0,6).map(m=>'<div><span>'+num(m.mission_no)+'</span><b>'+esc(m.title)+'</b></div>').join("")+'</div><a class="btn btn-outline" href="#/missions">مشاهده مسیر پروژه‌ها ↗</a></div></section>'+dailyPanel()+pushPanel()+financePanel()+studentServicesPanel()+(window.RFFAMILY?.student?.(studentAssignments,studentSubmissions,studentNotifications)||'')+'</main>';
 }
 function missionsPage(){
@@ -413,7 +427,7 @@ async function inviteLink(path,kind,email){
  catch{return "لینک اختصاصی ساخته شد؛ آن را کپی کنید: "+link}
 }
 async function submit(e){
- const f=e.target;if(!["rf-login","rf-activate","rf-profile-save","rf-work-save","rf-avatar-upload","rf-quiz","rf-campaign-launch","rf-invite-staff","rf-invite-student","rf-student-task","rf-service-request","rf-phone-request","rf-phone-verify"].includes(f.id)&&!f.classList.contains("rf-mission-submit"))return;e.preventDefault();if(busy)return;const generation=authEpoch;busy=true;error="";notice="";
+ const f=e.target;if(!["rf-login","rf-activate","rf-profile-save","rf-work-save","rf-avatar-upload","rf-quiz","rf-campaign-launch","rf-invite-staff","rf-invite-student","rf-student-task","rf-service-request","rf-phone-request","rf-phone-verify"].includes(f.id)&&!f.classList.contains("rf-mission-submit")&&!f.classList.contains("rf-personal-submit"))return;e.preventDefault();if(busy)return;const generation=authEpoch;busy=true;error="";notice="";
  try{
  const d=new FormData(f);
  if(f.id==="rf-phone-request"){
@@ -457,6 +471,16 @@ async function submit(e){
     if(Array.isArray(updated))studentServiceRequests=updated;
     showNotice("درخواست ثبت شد و برای رسیدگی به آموزشگاه ارسال شد.");
    }catch(e){requireCurrent(generation);showNotice("درخواست ثبت شد؛ فهرست پیگیری موقتاً به‌روز نشد. برای جلوگیری از ثبت تکراری، صفحه را بعداً تازه کنید.");}
+ }else if(f.classList.contains("rf-personal-submit")){
+  if(role?.kind!=="student")throw Error("فقط هنرجوی همین حساب مجاز به تحویل است.");
+  const task_id=String(d.get("task_id")||""),submission_text=String(d.get("submission_text")||"").trim(),url=String(d.get("submission_url")||"").trim();
+  if(!/^[0-9a-f-]{36}$/i.test(task_id)||!personalTasks.some(x=>x.id===task_id)||personalSubmissions.some(x=>x.task_id===task_id)||
+   submission_text.length<10||submission_text.length>4000||(url&&safeURL(url)==="#"))throw Error("تکلیف یا متن تحویل معتبر نیست.");
+  if(!confirm("تکلیف اختصاصی برای مدرس ثبت شود؟ هر تکلیف فقط یک بار قابل تحویل است."))return;
+  const result=await proxy("/rest/v1/academy_personal_task_submissions","POST",{task_id,submission_text,submission_url:url||null},"return=representation");
+  if(!Array.isArray(result)||result.length!==1||result[0].task_id!==task_id)
+   throw Error("تأیید ثبت از سرور دریافت نشد؛ پیش از ارسال مجدد فهرست را تازه کنید.");
+  await loadStudentExtras();showNotice("تکلیف اختصاصی برای مدرس ثبت شد.");
  }else if(f.id==="rf-student-task"){
   const taskId=String(d.get("assignment_id")||""),explanation=String(d.get("submission_text")||"").trim(),url=String(d.get("submission_url")||"").trim();
   if(!/^[0-9a-f-]{36}$/i.test(taskId)||!studentAssignments.some(a=>a.id===taskId))throw Error("این تکلیف معتبر یا متعلق به حساب شما نیست.");
