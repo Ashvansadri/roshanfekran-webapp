@@ -11,7 +11,11 @@ test('real 3D worlds initialize with unique scenes and maintain fallback assets'
  await expect(page.locator('.rf-cinema-scene')).toHaveCount(3);
  await expect(page.locator('.rf-cinema-world-nav button')).toHaveCount(3);
  await expect(page.locator('#rf26-main-title')).toContainText('آینده را بساز');
- await page.waitForFunction(()=>!!window.RFIMMERSIVE,{timeout:15000});
+ await page.waitForFunction(()=>window.RFIMMERSIVE&&(window.RFIMMERSIVE.loaded||window.RFIMMERSIVE.fallbacks>0),null,{timeout:25000});
+ const runtime=await page.evaluate(()=>({loaded:window.RFIMMERSIVE.loaded,contexts:window.RFIMMERSIVE.contexts,fallbacks:window.RFIMMERSIVE.fallbacks,status:document.querySelector('.rf-cinema-ai')?.dataset.rf3dStatus}));
+ expect(runtime.loaded,'Real 3D renderer did not initialize: '+JSON.stringify(runtime)).toBe(true);
+ expect(runtime.contexts).toBeGreaterThan(0);
+ expect(runtime.status).toBe('live');
  await expect(page.locator('.rf-cinema-photo')).toHaveCount(3);
  await page.locator('[data-rf-jump-scene="1"]').click();
  await expect(page.locator('.rf-cinema-chain')).toBeInViewport({ratio:.15});
