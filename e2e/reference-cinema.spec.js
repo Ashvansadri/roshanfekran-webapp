@@ -7,12 +7,12 @@ async function mock(page){
   return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(data)});
  });
 }
-test('desktop reference-inspired landing has three full-width photographic learning worlds',async({browser},testInfo)=>{
+test('desktop landing has three interactive WebGL worlds with local image fallbacks',async({browser},testInfo)=>{
  const page=await browser.newPage({viewport:{width:1440,height:900},deviceScaleFactor:1});
  await mock(page);const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('/',{waitUntil:'domcontentloaded'});
  await expect(page.locator('.rf-cinema-scene')).toHaveCount(3);
- await expect(page.locator('#rf26-main-title')).toContainText('خودت بسازش');
+ await expect(page.locator('#rf26-main-title')).toContainText('آینده را بساز');
  await expect(page.locator('.rf-cinema-scene img')).toHaveCount(3);
  const ready=await page.locator('.rf-cinema-scene img').evaluateAll(imgs=>imgs.map(x=>({loaded:x.complete&&x.naturalWidth>100,src:new URL(x.src).pathname,height:x.getBoundingClientRect().height})));
  expect(ready.every(x=>x.loaded),JSON.stringify(ready)).toBe(true);
