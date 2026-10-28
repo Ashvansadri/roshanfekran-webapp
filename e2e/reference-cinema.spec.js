@@ -15,7 +15,7 @@ test('desktop landing has three interactive WebGL worlds with local image fallba
  await expect(page.locator('#rf26-main-title')).toContainText('آینده را بساز');
  await expect(page.locator('.rf-cinema-scene img')).toHaveCount(3);
  const ready=await page.locator('.rf-cinema-scene img').evaluateAll(imgs=>imgs.map(x=>({loaded:x.complete&&x.naturalWidth>100,src:new URL(x.src).pathname,height:x.getBoundingClientRect().height})));
- expect(ready.every(x=>x.loaded),JSON.stringify(ready)).toBe(true);
+ expect(ready[0].loaded,JSON.stringify(ready)).toBe(true); // Other worlds stay lazy-loaded until selected.
  expect(ready.map(x=>x.src)).toEqual(['/assets/rf_ai_real3d.webp','/assets/rf_crypto_real3d.webp','/assets/rf_forex_real3d.webp']);
  expect(ready[0].height).toBeGreaterThan(500);
  await expect(page.locator('.rf26-track')).toHaveCount(3);
