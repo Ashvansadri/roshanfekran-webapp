@@ -10,7 +10,7 @@ function buildDraft({courseTitle,skill,level}){
 }
 document.addEventListener("click",event=>{
  const button=event.target.closest("[data-rf-draft-assignment]");if(!button)return;
- const form=button.closest("#rfops-assignment");if(!form)return;event.preventDefault();
+ const form=button.closest("#rfops-assignment, #rfops-personal-task");if(!form)return;event.preventDefault();
  const feedback=form.querySelector(".rf-agent-feedback");
  try{
   const selected=form.querySelector('[name="course_id"]')?.selectedOptions[0],course=selected?.textContent||"";

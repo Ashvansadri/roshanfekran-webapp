@@ -621,7 +621,7 @@ function tasks(){
   }
  }
  const personalEditor='<section class="rf-personal-editor"><h4>✦ تکلیف اختصاصی برای یک هنرجو</h4><p>مدرس ابتدا هنرجو و دوره او را انتخاب می‌کند؛ سرور ارتباط ثبت‌نام را تأیید می‌کند. این تکلیف برای سایر هنرجویان نمایش داده نمی‌شود.</p>'+
- '<form id="rfops-personal-task" class="rfops-form"><label>دوره<select name="course_id" required>'+assigned.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.title)+'</option>').join("")+'</select></label>'+
+ '<form id="rfops-personal-task" class="rfops-form"><div class="rf-assignment-agent"><div><strong>✦ کمک‌یار تکلیف فردی</strong><small>پیش‌نویس قابل ویرایش؛ انتشار فقط پس از تأیید مدرس</small></div><label>مهارت موردنظر<input name="draft_skill" maxlength="100" placeholder="مثلاً طراحی ایجنت"/></label><label>سطح تمرین<select name="draft_level"><option value="beginner">مقدماتی</option><option value="intermediate">متوسط</option><option value="advanced">پیشرفته</option></select></label><button type="button" data-rf-draft-assignment>ساخت پیش‌نویس</button><p class="rf-agent-feedback" aria-live="polite"></p></div><label>دوره<select name="course_id" required>'+assigned.map(c=>'<option value="'+esc(c.id)+'">'+esc(c.title)+'</option>').join("")+'</select></label>'+
  '<label>هنرجو<select name="student_id" required>'+students.map(st=>'<option value="'+esc(st.id)+'">'+esc(st.full_name)+'</option>').join("")+'</select></label>'+
  '<label>عنوان تکلیف<input name="title" minlength="4" maxlength="150" required/></label>'+
  '<label>مهلت تکلیف<input name="due_at" type="datetime-local" required/></label>'+

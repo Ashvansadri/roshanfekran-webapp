@@ -317,14 +317,15 @@ function studentCoachPanel(){
  const stages=Array.isArray(journey.stages)?journey.stages:[];
  const next=stages.findIndex(x=>!x.done),idx=Math.max(0,Math.min(4,next<0?4:next));
  // Only RLS-authorized, published assignments already loaded for this student are considered.
+ const personalPending=personalTasks.find(x=>!personalSubmissions.some(s=>s.task_id===x.id));
  const pending=studentAssignments.find(x=>x?.published===true&&!studentSubmissions.some(y=>String(y.assignment_id)===String(x.id)&&["submitted","graded","approved","reviewed"].includes(String(y.status||"").toLowerCase())));
- const headline=pending?String(pending.title||"تکلیف جدید"):labels[idx];
- const detail=pending?"تکلیف منتشرشده مربوط به دوره شماست. توضیحات را در بخش تکالیف همین صفحه ببین و به‌موقع تحویل بده.":"گام بعدی از وضعیت فعلی پرونده مهارتی شما پیشنهاد شده است؛ این تمرین رسمی و نمره‌دار نیست.";
+ const headline=personalPending?String(personalPending.title||"تکلیف اختصاصی"):pending?String(pending.title||"تکلیف جدید"):labels[idx];
+ const detail=personalPending?"این تکلیف اختصاصاً توسط مدرس برای پرونده شما منتشر شده است. شرح و مهلت آن را در بخش تکالیف اختصاصی همین صفحه ببین.":pending?"تکلیف منتشرشده مربوط به دوره شماست. توضیحات را در بخش تکالیف همین صفحه ببین و به‌موقع تحویل بده.":"گام بعدی از وضعیت فعلی پرونده مهارتی شما پیشنهاد شده است؛ این تمرین رسمی و نمره‌دار نیست.";
  return '<section class="rf-student-coach rf-panel" aria-label="راهنمای شخصی مسیر یادگیری">'+
  '<div class="rf-student-coach-head"><span>✦ همراه یادگیری</span><small>بر اساس پیشرفت همین هنرجو · بدون ارسال داده به سرویس هوش مصنوعی</small></div>'+
  '<h3>'+esc(headline)+'</h3><p>'+esc(detail)+'</p>'+
  '<div class="rf-student-coach-steps"><span><b>۱</b> هدف امروز را مشخص کن</span><span><b>۲</b> ۲۰ دقیقه تمرین کن</span><span><b>۳</b> نتیجه را ثبت کن</span></div>'+
- (pending?'<p class="rf-caption">این پیشنهاد، محتوای تکلیف اصلی را تغییر نمی‌دهد و تکلیف جدیدی ایجاد نمی‌کند.</p>':
+ ((personalPending||pending)?'<p class="rf-caption">این پیشنهاد، تکلیف جدیدی ایجاد نمی‌کند و فقط رکوردهای مجاز همین حساب را نشان می‌دهد.</p>':
  '<button type="button" class="portal-secondary" data-rf="stage" data-step="'+idx+'">بازکردن مرحله پیشنهادی ↗</button>')+
  '</section>';
 }
