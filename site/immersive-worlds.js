@@ -6,7 +6,7 @@
 const ROOT=document.querySelector("#app");
 const prefersReduced=window.matchMedia("(prefers-reduced-motion: reduce)");
 const coarse=window.matchMedia("(pointer: coarse)");
-const LIB="https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js";
+const LIB="/vendor/three/three.module.min.js";
 let threePromise=null, watchers=null, entries=new Map(), mutationQueued=false, dynamicCount=0;
 const info={loaded:false,active:0,contexts:0,fallbacks:0,version:"immersive-v1"};
 window.RFIMMERSIVE=info;
