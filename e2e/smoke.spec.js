@@ -38,7 +38,7 @@ test('desktop premium home is legible, safe and navigable',async({browser},testI
  await apiMock(page);
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('/',{waitUntil:'domcontentloaded'});
- await expect(page.locator('#rf26-main-title')).toContainText('خودت بسازش');
+ await expect(page.locator('#rf26-main-title')).toContainText('آینده را بساز');
  await expect(page.locator('.rf26-track')).toHaveCount(3);
  await expect(page.locator('.rf26-quiz-section')).toBeVisible();
  await page.locator('#rf26-quiz-live button[data-rf26-quiz="ai"]').click();
