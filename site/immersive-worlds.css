@@ -74,3 +74,6 @@
  .rf-cinema-panels[data-rf-immersive-worlds]>.rf-cinema-world-nav{bottom:12px!important}
 }
 @media(max-width:420px){.rf-cinema-panels[data-rf-immersive-worlds]>.rf-cinema-scene{min-height:790px!important}}
+
+/* Keep the landing free of empty technical-status badges. */
+.rf-3d-live-label:empty{display:none!important}
