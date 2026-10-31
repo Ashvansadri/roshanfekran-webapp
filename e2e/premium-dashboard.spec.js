@@ -66,3 +66,19 @@ test('teacher sees only authorized work modules, not finance or private student 
  await expect(page.locator('.rfov-module-grid [data-rfops-tab="tasks"]')).toHaveCount(1);
  await page.close();
 });
+
+test('manager search filters only authorized navigation and opens the chosen module',async({browser})=>{
+ const page=await browser.newPage({viewport:{width:1280,height:800}});
+ await withSyntheticStaff(page);
+ await page.goto('/#/workspace',{waitUntil:'domcontentloaded'});
+ const find=page.locator('#rfops-find');
+ await expect(find).toBeVisible({timeout:20000});
+ await find.fill('تکالیف');
+ await expect(page.locator('#rfops-tabs [data-rfops-tab="tasks"]')).toBeVisible();
+ await expect(page.locator('#rfops-tabs [data-rfops-tab="finance"]')).toBeHidden();
+ await find.fill('');
+ await expect(page.locator('#rfops-tabs [data-rfops-tab="finance"]')).toBeVisible();
+ await page.locator('#rfops-tabs [data-rfops-tab="tasks"]').click();
+ await expect(page.locator('.rfops-view-tasks')).toBeVisible();
+ await page.close();
+});
