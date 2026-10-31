@@ -241,10 +241,13 @@ function allowedTabs(){
  ["report","گزارش رویدادهای امروز",manage()]
  ].filter(x=>x[2]);
 }
+function navSearch(){
+ return '<div class="rfops-nav-search"><label for="rfops-find">دسترسی سریع به بخش‌ها</label><div><span aria-hidden="true">⌕</span><input id="rfops-find" type="search" maxlength="70" placeholder="جست‌وجوی دوره، شهریه، تکلیف، خانواده…" autocomplete="off" aria-controls="rfops-main" /></div><small id="rfops-find-status" aria-live="polite"></small></div>';
+}
 function tabs(){
  const allowed=allowedTabs();
  if(!allowed.some(x=>x[0]===selected))selected=allowed.find(x=>x[0]!=="overview")?.[0]||"overview";
- return '<div class="rfops-nav-search"><label for="rfops-find">دسترسی سریع به بخش‌ها</label><div><span aria-hidden="true">⌕</span><input id="rfops-find" type="search" maxlength="70" placeholder="جست‌وجوی دوره، شهریه، تکلیف، خانواده…" autocomplete="off" aria-controls="rfops-tabs" /></div><small id="rfops-find-status" aria-live="polite"></small></div><nav id="rfops-tabs" class="rfops-tabs" aria-label="بخش‌های مدیریت">'+allowed.map(x=>'<button type="button" data-rfops-tab="'+x[0]+'" aria-pressed="'+String(x[0]===selected)+'">'+x[1]+'</button>').join("")+'</nav>';
+ return navSearch()+'<nav id="rfops-tabs" class="rfops-tabs" aria-label="بخش‌های مدیریت">'+allowed.map(x=>'<button type="button" data-rfops-tab="'+x[0]+'" aria-pressed="'+String(x[0]===selected)+'">'+x[1]+'</button>').join("")+'</nav>';
 }
 const ovIcons={
  overview:'<circle cx="5" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/>',
@@ -688,7 +691,7 @@ if(root)root.addEventListener("input",event=>{
   const label=String(item.textContent||"").toLocaleLowerCase("fa-IR").replace(/ي/g,"ی").replace(/ك/g,"ک");
   const visible=!query||label.includes(query);
   item.hidden=!visible;
-  if(visible&&tabs.includes(item))matches++;
+  if(visible&&(tabs.length?tabs.includes(item):cards.includes(item)))matches++;
  }
  const status=scope.querySelector("#rfops-find-status");
  if(status)status.textContent=query?(matches?"بخش‌های مرتبط نمایش داده شدند.":"بخشی با این عبارت پیدا نشد. عبارت کوتاه‌تری امتحان کنید."):"";
@@ -700,7 +703,7 @@ function render(nextRole){
  let content="";
  switch(selected){case"overview":content=overviewDashboard();break;case"family":content=family();break;case"risk":content=riskDashboard();break;case"applications":content=applications();break;case"serviceDesk":content=serviceDesk();break;case"documents":content=documentsDesk();break;case"courses":content=courses();break;case"finance":content=finance();break;case"contracts":content=contracts();break;case"tasks":content=tasks();break;case"daily":content=window.RFDAILY?.render?.(nextRole)||"";break;case"report":content=reportDashboard();break;default:content=students();}
  const header=selected==="overview"?"":'<header class="rfops-top"><div><span>ACADEMY OPERATIONS / SECURE WORKSPACE</span><h2>'+esc(allowedTabs().find(x=>x[0]===selected)?.[1]||"مدیریت آموزشگاه")+'</h2><p>این بخش از داده‌ها و مجوزهای فعلی حساب شما استفاده می‌کند.</p></div><button data-rfops="reload" type="button">تازه‌سازی ↻</button></header>';
- return '<div class="rfops rfops-view-'+selected+'" id="rfops-main">'+alert()+(selected==="overview"?'<div class="rfops-overview-nav">'+nav+'</div>'+content:header+nav+content)+(inflight?'<div class="rfops-loading">در حال دریافت اطلاعات مجاز…</div>':"")+'</div>';
+ return '<div class="rfops rfops-view-'+selected+'" id="rfops-main">'+alert()+(selected==="overview"?'<div class="rfops-overview-nav">'+navSearch()+'</div>'+content:header+nav+content)+(inflight?'<div class="rfops-loading">در حال دریافت اطلاعات مجاز…</div>':"")+'</div>';
 }
 
 async function act(action,element){

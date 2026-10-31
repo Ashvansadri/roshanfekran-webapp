@@ -74,11 +74,11 @@ test('manager search filters only authorized navigation and opens the chosen mod
  const find=page.locator('#rfops-find');
  await expect(find).toBeVisible({timeout:20000});
  await find.fill('تکالیف');
- await expect(page.locator('#rfops-tabs [data-rfops-tab="tasks"]')).toBeVisible();
- await expect(page.locator('#rfops-tabs [data-rfops-tab="finance"]')).toBeHidden();
+ await expect(page.locator('.rfov-module-grid [data-rfops-tab="tasks"]')).toBeVisible();
+ await expect(page.locator('.rfov-module-grid [data-rfops-tab="finance"]')).toBeHidden();
  await find.fill('');
- await expect(page.locator('#rfops-tabs [data-rfops-tab="finance"]')).toBeVisible();
- await page.locator('#rfops-tabs [data-rfops-tab="tasks"]').click();
+ await expect(page.locator('.rfov-module-grid [data-rfops-tab="finance"]')).toBeVisible();
+ await page.locator('.rfov-module-grid [data-rfops-tab="tasks"]').click();
  await expect(page.locator('.rfops-view-tasks')).toBeVisible();
  await page.close();
 });
