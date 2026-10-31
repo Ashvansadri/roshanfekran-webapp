@@ -12,7 +12,7 @@ test('guide is available on every screen and questions are never sent to the ser
  await page.locator('#rf-companion-form button[type=submit]').click();
  await expect(page.locator('.rf-companion-history')).toContainText('اولین ورود');
  expect(leaked).toBe(false);
- await expect(page.locator('.rf-companion-notice')).toContainText('هنوز مدل هوش مصنوعی');
+ await expect(page.locator('.rf-companion-notice')).toContainText('سؤالت فقط در همین صفحه پردازش می‌شود');
 });
 test('install assistant gives manual instructions without a prompt',async({page})=>{
  await page.goto('/',{waitUntil:'domcontentloaded'});
