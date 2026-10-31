@@ -244,7 +244,7 @@ function allowedTabs(){
 function tabs(){
  const allowed=allowedTabs();
  if(!allowed.some(x=>x[0]===selected))selected=allowed.find(x=>x[0]!=="overview")?.[0]||"overview";
- return '<nav class="rfops-tabs" aria-label="بخش‌های مدیریت">'+allowed.map(x=>'<button type="button" data-rfops-tab="'+x[0]+'" aria-pressed="'+String(x[0]===selected)+'">'+x[1]+'</button>').join("")+'</nav>';
+ return '<div class="rfops-nav-search"><label for="rfops-find">دسترسی سریع به بخش‌ها</label><div><span aria-hidden="true">⌕</span><input id="rfops-find" type="search" maxlength="70" placeholder="جست‌وجوی دوره، شهریه، تکلیف، خانواده…" autocomplete="off" aria-controls="rfops-tabs" /></div><small id="rfops-find-status" aria-live="polite"></small></div><nav id="rfops-tabs" class="rfops-tabs" aria-label="بخش‌های مدیریت">'+allowed.map(x=>'<button type="button" data-rfops-tab="'+x[0]+'" aria-pressed="'+String(x[0]===selected)+'">'+x[1]+'</button>').join("")+'</nav>';
 }
 const ovIcons={
  overview:'<circle cx="5" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/>',
@@ -674,6 +674,25 @@ function reportDashboard(){
  '<p class="rf-caption">جمع‌بندی‌های بایگانی‌شده به‌صورت خودکار از شمار رکوردهای ثبت‌شده تهیه می‌شوند و پیام یا اطلاعات فردی ارسال نمی‌کنند. حسابرسی زنده ممکن است فعالیت‌های ثبت‌نشده در جدول audit را پوشش ندهد.</p>');
 }
 
+// Fast local navigation search; it never requests further account data.
+if(root)root.addEventListener("input",event=>{
+ const el=event.target;
+ if(!el||el.id!=="rfops-find")return;
+ const query=String(el.value||"").trim().toLocaleLowerCase("fa-IR").replace(/ي/g,"ی").replace(/ك/g,"ک");
+ const scope=el.closest("#rfops-main");
+ if(!scope)return;
+ const tabs=[...scope.querySelectorAll("#rfops-tabs [data-rfops-tab]")];
+ const cards=[...scope.querySelectorAll(".rfov-module-grid [data-rfops-tab]")];
+ let matches=0;
+ for(const item of [...tabs,...cards]){
+  const label=String(item.textContent||"").toLocaleLowerCase("fa-IR").replace(/ي/g,"ی").replace(/ك/g,"ک");
+  const visible=!query||label.includes(query);
+  item.hidden=!visible;
+  if(visible&&tabs.includes(item))matches++;
+ }
+ const status=scope.querySelector("#rfops-find-status");
+ if(status)status.textContent=query?(matches?"بخش‌های مرتبط نمایش داده شدند.":"بخشی با این عبارت پیدا نشد. عبارت کوتاه‌تری امتحان کنید."):"";
+});
 function render(nextRole){
  if(!nextRole||!["staff","teacher"].includes(nextRole.kind))return "";
  role=nextRole;

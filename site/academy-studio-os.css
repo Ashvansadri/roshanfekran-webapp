@@ -72,3 +72,14 @@ body{color:var(--rf-os-text)}
 }
 @media(prefers-reduced-motion:reduce){.rf-dashboard *, .rf-auth *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
 @media print{.rf-dashboard,.rf-auth,.rf-panel-container{background:#fff!important;color:#111!important}.rf-dashboard .rf-panel,.rf-dashboard .rf-page-head{box-shadow:none!important;background:#fff!important;color:#111!important}}
+
+/* Academy command finder: local scoped navigation, keyboard friendly. */
+.rfops-nav-search{display:grid;gap:6px;max-width:530px;margin:12px 0 17px;padding:0 4px;direction:rtl}
+.rfops-nav-search>label{font-size:12px;font-weight:750;color:#c4e6df}
+.rfops-nav-search>div{position:relative}
+.rfops-nav-search>div>span{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:24px;color:#9beadf;pointer-events:none}
+.rfops-nav-search input{width:100%;height:48px;border:1px solid rgba(139,223,208,.55);background:linear-gradient(110deg,#0a2935,#112c39);border-radius:14px;color:#edfff8;padding:10px 44px 10px 14px;font:inherit;box-shadow:inset 0 1px rgba(255,255,255,.07)}
+.rfops-nav-search input:focus-visible{outline:2px solid #74e4d3;outline-offset:3px}
+.rfops-nav-search input::placeholder{color:#b4cdc8}
+.rfops-nav-search small{min-height:0;color:#f1c78a;font-size:11px}
+.rfops-tabs [hidden],.rfov-module-grid [hidden]{display:none!important}

@@ -187,7 +187,7 @@ test('real catalog creates exactly one public course card without invented revie
  await expect(page.locator('.rf26-course-guide')).toHaveCount(1);
  await expect(page.locator('.rf26-course h3')).toContainText('هوش مصنوعی کاربردی');
  await expect(page.locator('.rf26-course a[href="#/course/course-1009"]')).toBeVisible();
- await expect(page.locator('.rf26-dashboard')).toContainText('نمای مفهومی');
+ await expect(page.locator('.rf26-dashboard')).toContainText('نمونه پورتال');
  await expect(page.locator('blockquote')).toHaveCount(0);
  await page.locator('.rf26-faq-list details').last().locator('summary').click();
  await expect(page.locator('.rf26-faq-list details').last()).toHaveAttribute('open','');
