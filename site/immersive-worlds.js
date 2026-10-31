@@ -13,7 +13,7 @@ window.RFIMMERSIVE=info;
 function setStatus(node,value){
  node.dataset.rf3dStatus=value;
  const label=node.querySelector(".rf-3d-live-label");
- if(label)label.textContent=value==="live"?"◉ صحنه سه‌بعدی فعال · موس را حرکت بده":"◌ نسخه تصویری سبک؛ سه‌بعدی در این دستگاه در دسترس نیست";
+ if(label)label.textContent="";
 }
 function loadThree(){if(!threePromise)threePromise=import(LIB);return threePromise}
 const rand=(a,b)=>a+Math.random()*(b-a);
@@ -32,7 +32,7 @@ function startScene(THREE,node,idx){
  scene.fog=new THREE.FogExp2(0x061824,0.028);
  const camera=new THREE.PerspectiveCamera(37,1,.1,130);
  camera.position.set(0,1.8,13);
- const hemisphere=new THREE.HemisphereLight(0x9df7ff,0x0a2432,2.0);scene.add(hemisphere);
+ const hemisphere=new THREE.HemisphereLight(0xddf8ff,0x0a2432,2.45);scene.add(hemisphere);
  const cyanLight=new THREE.PointLight(0x35f1f0,120,24);cyanLight.position.set(-4,5,4);scene.add(cyanLight);
  const goldLight=new THREE.PointLight(0xf8b86e,155,25);goldLight.position.set(3,1,5);scene.add(goldLight);
  const rimLight=new THREE.PointLight(0x9cc5ff,70,25);rimLight.position.set(-2,4,-5);scene.add(rimLight);
@@ -40,7 +40,9 @@ function startScene(THREE,node,idx){
  const accent=idx===2?0xf7b56b:0x47e9e9;
  const metal=(color=0x123f50,roughness=.18,metalness=.78,opacity=1)=>new THREE.MeshStandardMaterial({color,roughness,metalness,transparent:opacity<1,opacity,side:THREE.DoubleSide});
  const emissive=(color,intensity=1)=>new THREE.MeshBasicMaterial({color,transparent:true,opacity:intensity,depthWrite:false,side:THREE.DoubleSide});
- const steel=metal(0x274453,.17,.92),dark=metal(0x081d2a,.22,.86),gold=metal(0xe9b979,.25,.9),glass=metal(0x77d9e6,.07,.24,.19),glow=emissive(0x73f6f7,.89),amber=emissive(0xffd092,.85);
+ const steel=metal(0x426373,.15,.88),dark=metal(0x091b2a,.19,.86),gold=metal(0xe9b979,.23,.82),glass=metal(0x77d9e6,.07,.24,.19),glow=emissive(0x73f6f7,.89),amber=emissive(0xffd092,.85);
+ const porcelain=new THREE.MeshPhysicalMaterial({color:0xe8f3f5,metalness:.64,roughness:.16,clearcoat:1,clearcoatRoughness:.08});
+ const midnight=new THREE.MeshPhysicalMaterial({color:0x0c2334,metalness:.71,roughness:.19,clearcoat:.86,clearcoatRoughness:.1});
  const ball=new THREE.SphereGeometry(1,32,22),box=new THREE.BoxGeometry(1,1,1);
  const torus=(rad,tube,col)=>new THREE.Mesh(new THREE.TorusGeometry(rad,tube,9,85),col);
  function mesh(g,m,parent=entire,x=0,y=0,z=0){const o=new THREE.Mesh(g,m);o.position.set(x,y,z);parent.add(o);return o}
@@ -58,19 +60,47 @@ function startScene(THREE,node,idx){
  const floor=new THREE.GridHelper(29,32,0x2a9b9c,0x20515b);
  floor.position.y=-3.1;floor.material.transparent=true;floor.material.opacity=.25;entire.add(floor);
  const orbiters=[];
+ // Architectural 3D stage: physically modeled room depth, luminous ceiling, and
+ // a virtual studio desk. Built as real meshes and scaled down for mobile.
+ const architecture=new THREE.Group();entire.add(architecture);
+ const buildBox=(parent,mat,x,y,z,w,h,depth)=>{
+  const obj=mesh(box,mat,parent,x,y,z);obj.scale.set(w,h,depth);return obj;
+ };
+ buildBox(architecture,metal(0x132c36,.32,.61),-1,-3.33,-5,20,.23,17);
+ buildBox(architecture,metal(0x10232e,.45,.58),-1,4.8,-8,22,.2,10);
+ for(const x of [-7.5,-3,2.1,6.8]){
+  buildBox(architecture,metal(0x152f38,.26,.83),x,.45,-8.7,.13,8,.32);
+  buildBox(architecture,emissive(0x5ae4e4,.40),x+.09,.5,-8.45,.022,7.2,.03);
+ }
+ for(const y of [-1.5,.5,2.5]){
+  buildBox(architecture,emissive(0xe1b178,.23),-1,y,-9.1,18,.018,.025);
+ }
+ for(let i=0;i<5;i++){
+  buildBox(architecture,metal(0x142f3c,.21,.77),-6+i*2.4,4.15,-6.4,.075,.11,4);
+  buildBox(architecture,emissive(i%2?0xf3b16e:0x65e9f1,.45),-6+i*2.4,4.04,-6.15,.035,.032,3.7);
+ }
+ const columnPad=mesh(new THREE.CylinderGeometry(3.4,3.4,.17,56),metal(0x173746,.12,.83),architecture,-2.3,-3.18,-.9);
+ const padRim=ring(architecture,3.21,.028,amber,[Math.PI/2,0,0]);padRim.position.set(-2.3,-3.065,-.9);
+ const innerRim=ring(architecture,2.65,.016,glow,[Math.PI/2,0,0]);innerRim.position.set(-2.3,-3.053,-.9);
+ if(!coarse.matches){
+  for(const x of [-5.6,1.8])for(const y of [-1.65,.25,2.15]){
+   const screen=buildBox(architecture,glass,x,y,-6.6,1.9,1.46,.07);
+   const boundary=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1.95,1.50,.09)),new THREE.LineBasicMaterial({color:0x63deee,transparent:true,opacity:.57}));boundary.position.copy(screen.position);architecture.add(boundary);
+  }
+ }
  if(idx===0){
   // Polished robotic head and torso with embedded digital neural organ.
-  const torso=mesh(new THREE.SphereGeometry(1,32,22),dark,hero,0,-2.20,-.20);torso.scale.set(1.30,.66,.65);
-  const chest=mesh(new THREE.SphereGeometry(1,32,22),steel,hero,0,-2.10,.28);chest.scale.set(.93,.47,.35);
+  const torso=mesh(new THREE.SphereGeometry(1,32,22),midnight,hero,0,-2.20,-.20);torso.scale.set(1.30,.66,.65);
+  const chest=mesh(new THREE.SphereGeometry(1,32,22),porcelain,hero,0,-2.10,.28);chest.scale.set(.93,.47,.35);
   const neck=mesh(new THREE.CylinderGeometry(.30,.38,.75,24),gold,hero,0,-1.29,0);
   // Articulated shoulder assemblies, forearm armor and luminous actuator joints.
   for(const side of [-1,1]){
-   const shoulder=mesh(new THREE.SphereGeometry(.43,24,18),steel,hero,side*1.02,-1.84,-.15);
+   const shoulder=mesh(new THREE.SphereGeometry(.43,24,18),porcelain,hero,side*1.02,-1.84,-.15);
    shoulder.scale.set(1.06,.85,.86);
-   const upper=mesh(new THREE.CylinderGeometry(.19,.31,.97,16),steel,hero,side*1.29,-2.30,.03);
+   const upper=mesh(new THREE.CylinderGeometry(.19,.31,.97,16),porcelain,hero,side*1.29,-2.30,.03);
    upper.rotation.z=side*.24;
    const elbow=sphere(hero,side*1.40,-2.73,.12,.19,gold);
-   const wrist=mesh(new THREE.CylinderGeometry(.17,.21,.56,16),dark,hero,side*1.49,-3.05,.24);
+   const wrist=mesh(new THREE.CylinderGeometry(.17,.21,.56,16),midnight,hero,side*1.49,-3.05,.24);
    wrist.rotation.z=-side*.20;
    const cuff=ring(hero,.175,.024,glow,[Math.PI/2,0,0]);
    cuff.position.set(side*1.49,-3.04,.24);
@@ -80,8 +110,8 @@ function startScene(THREE,node,idx){
     const fin=mesh(new THREE.BoxGeometry(.46,.026,.08),j%2?glow:amber,hero,0,-2.05+j*.18,.60);
     fin.rotation.z=.025*j;
   }
-  const head=mesh(new THREE.SphereGeometry(1,46,32),steel,hero,0,.20,.02);head.scale.set(.83,1.12,.66);
-  const face=mesh(new THREE.SphereGeometry(1,32,22),dark,hero,0,.03,.56);face.scale.set(.59,.64,.19);
+  const head=mesh(new THREE.SphereGeometry(1,46,32),porcelain,hero,0,.20,.02);head.scale.set(.83,1.12,.66);
+  const face=mesh(new THREE.SphereGeometry(1,32,22),midnight,hero,0,.03,.56);face.scale.set(.59,.64,.19);
   for(const side of [-1,1]){
    const eye=mesh(new THREE.SphereGeometry(.13,16,12),glow,hero,side*.23,.25,.737);eye.scale.set(1.12,.58,.35);
    const ear=mesh(new THREE.CylinderGeometry(.22,.22,.18,22),gold,hero,side*.82,.19,.04);ear.rotation.z=Math.PI/2;
