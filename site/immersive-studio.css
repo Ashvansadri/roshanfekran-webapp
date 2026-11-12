@@ -1,0 +1,35 @@
+/* Studio V2: one WebGL view, clear contrast, visible switching */
+.rf-cinema-panels[data-rf-immersive-worlds]{position:relative;isolation:isolate;overflow:visible}
+.rf-cinema-panels[data-rf-immersive-worlds]>.rf-cinema-scene{background:radial-gradient(ellipse at 28% 45%,#173d4d 0%,#07151f 63%,#040b11 100%)!important;contain:layout style;transform:translateZ(0)}
+.rf-cinema-panels[data-rf-world="1"]>.rf-cinema-chain{background:radial-gradient(ellipse at 28% 45%,#1a3359 0%,#071626 60%,#070c15 100%)!important}
+.rf-cinema-panels[data-rf-world="2"]>.rf-cinema-markets{background:radial-gradient(ellipse at 28% 45%,#4b2d23 0%,#171b24 60%,#090e13 100%)!important}
+.rf-cinema-scene .rf-studio-viewport{position:absolute!important;inset:0!important;z-index:1!important;width:100%;height:100%;display:block;pointer-events:none!important;opacity:1;mix-blend-mode:normal}
+.rf-cinema-scene.rf-webgl-ready .rf-cinema-photo{opacity:.075!important;filter:brightness(.35) saturate(.8)!important;mix-blend-mode:screen!important}
+.rf-cinema-scene.rf-webgl-ready .rf-cinema-shade{z-index:2!important;background:linear-gradient(270deg,rgba(2,10,18,.94),rgba(2,11,19,.89) 14%,rgba(2,11,19,.42) 41%,transparent 75%),linear-gradient(0deg,#06101991,transparent 22%)!important}
+.rf-cinema-scene.rf-webgl-ready .rf-cinema-content{z-index:4!important}
+.rf-cinema-panels .rf-cinema-world-nav{z-index:12!important;right:50%;transform:translateX(50%);border:1px solid #77dfd163!important;border-radius:18px!important;padding:8px!important;background:linear-gradient(125deg,#041e2af5,#0b2532ee)!important;box-shadow:0 12px 48px #000a,0 0 0 1px #9ae9ec24!important}
+.rf-cinema-world-nav button{border-radius:11px!important;padding:15px 23px!important;min-height:45px;transition:background .2s,transform .2s,color .2s}
+.rf-cinema-world-nav button[aria-pressed="true"]{background:linear-gradient(120deg,#68d5ce,#b8f6e6)!important;color:#07202b!important;box-shadow:0 5px 22px #37dcc07a!important;font-weight:950!important;transform:translateY(-1px)}
+.rf-cinema-world-nav button[aria-pressed="true"] span{color:#103d45!important}
+.rf-cinema-world-nav button[aria-pressed="false"]{background:transparent!important;color:#d8edeb!important;box-shadow:none!important}
+.rf-cinema-world-nav button:hover{filter:brightness(1.17)}
+.rf-cinema-world-nav button:focus-visible{outline:3px solid #e9c188!important;outline-offset:4px}
+.rf-cinema-scene .rf-cinema-story,.rf-cinema-scene .rf26-hero-copy{position:relative;z-index:5}
+.rf-cinema-panels .rf-cinema-scene .rf-cinema-content{max-width:1420px!important}
+.rf-cinema-panels[data-rf-world="1"] .rf-cinema-story h2 em{color:#86b8ff!important;text-shadow:0 8px 42px #4f8cec85}
+.rf-cinema-panels[data-rf-world="2"] .rf-cinema-story h2 em{color:#f9c892!important;text-shadow:0 8px 42px #e9b16c66}
+.rf-cinema-scene .rf-cinema-story h2,.rf-cinema-scene .rf26-hero-copy h1{text-wrap:balance}
+.rf-cinema-scene .rf-cinema-story,.rf-cinema-scene .rf26-hero-copy{animation:rfStudioEnter .55s cubic-bezier(.2,.7,.2,1) both}
+@keyframes rfStudioEnter{from{opacity:0;transform:translateY(19px)}to{opacity:1;transform:translateY(0)}}
+.rf-world-live{position:absolute;width:1px;height:1px;clip-path:inset(50%);overflow:hidden}
+@media(max-width:780px){
+ .rf-cinema-panels[data-rf-immersive-worlds]>.rf-cinema-scene{min-height:850px!important;align-items:flex-end!important}
+ .rf-cinema-scene .rf-studio-viewport{height:100%!important;opacity:.95}
+ .rf-cinema-scene.rf-webgl-ready .rf-cinema-shade{background:linear-gradient(0deg,#061018ff 0%,#07151bf2 26%,#07151b8c 51%,transparent 82%)!important}
+ .rf-cinema-scene .rf-cinema-content{padding-top:330px!important;padding-bottom:150px!important}
+ .rf-cinema-panels .rf-cinema-world-nav{width:min(94%,390px)!important;gap:2px!important;bottom:12px!important}
+ .rf-cinema-world-nav button{padding:11px 10px!important;font-size:11px}
+ .rf-cinema-landing #rf26-main-title{font-size:clamp(38px,9.1vw,56px)!important;line-height:1.35!important}
+}
+@media(max-width:410px){.rf-cinema-panels[data-rf-immersive-worlds]>.rf-cinema-scene{min-height:920px!important}.rf-cinema-scene .rf-cinema-content{padding-top:355px!important}}
+@media(prefers-reduced-motion:reduce){.rf-cinema-scene .rf-cinema-story,.rf-cinema-scene .rf26-hero-copy{animation:none!important}.rf-cinema-world-nav button{transition:none!important}}
