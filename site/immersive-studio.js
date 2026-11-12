@@ -165,7 +165,12 @@ function createStudio(THREE,parts){
  for(let i=0;i<particleCount;i++){coords[i*3]=-9+Math.random()*16;coords[i*3+1]=-3+Math.random()*9;coords[i*3+2]=-8+Math.random()*12}
  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(coords,3));
  const stars=new THREE.Points(geo,new THREE.PointsMaterial({color:0xb1f8ff,size:.035,transparent:true,opacity:.58,depthWrite:false}));scene.add(stars);
- const controls={desired:0,current:0,pointerX:0,pointerY:0,last:0,running:false,dead:false,frame:0,width:0,height:0};
+ const controls={desired:0,current:0,pointerX:0,pointerY:0,last:0,running:false,dead:false,frame:0,width:0,height:0,visible:true};
+ const observer3d=new IntersectionObserver(items=>{
+  controls.visible=items.some(x=>x.isIntersecting);
+  if(controls.visible)paint(performance.now());
+ },{rootMargin:'100px',threshold:.01});
+ observer3d.observe(parts.wrap);
  const attach=i=>{
   const el=parts.nodes[i];if(!el)return;el.appendChild(canvas);
   parts.nodes.forEach((n,j)=>{n.classList.toggle('rf-webgl-ready',i===j);n.dataset.rf3dStatus=i===j?'live':'idle'});
@@ -204,7 +209,7 @@ function createStudio(THREE,parts){
  const loop=time=>{
   if(controls.dead||!document.contains(canvas)){destroy();return}
   controls.frame=requestAnimationFrame(loop);
-  if(document.hidden||time-controls.last<(mobile.matches?50:28))return;
+  if(document.hidden||!controls.visible||time-controls.last<(mobile.matches?50:28))return;
   controls.last=time;paint(time);
  };
  const onPointer=e=>{
@@ -226,7 +231,7 @@ function createStudio(THREE,parts){
  };
  function destroy(){
   if(controls.dead)return;controls.dead=true;cancelAnimationFrame(controls.frame);
-  document.removeEventListener('visibilitychange',onVisibility);window.removeEventListener('resize',onResize);
+  observer3d.disconnect();document.removeEventListener('visibilitychange',onVisibility);window.removeEventListener('resize',onResize);
   parts.nodes.forEach(n=>n.removeEventListener('pointermove',onPointer));
   scene.traverse(o=>{o.geometry?.dispose?.();if(o.material){(Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m?.dispose?.())}});
   renderer.dispose();canvas.remove();state.contexts=0;state.active=0;
@@ -266,6 +271,8 @@ document.addEventListener('click',event=>{
  const i=Number(btn.dataset.rfJumpScene);
  if(!Number.isInteger(i)||i<0||i>2)return;
  event.preventDefault();setWorld(i);
+ const active=findParts()?.nodes[i];
+ if(active)requestAnimationFrame(()=>active.scrollIntoView({behavior:reduced.matches?'instant':'smooth',block:'start'}));
 },{capture:true});
 document.addEventListener('keydown',event=>{
  const btn=event.target.closest('[data-rf-jump-scene]');if(!btn||!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
