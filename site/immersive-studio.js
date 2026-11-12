@@ -80,10 +80,10 @@ function createStudio(THREE,parts){
  const head=mesh(body,new THREE.SphereGeometry(1,56,36),porcelain,0,.1,0);head.scale.set(.91,1.08,.75);
  const visor=mesh(body,new THREE.SphereGeometry(1,44,26),graphite,0,-.02,.70);visor.scale.set(.67,.59,.19);
  for(const side of [-1,1]){
-   const eye=ball(body,side*.28,.18,.878,.105,cyan);eye.scale.set(1.15,.75,.4);
+   const eye=ball(body,side*.28,.18,.878,.105,cyan);eye.scale.set(.121,.079,.042);
    const ear=cylinder(body,.26,.26,.16,bronze,side*.93,.13,.03);ear.rotation.z=Math.PI/2;
    const earGlow=torus(body,.17,.026,cyan,side*1.05,.13,.03);earGlow.rotation.y=Math.PI/2;
-   const shoulder=ball(body,side*1.18,-1.65,-.06,.46,porcelain);shoulder.scale.set(1.07,.85,1.0);
+   const shoulder=ball(body,side*1.18,-1.65,-.06,.46,porcelain);shoulder.scale.set(.49,.39,.46);
    const joint=ball(body,side*1.34,-2.23,.1,.24,graphite);
    const arm=cylinder(body,.22,.30,.84,porcelain,side*1.45,-2.48,.08);arm.rotation.z=side*.14;
    const elbow=ball(body,side*1.49,-2.91,.08,.20,bronze);
