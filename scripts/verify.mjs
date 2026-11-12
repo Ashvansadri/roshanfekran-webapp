@@ -5,10 +5,13 @@ import assert from "node:assert/strict";
 const root=new URL("../",import.meta.url).pathname;
 const site=join(root,"site");
 const html=readFileSync(join(site,"index.html"),"utf8");
-assert(html.includes('src="./immersive-worlds.js"'),"Real WebGL scene module missing from page");
-assert(readFileSync(join(site,"immersive-worlds.js"),"utf8").includes("WebGLRenderer"),"3D engine must initialize a real WebGL renderer");
+assert(html.includes('src="./immersive-studio.js"'),"Live 3D Studio module missing from page");
+assert(!html.includes('src="./immersive-worlds.js"'),"Legacy 3D renderer should not run alongside Studio");
+assert(readFileSync(join(site,"immersive-studio.js"),"utf8").includes("WebGLRenderer"),"Studio must initialize actual WebGL renderer");
+const studioCheck=spawnSync(process.execPath,["--check",join(site,"immersive-studio.js")],{encoding:"utf8"});
+assert.equal(studioCheck.status,0,"3D Studio syntax error: "+studioCheck.stderr);
 const scripts=["app.js","portal.js","enroll.js","public-resume.js","scene.js","luxury.js","motion.js","homepage.js","cinematic.js","academy-ops.js","daily-admin.js","family-monitor.js","academy-companion.js","academy-agents.js","sw.js"];
-const styles=["styles.css","experience.css","portal.css","enroll.css","scene.css","invites.css","luxury.css","motion.css","homepage.css","portal-premium.css","cinematic.css","academy-ops.css","daily-admin.css","family-monitor.css","atelier27.css","atelier-noir.css","reference-cinema.css","academy-studio-os.css","academy-companion.css","academy-agents.css","immersive-worlds.css"];
+const styles=["styles.css","experience.css","portal.css","enroll.css","scene.css","invites.css","luxury.css","motion.css","homepage.css","portal-premium.css","cinematic.css","academy-ops.css","daily-admin.css","family-monitor.css","atelier27.css","atelier-noir.css","reference-cinema.css","academy-studio-os.css","academy-companion.css","academy-agents.css","immersive-worlds.css","immersive-studio.css"];
 for(const file of scripts){
  const filepath=join(site,file);assert(existsSync(filepath),file+" missing");
  const check=spawnSync(process.execPath,["--check",filepath],{encoding:"utf8"});
