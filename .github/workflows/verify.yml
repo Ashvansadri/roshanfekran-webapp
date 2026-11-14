@@ -120,13 +120,21 @@ jobs:
           mkdir -p /tmp/rf-video
           curl --fail --location --show-error --silent --retry 1 --max-time 50 --user-agent 'Mozilla/5.0' "$URL" -o /tmp/rf-video/reference.mp4
           ls -lh /tmp/rf-video/reference.mp4
-          ffprobe -hide_banner -v error -select_streams v:0 -show_entries stream=codec_name,profile,width,height,pix_fmt -of json /tmp/rf-video/reference.mp4
-          ffmpeg -hide_banner -loglevel error -y -ss 2 -i /tmp/rf-video/reference.mp4 -frames:v 1 -vf 'scale=1200:-2' /tmp/rf-video/reference-frame.jpg
+          if command -v ffprobe >/dev/null 2>&1; then
+            ffprobe -hide_banner -v error -select_streams v:0 -show_entries stream=codec_name,profile,width,height,pix_fmt -of json /tmp/rf-video/reference.mp4
+          else
+            echo "ffprobe is not installed on this runner; retaining the original MP4 for local codec inspection."
+          fi
+          if command -v ffmpeg >/dev/null 2>&1; then
+            ffmpeg -hide_banner -loglevel error -y -ss 2 -i /tmp/rf-video/reference.mp4 -frames:v 1 -vf 'scale=1200:-2' /tmp/rf-video/reference-frame.jpg
+          fi
       - name: Capture video evidence (no credentials)
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: cinematic-video-evidence
-          path: /tmp/rf-video/reference-frame.jpg
+          path: |
+            /tmp/rf-video/reference.mp4
+            /tmp/rf-video/reference-frame.jpg
           retention-days: 3
           if-no-files-found: warn
