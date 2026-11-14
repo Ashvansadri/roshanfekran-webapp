@@ -1,0 +1,19 @@
+/* Roshanfekran Academy OS · cinematic monochrome continuation of the video landing.
+   Overrides visual presentation only. No permission or API behavior changes. */
+:root{--bg:#050505;--bg2:#0c0c0c;--surf:#121212;--border:rgba(255,255,255,.17);--fg:#fafafa;--muted:#ababab;--aqua:#efefef;--aqua2:#c1c1c1;--gold:#d3d3d3;--rf-os-bg:#070707;--rf-os-panel:#101010;--rf-os-edge:rgba(255,255,255,.16);--rf-os-edge-strong:rgba(255,255,255,.3);--rf-os-cyan:#ececec;--rf-os-champagne:#d8d8d8}
+html{background:#050505!important}body{background:#050505!important;color:#fafafa}
+.top-note{background:#0d0d0d!important;color:#b9b9b9!important}
+.nav,.footer{background:#070707!important;border-color:#262626!important}
+.navlinks a:hover,.navlinks a:focus-visible{color:#fff}
+.brand-mark{border-color:#bcbcbc!important;color:#fafafa!important;background:#141414!important;box-shadow:none!important}
+.rf-auth:before,.rf-dashboard:before,.rf-panel-container:before,.rf-enroll:before{background:none!important}
+.rf-auth-card,.rf-dashboard .rf-panel,.rf-dashboard .rf-progress-wrap,.rf-dashboard .rf-stats>div,.rf-premium-workspace .rfops-card,.rf-enroll .rf-panel,.rf-panel-container .rf-panel{background:#101010!important;border:1px solid #313131!important;box-shadow:none!important}
+button,.btn,a,.rfops-card,.rf-panel{transition-property:opacity,color,background,border-color,transform}
+:where(.btn-primary,.rfops-form button[type=submit],.rf-auth button[type=submit],.rf-primary-action){background:#fafafa!important;color:#050505!important;border-color:#fff!important;box-shadow:none!important;border-radius:999px!important}
+:where(.btn-primary,.rfops-form button[type=submit],.rf-auth button[type=submit],.rf-primary-action):hover{background:#e4e4e4!important}
+:where(input,textarea,select){background-color:#141414;color:#fafafa;border-color:#555}
+:where(input,textarea,select):focus-visible{outline:2px solid #fff;outline-offset:2px}
+.rfops-nav-search input{background:#121212!important;border-color:#555!important}
+.rf-personal-editor,.rf-personal-task,.rf-private-task{background:#121212!important;border-color:#333!important}
+:where(.rfops-tabs button,.rfov-module-grid button){box-shadow:none!important}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001s!important;transition-duration:.001s!important}}
