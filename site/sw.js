@@ -1,9 +1,10 @@
 /* Public offline shell only. Private data and authentication responses are never cached. */
-const CACHE="rf-academy-public-v45";
+const CACHE="rf-academy-public-v46";
 const SHELL=[
  "/",
  "/index.html",
  "/academy.html",
+ "/cinema-system.css",
  "/manifest.webmanifest",
  "/favicon.svg",
  "/assets/rf-icon-180.png",

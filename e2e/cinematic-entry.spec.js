@@ -1,6 +1,6 @@
 const {test,expect}=require('@playwright/test');
 const VIDEO='https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260808_112712_da9d53df-6d27-4b12-bdf6-aa9dc2622bdf.mp4';
-test('cinematic entry stays single-file, video-backed and faithful at 1487x1058',async({browser})=>{
+test('cinematic entry stays single-file, video-backed and faithful at 1487x1058',async({browser},testInfo)=>{
  const page=await browser.newPage({viewport:{width:1487,height:1058},reducedMotion:'reduce'});
  await page.goto('/index.html',{waitUntil:'domcontentloaded'});
  await expect(page).toHaveTitle('The Next Layer of Intelligence');
@@ -22,9 +22,10 @@ test('cinematic entry stays single-file, video-backed and faithful at 1487x1058'
  expect(layout.logo.y).toBeGreaterThan(989);expect(layout.logo.y).toBeLessThan(1003);
  expect(layout.externalScripts).toBe(0);expect(layout.hasOldPortalMarkup).toBe(false);
  expect(layout.sections).toBe(1);
+ await page.screenshot({path:testInfo.outputPath('cinematic-1487x1058.png'),fullPage:false});
  await page.close();
 });
-test('mobile burger, Esc, legacy deep links and academy access are operable',async({browser})=>{
+test('mobile burger, Esc, legacy deep links and academy access are operable',async({browser},testInfo)=>{
  const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,reducedMotion:'reduce'});
  await page.goto('/index.html',{waitUntil:'domcontentloaded'});
  const burger=page.locator('#burger');
@@ -37,6 +38,7 @@ test('mobile burger, Esc, legacy deep links and academy access are operable',asy
  await burger.click();
  await page.locator('#menu a[href="/academy.html#/portals"]').click();
  await expect(page).toHaveURL(/academy\.html#\/portals$/);
+ await page.screenshot({path:testInfo.outputPath('cinematic-mobile-390.png'),fullPage:false});
  await page.goto('/index.html#/access',{waitUntil:'domcontentloaded'});
  await expect(page).toHaveURL(/academy\.html#\/access$/);
  await page.close();
