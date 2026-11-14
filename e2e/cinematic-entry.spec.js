@@ -23,6 +23,10 @@ test('cinematic entry stays single-file, video-backed and faithful at 1487x1058'
  expect(layout.externalScripts).toBe(0);expect(layout.hasOldPortalMarkup).toBe(false);
  expect(layout.sections).toBe(1);
  await page.screenshot({path:testInfo.outputPath('cinematic-1487x1058.png'),fullPage:false});
+ await page.getByRole('link',{name:'FAQ'}).first().click();
+ await expect(page.locator('#faqDialog')).toBeVisible();
+ await page.locator('#faqClose').click();
+ await expect(page.locator('#faqDialog')).toBeHidden();
  await page.close();
 });
 test('mobile burger, Esc, legacy deep links and academy access are operable',async({browser},testInfo)=>{

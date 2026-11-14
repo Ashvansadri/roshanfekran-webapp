@@ -16,6 +16,12 @@ jobs:
           node-version: '22'
       - name: Validate frontend source, privacy and public assets
         run: node scripts/verify.mjs
+      - name: Export standalone cinematic HTML
+        uses: actions/upload-artifact@v4
+        with:
+          name: roshanfekran-cinematic-index
+          path: site/index.html
+          retention-days: 14
       - name: Verify PWA push safety and notification navigation
         run: node scripts/pwa-push.test.mjs
       - name: Verify Push subscription ownership and opt-in readiness
