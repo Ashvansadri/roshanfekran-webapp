@@ -1,8 +1,9 @@
 /* Public offline shell only. Private data and authentication responses are never cached. */
-const CACHE="rf-academy-public-v44";
+const CACHE="rf-academy-public-v45";
 const SHELL=[
  "/",
  "/index.html",
+ "/academy.html",
  "/manifest.webmanifest",
  "/favicon.svg",
  "/assets/rf-icon-180.png",
@@ -77,7 +78,7 @@ self.addEventListener("fetch",event=>{
   event.respondWith(fetch(request).then(response=>{
    if(!response.ok)throw Error("Offline fallback");
    return response;
-  }).catch(()=>caches.match("/index.html")));
+  }) .catch(()=>caches.match(url.pathname==="/academy.html"?"/academy.html":"/index.html")));
   return;
  }
  event.respondWith(fetch(request).then(response=>{

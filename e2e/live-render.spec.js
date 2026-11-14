@@ -3,6 +3,7 @@ const {test,expect}=require('@playwright/test');
 // This complements local mocked browser tests and prevents a false "LIVE PASS"
 // based solely on successful asset downloads.
 const LIVE='https://roshanfekran-next-academy.onrender.com';
+const ACADEMY=LIVE+'/academy.html';
 
 const CINEMATIC_IMAGES=[
  'rf_hero_real3d.webp','rf_ai_real3d.webp','rf_crypto_real3d.webp',
@@ -24,7 +25,7 @@ test('Render serves all five self-hosted cinematic WebP assets without Floot CDN
  const legacyAssetRequests=[];
  page.on('request',req=>{if(/floot\.app\/_cdn\//i.test(req.url()))legacyAssetRequests.push(req.url())});
  try{
-  await page.goto(LIVE+'/',{waitUntil:'domcontentloaded',timeout:45000});
+  await page.goto(ACADEMY,{waitUntil:'domcontentloaded',timeout:45000});
   await expect(page.locator('.rf-spatial-scene')).toBeVisible({timeout:25000});
   for(const room of ['0','1','2']){
    await page.locator('[data-rf-room="'+room+'"]').click();
@@ -40,7 +41,7 @@ test('Render staging serves working interactive rooms and protected login screen
  const failures=[];
  page.on('pageerror',e=>failures.push(e.message));
  try{
-  const home=await page.goto(LIVE+'/',{waitUntil:'domcontentloaded',timeout:45000});
+  const home=await page.goto(ACADEMY,{waitUntil:'domcontentloaded',timeout:45000});
   expect(home?.status(),'Render homepage HTTP status').toBe(200);
   const scene=page.locator('.rf-spatial-scene');
   await expect(scene).toBeVisible({timeout:25000});
@@ -52,15 +53,15 @@ test('Render staging serves working interactive rooms and protected login screen
   await expect(scene.locator('.rf-spatial-title')).toHaveText('اتاق تحلیل بازار');
   // Hash-only SPA navigation does not issue an HTTP request: Playwright returns null.
   // Verify the URL and rendered form instead of asserting a nonexistent response status.
-  await page.goto(LIVE+'/#/access',{waitUntil:'domcontentloaded',timeout:45000});
-  await expect(page).toHaveURL(LIVE+'/#/access');
+  await page.goto(ACADEMY+'#/access',{waitUntil:'domcontentloaded',timeout:45000});
+  await expect(page).toHaveURL(ACADEMY+'#/access');
   await expect(page.locator('#rf-login input[name="email"]')).toBeVisible({timeout:15000});
   await expect(page.locator('#rf-login input[name="password"]')).toBeVisible();
   // Read-only end-to-end diagnostic: no email, password, or personal data.
   await page.getByRole('button',{name:/بررسی اتصال ورود/}).click();
   await expect(page.locator('.portal-success')).toContainText('سرویس احراز هویت در دسترس‌اند',{timeout:15000});
   expect(await page.evaluate(()=>sessionStorage.getItem('rf_safe_session_v1'))).toBeNull();
-  await page.goto(LIVE+'/#/workspace',{waitUntil:'domcontentloaded',timeout:45000});
+  await page.goto(ACADEMY+'#/workspace',{waitUntil:'domcontentloaded',timeout:45000});
   await expect(page.locator('#rf-login')).toBeVisible({timeout:15000});
   await expect(page.locator('.rf-dashboard')).toHaveCount(0);
   expect(failures,'Uncaught browser JavaScript errors').toEqual([]);
@@ -112,7 +113,7 @@ test('Expired synthetic session is removed on definitive refresh rejection',asyn
   }else await route.continue();
  });
  try{
-  await page.goto(LIVE+'/#/workspace',{waitUntil:'domcontentloaded',timeout:45000});
+  await page.goto(ACADEMY+'#/workspace',{waitUntil:'domcontentloaded',timeout:45000});
   await expect(page.locator('#rf-login')).toBeVisible({timeout:20000});
   await expect.poll(()=>page.evaluate(()=>sessionStorage.getItem('rf_safe_session_v1'))).toBeNull();
   await expect(page.locator('.rf-dashboard')).toHaveCount(0);
@@ -148,7 +149,7 @@ test('Student service requests render and submit only to a mocked authorized RPC
   await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(data)});
  });
  try{
-  await page.goto(LIVE+'/#/workspace',{waitUntil:'domcontentloaded',timeout:45000});
+  await page.goto(ACADEMY+'#/workspace',{waitUntil:'domcontentloaded',timeout:45000});
   await expect(page.locator('#rf-service-request')).toBeVisible({timeout:25000});
   await expect(page.getByText('درخواست پیشین')).toBeVisible();
   await page.locator('#rf-service-request select[name="category"]').selectOption('certificate');
@@ -194,7 +195,7 @@ test('Render LIVE staff service editor uses audited RPC with synthetic data only
  });
  page.on('dialog',d=>d.accept());
  try{
-  await page.goto(LIVE+'/#/workspace',{waitUntil:'domcontentloaded',timeout:45000});
+  await page.goto(ACADEMY+'#/workspace',{waitUntil:'domcontentloaded',timeout:45000});
   await expect(page.locator('.rfov-module-grid [data-rfops-tab="serviceDesk"]')).toBeVisible({timeout:25000});
   await page.locator('.rfov-module-grid [data-rfops-tab="serviceDesk"]').click();
   const editor=page.locator('.rfops-service-editor');
@@ -247,7 +248,7 @@ test('Render LIVE contract desk issues only on-demand signed links with syntheti
   await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(result)});
  });
  try{
-  await page.goto(LIVE+'/#/workspace',{waitUntil:'domcontentloaded',timeout:45000});
+  await page.goto(ACADEMY+'#/workspace',{waitUntil:'domcontentloaded',timeout:45000});
   const tab=page.locator('[data-rfops-tab="contracts"]').first();
   await expect(tab).toBeVisible({timeout:25000});
   await tab.click();

@@ -87,7 +87,7 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Launch static app locally
         run: |
-          python3 -m http.server 4173 --bind 127.0.0.1 --directory site > /tmp/roshanfekran-test-server.log 2>&1 &
+          python3 scripts/qa_server.py > /tmp/roshanfekran-test-server.log 2>&1 &
           sleep 2
       - name: Mobile, desktop and security UX smoke
         run: npx playwright test --reporter=line
