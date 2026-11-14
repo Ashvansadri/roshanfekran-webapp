@@ -16,8 +16,7 @@ test('3D buttons switch a SINGLE actual rendered canvas and three visually disti
 test('mobile scene selector is keyboard-operable and changing worlds works with reduced motion',async({browser})=>{
  const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,reducedMotion:'reduce'});
  await page.goto('/',{waitUntil:'domcontentloaded'});
- await page.locator('[data-rf-jump-scene="0"]').focus();
- await page.keyboard.press('ArrowLeft');
+ await page.locator('[data-rf-jump-scene="0"]').press('ArrowLeft');
  await expect(page.locator('.rf-cinema-panels')).toHaveAttribute('data-rf-world','1');
  await expect(page.locator('.rf-cinema-chain')).toBeVisible();
  await page.locator('[data-rf-jump-scene="2"]').click();

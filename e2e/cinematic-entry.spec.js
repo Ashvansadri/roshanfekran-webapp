@@ -22,8 +22,7 @@ test('academy cinematic home uses actual Roshanfekran identity and related visua
   await expect(page.locator('.stage')).toHaveAttribute('data-active',key);
   await expect(page.locator('[data-scene-choice="'+key+'"]')).toHaveAttribute('aria-pressed','true');
   await expect(page.locator('.headline')).toContainText(titles[i]);
-  const opacity=await page.locator('.scene-image[data-scene="'+key+'"]').evaluate(el=>getComputedStyle(el).opacity);
-  expect(Number(opacity)).toBeGreaterThan(.9);
+  await expect.poll(async()=>Number(await page.locator('.scene-image[data-scene="'+key+'"]').evaluate(el=>getComputedStyle(el).opacity)),{timeout:3000}).toBeGreaterThan(.9);
  }
  await page.screenshot({path:testInfo.outputPath('academy-cinematic-desktop.png'),fullPage:false});
  await page.getByRole('link',{name:'سؤالات متداول'}).first().click();
