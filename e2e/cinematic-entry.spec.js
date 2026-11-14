@@ -22,6 +22,9 @@ test('cinematic entry stays single-file, video-backed and faithful at 1487x1058'
  expect(layout.logo.y).toBeGreaterThan(989);expect(layout.logo.y).toBeLessThan(1003);
  expect(layout.externalScripts).toBe(0);expect(layout.hasOldPortalMarkup).toBe(false);
  expect(layout.sections).toBe(1);
+ await page.waitForTimeout(2200);
+ const video=await page.locator('.plate-video').evaluate(el=>({readyState:el.readyState,networkState:el.networkState,errorCode:el.error?.code||null,paused:el.paused,currentTime:el.currentTime,videoWidth:el.videoWidth,videoHeight:el.videoHeight}));
+ console.log('CINEMATIC_VIDEO_DIAGNOSTIC',JSON.stringify(video));
  await page.screenshot({path:testInfo.outputPath('cinematic-1487x1058.png'),fullPage:false});
  await page.getByRole('link',{name:'FAQ'}).first().click();
  await expect(page.locator('#faqDialog')).toBeVisible();
@@ -40,6 +43,7 @@ test('mobile burger, Esc, legacy deep links and academy access are operable',asy
  await page.keyboard.press('Escape');
  await expect(burger).toHaveAttribute('aria-expanded','false');
  await burger.click();
+ await page.screenshot({path:testInfo.outputPath('cinematic-mobile-menu-390.png'),fullPage:false});
  await page.locator('#menu .menu-foot a[href="/academy.html#/portals"]').click();
  await expect(page).toHaveURL(/academy\.html#\/portals$/);
  await page.screenshot({path:testInfo.outputPath('cinematic-mobile-390.png'),fullPage:false});
