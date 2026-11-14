@@ -104,3 +104,29 @@ jobs:
           name: roshanfekran-browser-qa
           path: test-results/
           retention-days: 7
+
+  video-probe:
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    permissions:
+      contents: read
+    timeout-minutes: 3
+    steps:
+      - name: Verify exact external video GET and identify codec
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260808_112712_da9d53df-6d27-4b12-bdf6-aa9dc2622bdf.mp4"
+          mkdir -p /tmp/rf-video
+          curl --fail --location --show-error --silent --retry 1 --max-time 50 --user-agent 'Mozilla/5.0' "$URL" -o /tmp/rf-video/reference.mp4
+          ls -lh /tmp/rf-video/reference.mp4
+          ffprobe -hide_banner -v error -select_streams v:0 -show_entries stream=codec_name,profile,width,height,pix_fmt -of json /tmp/rf-video/reference.mp4
+          ffmpeg -hide_banner -loglevel error -y -ss 2 -i /tmp/rf-video/reference.mp4 -frames:v 1 -vf 'scale=1200:-2' /tmp/rf-video/reference-frame.jpg
+      - name: Capture video evidence (no credentials)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cinematic-video-evidence
+          path: /tmp/rf-video/reference-frame.jpg
+          retention-days: 3
+          if-no-files-found: warn
