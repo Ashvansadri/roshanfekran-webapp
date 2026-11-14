@@ -1,52 +1,54 @@
 const {test,expect}=require('@playwright/test');
-const VIDEO='https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260808_112712_da9d53df-6d27-4b12-bdf6-aa9dc2622bdf.mp4';
-test('cinematic entry stays single-file, video-backed and faithful at 1487x1058',async({browser},testInfo)=>{
+test('academy cinematic home uses actual Roshanfekran identity and related visual tracks',async({browser},testInfo)=>{
  const page=await browser.newPage({viewport:{width:1487,height:1058},reducedMotion:'reduce'});
  await page.goto('/index.html',{waitUntil:'domcontentloaded'});
- await expect(page).toHaveTitle('The Next Layer of Intelligence');
- await expect(page.locator('video.plate-video')).toHaveCount(1);
- await expect(page.locator('video.plate-video source')).toHaveAttribute('src',VIDEO);
- await expect(page.locator('.headline')).toContainText('The Next Layer');
- await expect(page.locator('.headline')).toContainText('of Intelligence');
- await expect(page.locator('.logos .lg')).toHaveCount(4);
- const layout=await page.evaluate(()=>{
-  const select=s=>{const r=document.querySelector(s).getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height}};
-  return {brand:select('.brand'),headline:select('.headline'),nav:select('.links'),start:select('.pill-nav'),logo:select('.lg1'),background:getComputedStyle(document.body).backgroundColor,
-    hasOldPortalMarkup:!!document.getElementById('app'),externalScripts:document.querySelectorAll('script[src]').length,
-    sections:document.querySelectorAll('.stage .hero').length};
+ await expect(page).toHaveTitle('آموزشگاه روشنفکران | آینده را بساز');
+ await expect(page.locator('.brand-name')).toContainText('روشنفکران');
+ await expect(page.locator('.headline')).toContainText('مهارت امروز');
+ await expect(page.locator('.plate .scene-image')).toHaveCount(3);
+ await expect(page.locator('[data-scene-choice]')).toHaveCount(3);
+ await expect(page.locator('a[href="/academy.html#/courses"]').first()).toBeVisible();
+ const dimensions=await page.evaluate(()=>{
+  const r=document.querySelector('.headline').getBoundingClientRect();
+  return {headlineVisible:r.width>0&&r.height>0,main:!!document.querySelector('.hero'),otherPortal:!!document.querySelector('#app'),
+    externalScripts:document.querySelectorAll('script[src]').length,bodyOverflow:document.documentElement.scrollWidth-innerWidth};
  });
- expect(layout.background).toBe('rgb(5, 5, 5)');
- expect(layout.brand.x).toBeGreaterThan(73);expect(layout.brand.x).toBeLessThan(78);
- expect(layout.brand.y).toBeGreaterThan(25);expect(layout.brand.y).toBeLessThan(30);
- expect(layout.headline.y).toBeGreaterThan(225);expect(layout.headline.y).toBeLessThan(235);
- expect(layout.logo.y).toBeGreaterThan(989);expect(layout.logo.y).toBeLessThan(1003);
- expect(layout.externalScripts).toBe(0);expect(layout.hasOldPortalMarkup).toBe(false);
- expect(layout.sections).toBe(1);
- await page.waitForTimeout(2200);
- const video=await page.locator('.plate-video').evaluate(el=>({readyState:el.readyState,networkState:el.networkState,errorCode:el.error?.code||null,paused:el.paused,currentTime:el.currentTime,videoWidth:el.videoWidth,videoHeight:el.videoHeight}));
- console.log('CINEMATIC_VIDEO_DIAGNOSTIC',JSON.stringify(video));
- await page.screenshot({path:testInfo.outputPath('cinematic-1487x1058.png'),fullPage:false});
- await page.getByRole('link',{name:'FAQ'}).first().click();
+ expect(dimensions.headlineVisible).toBe(true);expect(dimensions.main).toBe(true);
+ expect(dimensions.otherPortal).toBe(false);expect(dimensions.externalScripts).toBe(0);
+ expect(dimensions.bodyOverflow).toBeLessThanOrEqual(4);
+ const titles=['مهارت امروز','فناوری را بشناس','نمودارها را بخوان'];
+ for(const [i,key] of ['ai','crypto','market'].entries()){
+  await page.locator('[data-scene-choice="'+key+'"]').click();
+  await expect(page.locator('.stage')).toHaveAttribute('data-active',key);
+  await expect(page.locator('[data-scene-choice="'+key+'"]')).toHaveAttribute('aria-pressed','true');
+  await expect(page.locator('.headline')).toContainText(titles[i]);
+  const opacity=await page.locator('.scene-image[data-scene="'+key+'"]').evaluate(el=>getComputedStyle(el).opacity);
+  expect(Number(opacity)).toBeGreaterThan(.9);
+ }
+ await page.screenshot({path:testInfo.outputPath('academy-cinematic-desktop.png'),fullPage:false});
+ await page.getByRole('link',{name:'سؤالات متداول'}).first().click();
  await expect(page.locator('#faqDialog')).toBeVisible();
  await page.locator('#faqClose').click();
  await expect(page.locator('#faqDialog')).toBeHidden();
  await page.close();
 });
-test('mobile burger, Esc, legacy deep links and academy access are operable',async({browser},testInfo)=>{
+test('academy cinematic mobile menu, category switching and legacy portal links work',async({browser},testInfo)=>{
  const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,reducedMotion:'reduce'});
  await page.goto('/index.html',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('.brand-name')).toBeVisible();
  const burger=page.locator('#burger');
- await expect(burger).toBeVisible();
- await burger.click();
+ await expect(burger).toBeVisible();await burger.click();
  await expect(burger).toHaveAttribute('aria-expanded','true');
- await expect(page.locator('#menu')).toHaveAttribute('aria-hidden','false');
  await page.keyboard.press('Escape');
  await expect(burger).toHaveAttribute('aria-expanded','false');
+ await page.locator('[data-scene-choice="crypto"]').click();
+ await expect(page.locator('.headline')).toContainText('فناوری را بشناس');
+ await page.locator('[data-scene-choice="market"]').click();
+ await expect(page.locator('.headline')).toContainText('نمودارها را بخوان');
+ await page.screenshot({path:testInfo.outputPath('academy-cinematic-mobile.png'),fullPage:false});
  await burger.click();
- await page.screenshot({path:testInfo.outputPath('cinematic-mobile-menu-390.png'),fullPage:false});
- await page.locator('#menu .menu-foot a[href="/academy.html#/portals"]').click();
+ await page.locator('#menu a[href="/academy.html#/portals"]').first().click();
  await expect(page).toHaveURL(/academy\.html#\/portals$/);
- await page.screenshot({path:testInfo.outputPath('cinematic-mobile-390.png'),fullPage:false});
  await page.goto('/index.html#/access',{waitUntil:'domcontentloaded'});
  await expect(page).toHaveURL(/academy\.html#\/access$/);
  await page.close();
