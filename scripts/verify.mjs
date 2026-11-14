@@ -9,7 +9,7 @@ const html=readFileSync(join(site,"academy.html"),"utf8");
 const landing=readFileSync(join(site,"index.html"),"utf8");
 assert(landing.includes('<title>آموزشگاه روشنفکران | آینده را بساز</title>'),"Academy-specific cinematic title missing");
 assert(landing.includes('ROSHANFEKRAN ACADEMY')&&landing.includes('روشنفکران'),"Academy brand missing");
-assert(landing.includes('رف')===false,"Unexpected placeholder text in academy landing");
+assert(!landing.includes('logoipsum'),"Generic example partner name must not appear");
 assert(landing.includes('rf_ai_real3d.webp')&&landing.includes('rf_crypto_real3d.webp')&&landing.includes('rf_forex_real3d.webp'),"Distinct academy visual scenes missing");
 assert(landing.includes('data-scene-choice="ai"')&&landing.includes('data-scene-choice="crypto"')&&landing.includes('data-scene-choice="market"'),"Real academy track controls missing");
 assert(landing.includes('href="/academy.html#/courses"'),"Academy course handoff missing");
