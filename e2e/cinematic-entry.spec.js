@@ -40,7 +40,7 @@ test('mobile burger, Esc, legacy deep links and academy access are operable',asy
  await page.keyboard.press('Escape');
  await expect(burger).toHaveAttribute('aria-expanded','false');
  await burger.click();
- await page.locator('#menu a[href="/academy.html#/portals"]').click();
+ await page.locator('#menu .menu-foot a[href="/academy.html#/portals"]').click();
  await expect(page).toHaveURL(/academy\.html#\/portals$/);
  await page.screenshot({path:testInfo.outputPath('cinematic-mobile-390.png'),fullPage:false});
  await page.goto('/index.html#/access',{waitUntil:'domcontentloaded'});
